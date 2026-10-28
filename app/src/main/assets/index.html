@@ -9,16 +9,22 @@
 .row{display:flex;align-items:center;justify-content:space-between;height:56px;padding:26px 40px 0}
 .status{display:flex;align-items:center;gap:22px;font-size:26px;font-weight:500}
 .cards{display:flex;gap:20px;flex:1;min-height:0;padding:22px 40px 0;box-sizing:border-box}
-.card{padding:26px 28px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}
-.apps{display:flex;gap:16px;height:150px;padding:22px 40px 34px;box-sizing:border-box}
-.app{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:24px;font-weight:500}
-.app svg{width:56px;height:56px}
+.card{padding:26px 28px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.apps{display:flex;gap:14px;height:150px;padding:22px 40px 34px;box-sizing:border-box}
+.app{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:22px;font-weight:500;border:none;color:#fff}
+.app svg{width:52px;height:52px}
+.mbtn{width:64px;height:64px;border-radius:32px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center}
+.mbtn.main{width:76px;height:76px;border-radius:38px;background:#2F7BFF;border-color:#6FA8FF}
+.ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.banner{position:absolute;top:24px;left:50%;transform:translateX(-50%);height:52px;padding:0 22px;border-radius:26px;background:rgba(80,50,10,.85);border:1.5px solid #E8C061;display:none;align-items:center;gap:10px;font-size:19px;color:#FFE6A8;z-index:5}
+.mini{font-size:15px;padding:8px 16px;border-radius:14px;background:#13254a;border:1px solid #2b4a80;color:#fff}
 </style>
 </head>
 <body>
 <div id="stage">
   <img id="bg" src="bg/home_mountain.jpg" alt="">
   <div class="shade"></div>
+  <a class="banner" id="banner" href="maintenance.html"></a>
   <div class="wrap">
     <div class="row">
       <div class="logo" id="brand" aria-label="اسم السيارة"></div>
@@ -34,18 +40,11 @@
         <div id="clock" style="font-size:124px;font-weight:700;line-height:1.05;direction:ltr;font-variant-numeric:tabular-nums"></div>
         <div id="hijri" class="sub" style="font-size:22px"></div>
       </div>
-      <div class="glass card" style="flex:1">
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <span class="accent" style="font-size:20px">الطقس</span>
-          <span id="weatherCity" style="font-size:24px">الظهران</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:flex-end">
-          <span class="sub" style="font-size:22px">صافٍ</span>
-          <span style="font-size:76px;font-weight:700;line-height:1;direction:ltr">35°</span>
-        </div>
-      </div>
+
+      <div class="glass card" id="mid" style="flex:1"></div>
+
       <a class="glass card" href="prayer.html" style="flex:1;color:inherit">
-        <span class="accent" style="font-size:20px">الصلاة القادمة</span>
+        <div style="display:flex;justify-content:space-between"><span class="accent" style="font-size:20px">الصلاة القادمة</span><span id="cityName" class="sub" style="font-size:16px"></span></div>
         <div style="display:flex;flex-direction:column;gap:2px">
           <span id="nextName" style="font-size:40px;font-weight:600"></span>
           <div style="display:flex;justify-content:space-between;align-items:baseline">
@@ -57,8 +56,9 @@
     </div>
 
     <nav class="apps">
-      <div class="glass app" role="button" tabindex="0"><svg viewBox="0 0 24 24"><path d="M12 2 20 21 12 17 4 21Z" fill="#3B9DFF"/></svg><span>الخرائط</span></div>
-      <div class="glass app" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="#FF4FA3" stroke-width="2.2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" fill="#FF4FA3"/><circle cx="18" cy="16" r="3" fill="#FF4FA3"/></svg><span>الموسيقى</span></div>
+      <button class="glass app" onclick="openRole('maps')"><svg viewBox="0 0 24 24"><path d="M12 2 20 21 12 17 4 21Z" fill="#3B9DFF"/></svg><span>الخرائط</span></button>
+      <button class="glass app" onclick="openRole('music')"><svg viewBox="0 0 24 24" fill="none" stroke="#FF4FA3" stroke-width="2.2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" fill="#FF4FA3"/><circle cx="18" cy="16" r="3" fill="#FF4FA3"/></svg><span>الموسيقى</span></button>
+      <a class="glass app" href="apps.html"><svg viewBox="0 0 24 24" fill="#B79CFF"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>التطبيقات</span></a>
       <a class="glass app" href="rest.html"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="#FFD24A"/></svg><span>الاستراحة</span></a>
       <a class="glass app" href="azkar.html"><svg viewBox="0 0 24 24" fill="none" stroke="#5AD1A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg><span>الأذكار</span></a>
       <a class="glass app" href="trip.html"><svg viewBox="0 0 24 24" fill="none" stroke="#8FD3C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M3 13l2-6h14l2 6v5h-3v-2H6v2H3z"/></svg><span>الرحلة</span></a>
@@ -71,6 +71,88 @@
 <script>
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
+
+var ICON = {
+  play: '<svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M7 4v16l13-8z"/></svg>',
+  pause: '<svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+  next: '<svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M5 4v16l10-8zM17 4h2v16h-2z"/></svg>',
+  prev: '<svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M19 4v16L9 12zM5 4h2v16H5z"/></svg>'
+};
+
+/* ===== البطاقة الوسطى: الموسيقى / الرحلة / القبلة / الطقس ===== */
+var mid = document.getElementById('mid'), midKind = '', midHtml = '', lastMediaSig = '';
+function setMid(kind, html){ if (midKind !== kind || midHtml !== html) { mid.innerHTML = html; midHtml = html; midKind = kind; } }
+
+function renderMedia(){
+  var m = natJSON('media');
+  if (!HAS_NATIVE) {
+    setMid('media0', '<span class="accent" style="font-size:20px">الموسيقى</span><div class="sub" style="font-size:20px">يعمل داخل التطبيق على الشاشة</div><div></div>');
+    return;
+  }
+  if (!m || m.access === false) {
+    setMid('media1', '<span class="accent" style="font-size:20px">الموسيقى</span>' +
+      '<div class="sub" style="font-size:18px;line-height:1.5">لعرض ما يُشغَّل الآن والتحكم به، فعّل «الوصول إلى الإشعارات» لرفيق الطريق مرة واحدة.</div>' +
+      '<button class="mini" style="align-self:flex-start;height:48px;font-size:17px" onclick="nat(\'openNotificationAccess\')">تفعيل الآن</button>');
+    return;
+  }
+  if (!m.title) {
+    setMid('media2', '<span class="accent" style="font-size:20px">الموسيقى</span>' +
+      '<div class="sub" style="font-size:20px">لا يوجد تشغيل الآن</div>' +
+      '<button class="mini" style="align-self:flex-start;height:48px;font-size:17px" onclick="openRole(\'music\')">فتح تطبيق الموسيقى</button>');
+    return;
+  }
+  var sig = m.title + '|' + m.artist + '|' + m.playing;
+  if (midKind === 'media3' && sig === lastMediaSig) return;
+  lastMediaSig = sig;
+  var e = function (s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
+  setMid('media3',
+    '<div style="display:flex;justify-content:space-between"><span class="accent" style="font-size:20px">يُشغَّل الآن</span><span class="sub" style="font-size:16px">' + e(m.app) + '</span></div>' +
+    '<div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="ellip" style="font-size:30px;font-weight:700">' + e(m.title) + '</span><span class="sub ellip" style="font-size:20px">' + e(m.artist) + '</span></div>' +
+    '<div style="display:flex;justify-content:center;align-items:center;gap:20px;direction:ltr">' +
+      '<button class="mbtn" aria-label="السابق" onclick="nat(\'mediaCmd\',\'prev\');setTimeout(tick,400)">' + ICON.prev + '</button>' +
+      '<button class="mbtn main" aria-label="تشغيل أو إيقاف" onclick="nat(\'mediaCmd\',\'' + (m.playing ? 'pause' : 'play') + '\');setTimeout(tick,400)">' + (m.playing ? ICON.pause : ICON.play) + '</button>' +
+      '<button class="mbtn" aria-label="التالي" onclick="nat(\'mediaCmd\',\'next\');setTimeout(tick,400)">' + ICON.next + '</button>' +
+    '</div>');
+}
+function renderTripMini(){
+  var t = natJSON('trip');
+  var km = t ? t.km.toFixed(1) : '0.0';
+  var sp = t ? Math.round(t.speed) : 0;
+  setMid('trip', '<a href="trip.html" style="display:contents"><span class="accent" style="font-size:20px">الرحلة</span>' +
+    '<div style="direction:ltr;text-align:right"><span style="font-size:72px;font-weight:700">' + km + '</span><span class="sub" style="font-size:24px"> كم</span></div>' +
+    '<div class="sub" style="font-size:20px">السرعة ' + sp + ' كم/س' + (t && t.gps ? '' : ' · بانتظار GPS') + '</div></a>');
+}
+function renderQiblaMini(){
+  var t = natJSON('trip');
+  var lat = t && typeof t.lat === 'number' ? t.lat : LAT, lng = t && typeof t.lng === 'number' ? t.lng : LNG;
+  var b = Math.round(qiblaBearing(lat, lng));
+  var rel = (t && t.heading >= 0 && t.speed > 5) ? norm360(b - t.heading) : null;
+  var rot = rel !== null ? rel : b;
+  setMid('qibla', '<span class="accent" style="font-size:20px">القبلة</span>' +
+    '<div style="display:flex;align-items:center;gap:20px">' +
+    '<svg width="120" height="120" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>' +
+    (rel === null ? '<text x="50" y="16" text-anchor="middle" fill="#9FB0CC" font-size="11">N</text>' : '<path d="M50 10 46 20h8z" fill="#9FB0CC"/>') +
+    '<g transform="rotate(' + rot + ' 50 50)"><path d="M50 14 60 52 50 46 40 52Z" fill="#E8C061"/></g></svg>' +
+    '<div style="display:flex;flex-direction:column"><span style="font-size:44px;font-weight:700;direction:ltr">' + b + '°</span><span class="sub" style="font-size:16px">' +
+    (rel === null ? 'من الشمال' : 'السهم بالنسبة لاتجاه السير') + '</span></div></div>' +
+    '<div class="sub" style="font-size:15px">' + (t && typeof t.lat === 'number' ? 'من موقعك الحالي' : 'من ' + cityLabel()) + '</div>');
+}
+function renderWeather(){
+  setMid('weather', '<div style="display:flex;flex-direction:column;gap:6px"><span class="accent" style="font-size:20px">الطقس</span><span style="font-size:24px">' + cityLabel() + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end"><span class="sub" style="font-size:18px">قيمة ثابتة (بدون إنترنت)</span><span style="font-size:76px;font-weight:700;line-height:1;direction:ltr">35°</span></div>');
+}
+function renderMid(){
+  var k = prefs.midCard;
+  if (k === 'trip') renderTripMini(); else if (k === 'qibla') renderQiblaMini(); else if (k === 'weather') renderWeather(); else renderMedia();
+}
+
+function renderBanner(){
+  var b = document.getElementById('banner'), due = [];
+  loadMaint().forEach(function (it) { var s = maintStatus(it); if (s.due) due.push(it.name); });
+  if (due.length) { b.textContent = 'تذكير الصيانة: ' + due.join('، '); b.style.display = 'flex'; }
+  else b.style.display = 'none';
+}
+
 function tick(){
   var d = new Date();
   var clk = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
@@ -81,10 +163,14 @@ function tick(){
   var np = nextPrayer(d);
   document.getElementById('nextName').textContent = np.name;
   document.getElementById('nextTime').textContent = np.time;
+  document.getElementById('cityName').textContent = cityLabel();
   document.getElementById('untilText').textContent = 'بعد ' + Math.floor(np.diff / 60) + ' س ' + (np.diff % 60) + ' د';
+  renderMid();
 }
-tick();
-setInterval(tick, 15000);
+window.onPageResume = function () { prefs = loadPrefs(); applyPrefs('home', prefs); tick(); renderBanner(); };
+tick(); renderBanner();
+setInterval(tick, 2000);
+setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); renderBanner(); }, 60000);
 fitStage();
 </script>
 </body>

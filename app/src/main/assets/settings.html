@@ -6,25 +6,32 @@
 <title>الإعدادات</title>
 <link rel="stylesheet" href="common.css">
 <style>
-.top{display:flex;align-items:center;gap:16px;height:60px;padding:26px 40px 0}
+.top{display:flex;align-items:center;gap:16px;height:60px;padding:22px 40px 0}
 .title{font-size:28px;font-weight:600;margin:0}
-.body{flex:1;display:flex;flex-direction:column;gap:12px;padding:12px 40px 20px;box-sizing:border-box;min-height:0;overflow-y:auto}
+.tabs{display:flex;gap:10px;margin-right:auto}
+.tab{height:52px;padding:0 24px;border-radius:26px;border:1px solid #2b4a80;background:rgba(19,37,74,.85);font-size:19px}
+.tab.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
+.body{flex:1;display:flex;flex-direction:column;gap:12px;padding:14px 40px 20px;box-sizing:border-box;min-height:0;overflow-y:auto}
 .section{padding:14px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
 .label{font-size:20px;font-weight:600}
-.opts{display:flex;gap:12px;flex-wrap:wrap}
-.opt{height:58px;padding:0 22px;border-radius:18px;background:#13254a;border:1px solid #23406f;font-size:19px}
+.opts{display:flex;gap:10px;flex-wrap:wrap}
+.opt{height:54px;padding:0 20px;border-radius:16px;background:#13254a;border:1px solid #23406f;font-size:18px}
 .opt.on{background:#1F5FD1;border:1.5px solid #6FA8FF;font-weight:700}
-.themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.tile{height:84px;border-radius:16px;background-size:cover;background-position:center;border:3px solid transparent;position:relative;font-size:17px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);display:flex;align-items:flex-end;justify-content:center;padding:8px}
+.opt.sm{height:46px;font-size:16px;padding:0 16px}
+.themes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{height:84px;border-radius:16px;background-size:cover;background-position:center;border:3px solid transparent;position:relative;font-size:16px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);display:flex;align-items:flex-end;justify-content:center;padding:8px}
 .tile.on{border-color:#2F7BFF}
-.toggle{display:flex;justify-content:space-between;align-items:center;font-size:20px}
-.sw{width:64px;height:36px;border-radius:18px;background:#2a3a58;border:none;position:relative}
+.tile .x{position:absolute;top:6px;left:6px;width:30px;height:30px;border-radius:15px;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.4);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center}
+.tile.add{border:2px dashed #4b6ea8;background:rgba(19,37,74,.7);align-items:center;font-size:17px;text-shadow:none}
+.toggle{display:flex;justify-content:space-between;align-items:center;font-size:19px;gap:16px}
+.sw{width:64px;height:36px;border-radius:18px;background:#2a3a58;border:none;position:relative;flex:none}
 .sw.on{background:#2F7BFF}
 .sw::after{content:'';position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:14px;background:#fff;transition:left .15s}
 .sw.on::after{left:32px}
-.note{font-size:16px;color:#9FB0CC}
-.opt.sm{height:48px;font-size:17px;padding:0 18px}
-.txt{height:56px;width:360px;border-radius:16px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:20px;padding:0 16px;box-sizing:border-box}
+.note{font-size:15px;color:#9FB0CC}
+.txt{height:54px;width:360px;border-radius:16px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:20px;padding:0 16px;box-sizing:border-box}
+.line{display:flex;align-items:center;gap:14px;font-size:18px}
+.line .v{color:#9FD0FF}
 </style>
 </head>
 <body>
@@ -35,38 +42,10 @@
     <div class="top">
       <a class="icon-btn" href="index.html" aria-label="العودة للرئيسية"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
       <h1 class="title">الإعدادات</h1>
+      <div class="tabs" id="tabs"></div>
     </div>
-    <div class="body">
-      <div class="glass section">
-        <span class="label">اسم السيارة أعلى الشاشة</span>
-        <div class="opts" id="brands"></div>
-        <div class="opts" id="brandExtra"></div>
-        <span class="note" id="subNote">ماركات تظهر بجانب الاسم:</span>
-        <div class="opts" id="subBrands"></div>
-        <span class="note">الحجم:</span>
-        <div class="opts" id="sizes"></div>
-        <input type="file" id="logoFile" accept="image/*" style="display:none">
-      </div>
-      <div class="glass section">
-        <span class="label">الخلفية</span>
-        <div class="themes" id="themes"></div>
-      </div>
-      <div class="glass section">
-        <span class="label">المدينة (لمواقيت الصلاة)</span>
-        <div class="opts" id="cities"></div>
-      </div>
-      <div class="glass section">
-        <span class="label">الخط</span>
-        <div class="opts" id="fonts"></div>
-      </div>
-      <div class="glass section">
-        <div class="toggle">
-          <span>بطاقات مصمتة (بدون ضبابية)</span>
-          <button class="sw" id="solid" role="switch" aria-label="بطاقات مصمتة"></button>
-        </div>
-        <span class="note">مفيد للأجهزة القديمة (Android 9) أو لتحسين الوضوح.</span>
-      </div>
-    </div>
+    <div class="body" id="body"></div>
+    <input type="file" id="logoFile" accept="image/*" style="display:none">
   </div>
 </div>
 
@@ -74,88 +53,213 @@
 <script>
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
+var TABS = [['look', 'المظهر'], ['prayer', 'الصلاة والتنبيهات'], ['apps', 'التطبيقات والسيارة']];
+var tab = 'look';
+try { tab = sessionStorage.getItem('settings.tab') || 'look'; } catch (e) {}
 
-function renderAll(){
-  var th = document.getElementById('themes');
-  th.innerHTML = '';
-  Object.keys(THEMES).forEach(function (k) {
-    var t = THEMES[k];
-    var b = document.createElement('button');
-    b.className = 'tile' + (prefs.theme === k ? ' on' : '');
-    b.style.backgroundImage = "url('" + t.bg + "')";
-    b.textContent = t.label;
-    b.onclick = function () { prefs.theme = k; savePrefs(prefs); renderAll(); applyPrefs('home', prefs); };
-    th.appendChild(b);
-  });
-  var fo = document.getElementById('fonts');
-  fo.innerHTML = '';
-  [['thmanyah', 'ثمنية سانس'], ['system', 'خط الجهاز']].forEach(function (f) {
-    var b = document.createElement('button');
-    b.className = 'opt' + (prefs.font === f[0] ? ' on' : '');
-    b.textContent = f[1];
-    b.onclick = function () { prefs.font = f[0]; savePrefs(prefs); renderAll(); applyPrefs('home', prefs); };
-    fo.appendChild(b);
-  });
-  var co = document.getElementById('cities');
-  co.innerHTML = '';
-  Object.keys(CITIES).forEach(function (k) {
-    var b = document.createElement('button');
-    b.className = 'opt' + (prefs.city === k ? ' on' : '');
-    b.textContent = CITIES[k].label;
-    b.onclick = function () { prefs.city = k; savePrefs(prefs); renderAll(); applyPrefs('home', prefs); };
-    co.appendChild(b);
-  });
-  renderBrandSettings();
-  var sw = document.getElementById('solid');
-  sw.className = 'sw' + (prefs.solid ? ' on' : '');
-  sw.setAttribute('aria-checked', prefs.solid ? 'true' : 'false');
+function upd(){ savePrefs(prefs); applyPrefs('home', prefs); render(); }
+function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function section(title, note){
+  var s = el('div', 'glass section');
+  if (title) s.appendChild(el('span', 'label', title));
+  if (note) s.appendChild(el('span', 'note', note));
+  document.getElementById('body').appendChild(s);
+  return s;
 }
-document.getElementById('solid').onclick = function () { prefs.solid = !prefs.solid; savePrefs(prefs); renderAll(); applyPrefs('home', prefs); };
-function upd(){ savePrefs(prefs); renderAll(); applyPrefs('home', prefs); }
-function btn(cls, label, on, fn){ var b = document.createElement('button'); b.className = cls + (on ? ' on' : ''); b.textContent = label; b.onclick = fn; return b; }
-function renderBrandSettings(){
-  var br = document.getElementById('brands'); br.innerHTML = '';
-  Object.keys(BRANDS).forEach(function (k) { br.appendChild(btn('opt', BRANDS[k].label, prefs.brand === k, function () { prefs.brand = k; upd(); })); });
-  br.appendChild(btn('opt', 'اسم مخصص', prefs.brand === 'text', function () { prefs.brand = 'text'; upd(); }));
-  br.appendChild(btn('opt', 'صورة من الجهاز', prefs.brand === 'image', function () { document.getElementById('logoFile').click(); }));
-  br.appendChild(btn('opt', 'بدون', prefs.brand === 'none', function () { prefs.brand = 'none'; upd(); }));
+function opts(parent, list, cur, onPick, small){
+  var o = el('div', 'opts');
+  list.forEach(function (x) {
+    var b = el('button', 'opt' + (small ? ' sm' : '') + (String(cur) === String(x[0]) ? ' on' : ''), x[1]);
+    b.onclick = function () { onPick(x[0]); };
+    o.appendChild(b);
+  });
+  parent.appendChild(o);
+  return o;
+}
+function toggle(parent, label, key, note){
+  var t = el('div', 'toggle');
+  t.appendChild(el('span', '', label));
+  var sw = el('button', 'sw' + (prefs[key] ? ' on' : ''));
+  sw.setAttribute('role', 'switch'); sw.setAttribute('aria-label', label); sw.setAttribute('aria-checked', prefs[key] ? 'true' : 'false');
+  sw.onclick = function () { prefs[key] = !prefs[key]; upd(); };
+  t.appendChild(sw);
+  parent.appendChild(t);
+  if (note) parent.appendChild(el('span', 'note', note));
+}
+function bgTiles(parent, slot, cur, onPick, withAuto){
+  var g = el('div', 'themes');
+  if (withAuto) {
+    var a = el('button', 'tile add' + (cur === 'auto' ? ' on' : ''), 'تلقائي (حسب خلفية الرئيسية)');
+    a.onclick = function () { onPick('auto'); }; g.appendChild(a);
+  }
+  Object.keys(THEMES).forEach(function (k) {
+    var b = el('button', 'tile' + (cur === k ? ' on' : ''), THEMES[k].label);
+    b.style.backgroundImage = "url('" + (slot === 'rest' ? THEMES[k].rest : THEMES[k].bg) + "')";
+    b.onclick = function () { onPick(k); };
+    g.appendChild(b);
+  });
+  userImages().filter(function (im) { return im.slot === slot; }).forEach(function (im) {
+    var key = 'user:' + im.name;
+    var b = el('button', 'tile' + (cur === key ? ' on' : ''), 'صورتي');
+    b.style.backgroundImage = "url('" + im.url + "')";
+    b.onclick = function () { onPick(key); };
+    var x = el('span', 'x', '×'); x.setAttribute('aria-label', 'حذف الصورة');
+    x.onclick = function (e) {
+      e.stopPropagation();
+      nat('deleteImage', im.name); _imgs = null;
+      if (prefs.theme === key) prefs.theme = 'mountain';
+      if (prefs.restBg === key) prefs.restBg = 'auto';
+      if (prefs.nightTheme === key) prefs.nightTheme = 'night';
+      upd();
+    };
+    b.appendChild(x);
+    g.appendChild(b);
+  });
+  var add = el('a', 'tile add', '+ من الجوال (باركود)'); add.href = 'upload.html';
+  g.appendChild(add);
+  parent.appendChild(g);
+}
+function appLabel(pkg){
+  if (!pkg) return 'لم يُختر';
+  var a = (natJSON('apps') || []).filter(function (x) { return x.pkg === pkg; })[0];
+  return a ? a.label : pkg;
+}
 
-  var ex = document.getElementById('brandExtra'); ex.innerHTML = '';
+/* ===== تبويب المظهر ===== */
+function renderLook(){
+  var s = section('اسم السيارة أعلى الشاشة');
+  var brands = Object.keys(BRANDS).map(function (k) { return [k, BRANDS[k].label]; }).concat([['text', 'اسم مخصص'], ['image', 'صورة'], ['none', 'بدون']]);
+  opts(s, brands, prefs.brand, function (k) {
+    if (k === 'image' && !loadLogo()) { document.getElementById('logoFile').click(); return; }
+    prefs.brand = k; upd();
+  });
   if (prefs.brand === 'text') {
-    var inp = document.createElement('input'); inp.className = 'txt'; inp.maxLength = 24; inp.placeholder = 'اكتب الاسم'; inp.value = prefs.brandText || '';
+    var inp = el('input', 'txt'); inp.maxLength = 24; inp.placeholder = 'اكتب الاسم'; inp.value = prefs.brandText || '';
     inp.oninput = function () { prefs.brandText = inp.value; savePrefs(prefs); applyPrefs('home', prefs); };
-    ex.appendChild(inp);
+    s.appendChild(inp);
   }
-  if (prefs.brand === 'image' && loadLogo()) {
-    ex.appendChild(btn('opt sm', 'تغيير الصورة', false, function () { document.getElementById('logoFile').click(); }));
-    ex.appendChild(btn('opt sm', 'حذف الصورة', false, function () { saveLogo(''); prefs.brand = 'toyota'; upd(); }));
+  if (prefs.brand === 'image') {
+    var r = el('div', 'opts');
+    var b1 = el('button', 'opt sm', 'من ذاكرة الشاشة'); b1.onclick = function () { document.getElementById('logoFile').click(); };
+    var b2 = el('a', 'opt sm', 'من الجوال (باركود)'); b2.href = 'upload.html'; b2.style.display = 'flex'; b2.style.alignItems = 'center';
+    r.appendChild(b1); r.appendChild(b2); s.appendChild(r);
+  }
+  if (prefs.brand !== 'none' && prefs.brand !== 'image') {
+    s.appendChild(el('span', 'note', 'ماركات تظهر بجانب الاسم:'));
+    var sb = el('div', 'opts');
+    Object.keys(BRANDS).filter(function (k) { return k !== prefs.brand; }).forEach(function (k) {
+      var on = (prefs.subBrands || []).indexOf(k) >= 0;
+      var b = el('button', 'opt sm' + (on ? ' on' : ''), BRANDS[k].label);
+      b.onclick = function () {
+        var a = (prefs.subBrands || []).slice(), i = a.indexOf(k);
+        if (i >= 0) a.splice(i, 1); else a.push(k);
+        prefs.subBrands = a; upd();
+      };
+      sb.appendChild(b);
+    });
+    s.appendChild(sb);
+  }
+  s.appendChild(el('span', 'note', 'الحجم:'));
+  opts(s, [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']], prefs.brandSize || 'm', function (k) { prefs.brandSize = k; upd(); }, true);
+
+  s = section('خلفية الرئيسية');
+  bgTiles(s, 'home', prefs.theme, function (k) { prefs.theme = k; upd(); });
+
+  s = section('خلفية الاستراحة', 'يفضَّل صورة هادئة وداكنة ليُقرأ الدعاء بوضوح.');
+  bgTiles(s, 'rest', prefs.restBg || 'auto', function (k) { prefs.restBg = k; upd(); }, true);
+
+  s = section('');
+  toggle(s, 'الوضع الليلي التلقائي (من المغرب إلى الشروق)', 'autoNight');
+  if (prefs.autoNight) {
+    s.appendChild(el('span', 'note', 'خلفية الليل:'));
+    var nightOpts = Object.keys(THEMES).map(function (k) { return [k, THEMES[k].label]; })
+      .concat(userImages().filter(function (im) { return im.slot === 'home'; }).map(function (im, i) { return ['user:' + im.name, 'صورتي ' + (i + 1)]; }));
+    opts(s, nightOpts, prefs.nightTheme, function (k) { prefs.nightTheme = k; upd(); }, true);
   }
 
-  var showSub = prefs.brand !== 'none' && prefs.brand !== 'image';
-  document.getElementById('subNote').style.display = showSub ? '' : 'none';
-  var sb = document.getElementById('subBrands'); sb.innerHTML = ''; sb.style.display = showSub ? '' : 'none';
-  Object.keys(BRANDS).filter(function (k) { return k !== prefs.brand; }).forEach(function (k) {
-    var on = (prefs.subBrands || []).indexOf(k) >= 0;
-    sb.appendChild(btn('opt sm', BRANDS[k].label, on, function () {
-      var a = (prefs.subBrands || []).slice(); var i = a.indexOf(k);
-      if (i >= 0) a.splice(i, 1); else a.push(k);
-      prefs.subBrands = a; upd();
-    }));
+  s = section('البطاقة الوسطى في الرئيسية');
+  opts(s, [['media', 'الموسيقى'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس (ثابت)']], prefs.midCard, function (k) { prefs.midCard = k; upd(); });
+
+  s = section('الخط');
+  opts(s, [['thmanyah', 'ثمانية سانس'], ['system', 'خط الجهاز']], prefs.font, function (k) { prefs.font = k; upd(); });
+
+  s = section('');
+  toggle(s, 'بطاقات مصمتة (بدون ضبابية)', 'solid', 'مفيد للأجهزة القديمة (Android 9) أو لتحسين الوضوح.');
+}
+
+/* ===== تبويب الصلاة والتنبيهات ===== */
+function renderPrayer(){
+  var s = section('المدينة (لمواقيت الصلاة)', 'طريقة أم القرى. «موقعي الحالي» يستخدم GPS ويتغير معك في السفر.');
+  opts(s, [['gps', 'موقعي الحالي']].concat(Object.keys(CITIES).map(function (k) { return [k, CITIES[k].label]; })), prefs.city, function (k) { prefs.city = k; upd(); pushPrayerSchedule(); }, true);
+
+  s = section('تنبيه الصلاة');
+  toggle(s, 'تنبيه عند دخول وقت الصلاة', 'adhan');
+  if (prefs.adhan) {
+    s.appendChild(el('span', 'note', 'تنبيه مسبق قبل الصلاة:'));
+    opts(s, [[0, 'بدون'], [5, '5 دقائق'], [10, '10 دقائق'], [15, '15 دقيقة'], [20, '20 دقيقة']], prefs.preMin, function (k) { prefs.preMin = k; upd(); }, true);
+  }
+  s = section('الصوت');
+  toggle(s, 'صوت التنبيه', 'sound');
+  toggle(s, 'خفض صوت الموسيقى مؤقتاً عند التنبيه', 'duck', 'يعمل حتى والخرائط أو الموسيقى مفتوحة.');
+
+  s = section('تنبيه الاستراحة');
+  toggle(s, 'تنبيه بعد قيادة متواصلة', 'rest', 'يُصفَّر العداد إذا توقفت 15 دقيقة أو أكثر.');
+  if (prefs.rest) opts(s, [[90, 'ساعة ونصف'], [120, 'ساعتان'], [150, 'ساعتان ونصف'], [180, '3 ساعات']], prefs.restMin, function (k) { prefs.restMin = k; upd(); }, true);
+
+  s = section('دعاء السفر');
+  toggle(s, 'تذكير بدعاء السفر في الرحلات الطويلة', 'travel');
+  if (prefs.travel) opts(s, [[50, 'بعد 50 كم'], [80, 'بعد 80 كم'], [100, 'بعد 100 كم']], prefs.travelKm, function (k) { prefs.travelKm = k; upd(); }, true);
+}
+
+/* ===== تبويب التطبيقات والسيارة ===== */
+function renderApps(){
+  var s = section('التطبيقات');
+  [['maps', 'تطبيق الخرائط', 'mapsApp'], ['music', 'تطبيق الموسيقى', 'musicApp']].forEach(function (x) {
+    var l = el('div', 'line');
+    l.appendChild(el('span', '', x[1] + ':'));
+    l.appendChild(el('span', 'v', appLabel(prefs[x[2]])));
+    var b = el('a', 'opt sm', 'تغيير'); b.href = 'apps.html?pick=' + x[0]; b.style.display = 'flex'; b.style.alignItems = 'center'; b.style.marginRight = 'auto';
+    l.appendChild(b);
+    s.appendChild(l);
   });
 
-  var sz = document.getElementById('sizes'); sz.innerHTML = '';
-  [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']].forEach(function (z) {
-    sz.appendChild(btn('opt sm', z[1], (prefs.brandSize || 'm') === z[0], function () { prefs.brandSize = z[0]; upd(); }));
+  s = section('التحكم بالموسيقى من الرئيسية', 'أندرويد يتطلب تفعيل «الوصول إلى الإشعارات» لرفيق الطريق حتى نعرض اسم المقطع ونتحكم بالتشغيل. لا نقرأ محتوى إشعاراتك.');
+  var m = natJSON('media');
+  var l = el('div', 'line');
+  l.appendChild(el('span', '', 'الحالة:'));
+  l.appendChild(el('span', 'v', !HAS_NATIVE ? 'داخل التطبيق فقط' : (m && m.access ? 'مُفعَّل ✓' : 'غير مُفعَّل')));
+  var b = el('button', 'opt sm', 'فتح الإعداد'); b.style.marginRight = 'auto'; b.onclick = function () { nat('openNotificationAccess'); };
+  l.appendChild(b); s.appendChild(l);
+
+  s = section('السيارة');
+  var r = el('div', 'opts');
+  [['maintenance.html', 'الصيانة والتجديدات'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['upload.html', 'رفع صورة من الجوال']].forEach(function (x) {
+    var a = el('a', 'opt', x[1]); a.href = x[0]; a.style.display = 'flex'; a.style.alignItems = 'center'; r.appendChild(a);
   });
+  s.appendChild(r);
+}
+
+function render(){
+  var t = document.getElementById('tabs'); t.innerHTML = '';
+  TABS.forEach(function (x) {
+    var b = el('button', 'tab' + (tab === x[0] ? ' on' : ''), x[1]);
+    b.onclick = function () { tab = x[0]; try { sessionStorage.setItem('settings.tab', tab); } catch (e) {} document.getElementById('body').scrollTop = 0; render(); };
+    t.appendChild(b);
+  });
+  var body = document.getElementById('body'), y = body.scrollTop;
+  body.innerHTML = '';
+  if (tab === 'prayer') renderPrayer(); else if (tab === 'apps') renderApps(); else renderLook();
+  body.scrollTop = y;
 }
 document.getElementById('logoFile').onchange = function (e) {
   var f = e.target.files && e.target.files[0]; if (!f) return;
   resizeImage(f, function (d) {
-    if (d && saveLogo(d)) { prefs.brand = 'image'; upd(); }
+    if (d && saveLogo(d)) { prefs = loadPrefs(); prefs.brand = 'image'; upd(); }
     e.target.value = '';
   });
 };
-renderAll();
+window.onPageResume = function () { _imgs = null; render(); };
+render();
 fitStage();
 </script>
 </body>

@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1280, initial-scale=1">
-<title>قالب الرحلة</title>
+<title>الرحلة</title>
 <link rel="stylesheet" href="common.css">
 <style>
 .page{height:100%;box-sizing:border-box;padding:22px 28px;display:flex;flex-direction:column;gap:16px;background:#0a0f1f}
 .top{display:flex;justify-content:space-between;align-items:center;height:52px}
 .grid{flex:1;min-height:0;display:grid;grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:14px}
-.tile{border-radius:22px;background:#111a33;border:1px solid #222c4d;padding:18px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}
+.tile{border-radius:22px;background:#111a33;border:1px solid #222c4d;padding:18px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;color:inherit}
 .lbl{font-size:18px;color:#8FD3C4}
 .big{font-size:92px;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums}
-.st{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.st div{height:84px;border-radius:16px;border:1px solid #222c4d;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 14px;box-sizing:border-box}
+.btn{height:56px;border-radius:16px;background:#1b2748;border:1px solid #2b3658;font-size:18px;display:flex;align-items:center;justify-content:center;flex:1}
+.pill{font-size:14px;padding:5px 12px;border-radius:14px;border:1px solid #2b3658}
 </style>
 </head>
 <body>
@@ -22,9 +22,9 @@
     <div class="top">
       <div style="display:flex;align-items:center;gap:12px">
         <a class="icon-btn" href="index.html" aria-label="العودة للرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
-        <span style="font-size:26px;font-weight:700">قالب الرحلة</span>
+        <span style="font-size:26px;font-weight:700">الرحلة</span>
       </div>
-      <span id="mode" class="sub" style="font-size:14px;padding:5px 12px;border-radius:14px;border:1px solid #2b3658">جارٍ البحث عن GPS…</span>
+      <span id="mode" class="sub pill">جارٍ البحث عن GPS…</span>
     </div>
 
     <div class="grid">
@@ -32,13 +32,17 @@
         <span class="lbl">عداد الرحلة</span>
         <div>
           <span class="big" id="km">0.0</span><span style="font-size:30px;color:#B9C3DC"> كم</span>
-          <div class="sub" style="font-size:18px;margin-top:6px">المسافة منذ البداية</div>
+          <div class="sub" style="font-size:18px;margin-top:6px">تبدأ رحلة جديدة تلقائياً بعد توقف 10 دقائق</div>
         </div>
         <div style="display:flex;justify-content:space-between;direction:ltr;font-variant-numeric:tabular-nums">
-          <div style="display:flex;flex-direction:column"><span id="dur" style="font-size:30px;font-weight:700">00:00</span><span style="font-size:14px;color:#8F9AB8;direction:rtl">المدة</span></div>
+          <div style="display:flex;flex-direction:column"><span id="dur" style="font-size:30px;font-weight:700">00:00</span><span style="font-size:14px;color:#8F9AB8;direction:rtl">مدة القيادة</span></div>
           <div style="display:flex;flex-direction:column"><span id="avg" style="font-size:30px;font-weight:700">—</span><span style="font-size:14px;color:#8F9AB8;direction:rtl">متوسط كم/س</span></div>
+          <div style="display:flex;flex-direction:column"><span id="max" style="font-size:30px;font-weight:700">—</span><span style="font-size:14px;color:#8F9AB8;direction:rtl">أعلى سرعة</span></div>
         </div>
-        <button id="reset" style="height:56px;border-radius:16px;background:#1b2748;border:1px solid #2b3658;font-size:18px">تصفير العداد</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn" id="reset">إنهاء الرحلة</button>
+          <a class="btn" href="log.html">سجل الرحلات</a>
+        </div>
       </div>
 
       <div class="tile">
@@ -50,7 +54,7 @@
           </svg>
           <div style="display:flex;flex-direction:column"><span id="drive" style="font-size:40px;font-weight:700;direction:ltr">00:00</span><span class="sub" style="font-size:14px">قيادة متواصلة</span></div>
         </div>
-        <span class="sub" style="font-size:14px">تُنبَّه كل ساعتين</span>
+        <span class="sub" style="font-size:14px" id="restNote"></span>
       </div>
 
       <div class="tile">
@@ -59,14 +63,19 @@
         <div style="height:8px;border-radius:4px;background:#252e4d;overflow:hidden"><div id="speedBar" style="width:0;height:100%;background:#E8C061"></div></div>
       </div>
 
-      <div class="tile" style="grid-column:span 2;gap:12px">
-        <span class="lbl">حالة البطاقات</span>
-        <div class="st">
-          <div style="background:#15302e"><span style="font-size:17px;font-weight:700">الصلاة</span><span style="font-size:14px;color:#8FD3C4">جاهزة الآن</span></div>
-          <div style="background:#2a2414"><span style="font-size:17px;font-weight:700">الطقس</span><span style="font-size:14px;color:#F2C879">تحتاج إنترنت</span></div>
-          <div id="gpsCard" style="background:#2a2414"><span style="font-size:17px;font-weight:700">الموقع</span><span id="gpsState" style="font-size:14px;color:#F2C879">تحتاج الموقع</span></div>
-          <div style="background:#1b2748"><span style="font-size:17px;font-weight:700">حالة السيارة</span><span style="font-size:14px;color:#B9C3DC">تحتاج OBD</span></div>
+      <a class="tile" href="maintenance.html">
+        <span class="lbl">عداد السيارة والصيانة</span>
+        <div style="direction:ltr;text-align:right"><span id="odo" style="font-size:52px;font-weight:700">—</span><span class="sub" style="font-size:20px"> كم</span></div>
+        <span class="sub" id="maintNote" style="font-size:16px"></span>
+      </a>
+
+      <div class="tile">
+        <span class="lbl">القبلة</span>
+        <div style="display:flex;align-items:center;gap:16px">
+          <svg width="90" height="90" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="#2b3658" stroke-width="3"/><g id="qArrow"><path d="M50 12 60 52 50 46 40 52Z" fill="#E8C061"/></g></svg>
+          <div style="display:flex;flex-direction:column"><span id="qDeg" style="font-size:40px;font-weight:700;direction:ltr">—</span><span class="sub" id="qNote" style="font-size:14px"></span></div>
         </div>
+        <span class="sub" style="font-size:14px" id="qDist"></span>
       </div>
     </div>
   </div>
@@ -77,77 +86,45 @@
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
 document.body.style.background = '#0a0f1f';
-
-var STATE_KEY = 'carlauncher.trip';
-var trip = { km: 0, sec: 0 };
-try { var raw = localStorage.getItem(STATE_KEY); if (raw) trip = JSON.parse(raw); } catch (e) {}
-
-var gps = { active: false, lastLat: null, lastLon: null, speedKmh: 0, lastFixAt: 0 };
-
 function pad(x){ return (x < 10 ? '0' : '') + x; }
-function fmtDur(s){ return pad(Math.floor(s/3600)) + ':' + pad(Math.floor((s%3600)/60)); }
-function save(){ try { localStorage.setItem(STATE_KEY, JSON.stringify(trip)); } catch (e) {} }
-
-/* المسافة بين نقطتين بالكيلومتر (هافرساين) */
-function distKm(a, b, c, d){
-  var R = 6371, r = Math.PI / 180;
-  var dLat = (c - a) * r, dLon = (d - b) * r;
-  var h = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(a*r) * Math.cos(c*r) * Math.sin(dLon/2) * Math.sin(dLon/2);
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-function onFix(pos){
-  var c = pos.coords;
-  gps.active = true; gps.lastFixAt = Date.now();
-  // السرعة من GPS بالمتر/ثانية، تتحول إلى كم/س
-  gps.speedKmh = (c.speed && c.speed > 0) ? c.speed * 3.6 : 0;
-  // نُضيف المسافة فقط عند دقة جيدة وحركة فعلية، لتجنب الانجراف
-  if (c.accuracy <= 30 && gps.lastLat !== null) {
-    var d = distKm(gps.lastLat, gps.lastLon, c.latitude, c.longitude);
-    if (d >= 0.005) { trip.km += d; gps.lastLat = c.latitude; gps.lastLon = c.longitude; }
-  } else if (gps.lastLat === null && c.accuracy <= 30) {
-    gps.lastLat = c.latitude; gps.lastLon = c.longitude;
-  }
-  document.getElementById('gpsState').textContent = 'GPS متصل';
-  document.getElementById('gpsCard').style.background = '#15302e';
-  document.getElementById('mode').textContent = 'GPS حقيقي';
-}
-function onFixError(){
-  if (gps.active) return;
-  document.getElementById('mode').textContent = 'بيانات تجريبية (لا يوجد GPS)';
-  document.getElementById('gpsState').textContent = 'تحتاج الموقع';
-  document.getElementById('gpsCard').style.background = '#2a2414';
-}
-
-if (navigator.geolocation) {
-  navigator.geolocation.watchPosition(onFix, onFixError, { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
-} else {
-  onFixError();
-}
+function fmtDur(s){ s = Math.max(0, Math.floor(s)); return pad(Math.floor(s/3600)) + ':' + pad(Math.floor((s%3600)/60)); }
+var REST = (+prefs.restMin || 120) * 60;
+document.getElementById('restNote').textContent = prefs.rest ? ('تنبيه بعد ' + ({5400: 'ساعة ونصف', 7200: 'ساعتين', 9000: 'ساعتين ونصف', 10800: '3 ساعات'}[REST] || (REST/60) + ' دقيقة') + '، ويُصفَّر بعد توقف 15 دقيقة') : 'التنبيه مُطفأ من الإعدادات';
 
 function render(){
-  var speed = gps.active ? Math.round(gps.speedKmh) : 86;
-  document.getElementById('km').textContent = trip.km.toFixed(1);
-  document.getElementById('dur').textContent = fmtDur(trip.sec);
-  document.getElementById('avg').textContent = trip.sec > 0 ? String(Math.round(trip.km / (trip.sec / 3600))) : '—';
-  document.getElementById('drive').textContent = fmtDur(trip.sec % 7200);
-  document.getElementById('restArc').setAttribute('stroke-dasharray', Math.round(276 * (trip.sec % 7200) / 7200) + ' 276');
-  document.getElementById('speed').textContent = speed;
-  document.getElementById('speedBar').style.width = Math.min(100, Math.round(speed / 180 * 100)) + '%';
+  var t = natJSON('trip');
+  var mode = document.getElementById('mode');
+  if (!HAS_NATIVE) { mode.textContent = 'يعمل داخل التطبيق على الشاشة'; t = { gps: false, km: 0, movingSec: 0, maxSpeed: 0, driveSec: 0, speed: 0, heading: -1, odo: 0 }; }
+  else if (!nat('hasLocation')) mode.textContent = 'إذن الموقع غير ممنوح';
+  else mode.textContent = t && t.gps ? 'GPS متصل' : 'بانتظار إشارة GPS';
+  mode.style.color = t && t.gps ? '#8FD3C4' : '#F2C879';
+
+  document.getElementById('km').textContent = t.km.toFixed(1);
+  document.getElementById('dur').textContent = fmtDur(t.movingSec);
+  document.getElementById('avg').textContent = t.movingSec > 60 ? String(Math.round(t.km / (t.movingSec / 3600))) : '—';
+  document.getElementById('max').textContent = t.maxSpeed > 0 ? String(Math.round(t.maxSpeed)) : '—';
+  document.getElementById('drive').textContent = fmtDur(t.driveSec);
+  document.getElementById('restArc').setAttribute('stroke-dasharray', Math.round(276 * Math.min(1, t.driveSec / REST)) + ' 276');
+  var sp = Math.round(t.speed);
+  document.getElementById('speed').textContent = sp;
+  document.getElementById('speedBar').style.width = Math.min(100, Math.round(sp / 180 * 100)) + '%';
+
+  var odo = carOdometer();
+  document.getElementById('odo').textContent = odo === null ? '—' : odo.toLocaleString('en');
+  var due = loadMaint().filter(function (it) { return maintStatus(it).due; }).map(function (it) { return it.name; });
+  document.getElementById('maintNote').textContent = odo === null ? 'اضغط لإدخال قراءة عداد السيارة' : (due.length ? 'مستحق: ' + due.join('، ') : 'لا توجد صيانة مستحقة');
+
+  var lat = typeof t.lat === 'number' ? t.lat : LAT, lng = typeof t.lng === 'number' ? t.lng : LNG;
+  var b = qiblaBearing(lat, lng);
+  var rel = (t.heading >= 0 && t.speed > 5) ? norm360(b - t.heading) : null;
+  document.getElementById('qArrow').setAttribute('transform', 'rotate(' + Math.round(rel !== null ? rel : b) + ' 50 50)');
+  document.getElementById('qDeg').textContent = Math.round(b) + '°';
+  document.getElementById('qNote').textContent = rel !== null ? 'السهم بالنسبة لاتجاه السير' : 'من الشمال (السهم يتبع اتجاهك أثناء السير)';
+  document.getElementById('qDist').textContent = 'المسافة إلى مكة ' + Math.round(distKm(lat, lng, KAABA.lat, KAABA.lng)).toLocaleString('en') + ' كم';
 }
-setInterval(function () {
-  // المدة تزيد عند الحركة فقط مع GPS، وفي المحاكاة دائماً
-  var moving = gps.active ? gps.speedKmh > 3 : true;
-  if (moving) {
-    trip.sec += 1;
-    if (!gps.active) trip.km += 86 / 3600;
-  }
-  // GPS غائب منذ 20 ثانية: نعتبره غير متصل
-  if (gps.active && Date.now() - gps.lastFixAt > 20000) { gps.active = false; onFixError(); }
-  save(); render();
-}, 1000);
-document.getElementById('reset').onclick = function () { trip = { km: 0, sec: 0 }; gps.lastLat = null; save(); render(); };
+document.getElementById('reset').onclick = function () { nat('tripReset'); render(); };
 render();
+setInterval(render, 1000);
 fitStage();
 </script>
 </body>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>التطبيقات</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.top{display:flex;align-items:center;gap:16px;height:60px;padding:26px 40px 0}
+.title{font-size:28px;font-weight:600;margin:0}
+.search{margin-right:auto;height:56px;width:380px;border-radius:18px;border:1px solid #2b4a80;background:rgba(10,25,55,.8);color:#fff;font:inherit;font-size:20px;padding:0 18px;box-sizing:border-box}
+.hint{padding:10px 40px 0;font-size:19px;color:#FFE6A8}
+.grid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:150px;gap:14px;padding:18px 40px 30px;box-sizing:border-box;align-content:start}
+.a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:17px;border:none;color:#fff;padding:8px}
+.a img{width:64px;height:64px}
+.a span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{grid-column:1/-1;text-align:center;font-size:22px;color:#C3D1E8;padding-top:80px;line-height:1.7}
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="bg" src="bg/home_mountain.jpg" alt="">
+  <div class="shade" style="background:rgba(0,0,0,.45)"></div>
+  <div class="wrap">
+    <div class="top">
+      <a class="icon-btn" href="index.html" aria-label="العودة للرئيسية"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <h1 class="title" id="title">التطبيقات</h1>
+      <input class="search" id="q" placeholder="ابحث عن تطبيق" aria-label="بحث">
+    </div>
+    <div class="hint" id="hint" style="display:none"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs();
+applyPrefs('home', prefs);
+var pick = (location.search.match(/pick=(maps|music)/) || [])[1] || '';
+if (pick) {
+  document.getElementById('title').textContent = pick === 'maps' ? 'اختر تطبيق الخرائط' : 'اختر تطبيق الموسيقى';
+  var h = document.getElementById('hint'); h.style.display = 'block';
+  h.textContent = 'اختر التطبيق الذي يفتح عند الضغط على زر ' + (pick === 'maps' ? 'الخرائط' : 'الموسيقى') + '. يمكنك تغييره لاحقاً من الإعدادات.';
+}
+var apps = natJSON('apps') || [];
+function render(){
+  var q = document.getElementById('q').value.trim().toLowerCase();
+  var g = document.getElementById('grid'); g.innerHTML = '';
+  var list = apps.filter(function (a) { return !q || a.label.toLowerCase().indexOf(q) >= 0 || a.pkg.indexOf(q) >= 0; });
+  if (!HAS_NATIVE) { g.innerHTML = '<div class="empty">قائمة التطبيقات تظهر داخل التطبيق على الشاشة.</div>'; return; }
+  if (!list.length) { g.innerHTML = '<div class="empty">لا توجد نتائج</div>'; return; }
+  list.forEach(function (a) {
+    var b = document.createElement('button'); b.className = 'glass a';
+    var im = document.createElement('img'); im.alt = ''; im.loading = 'lazy';
+    var s = document.createElement('span'); s.textContent = a.label;
+    b.appendChild(im); b.appendChild(s);
+    b.onclick = function () {
+      if (pick) {
+        if (pick === 'maps') prefs.mapsApp = a.pkg; else prefs.musicApp = a.pkg;
+        savePrefs(prefs);
+      }
+      nat('launch', a.pkg);
+      if (pick) setTimeout(function () { location.href = 'index.html'; }, 300);
+    };
+    g.appendChild(b);
+    // الأيقونات تُحمَّل بعد عرض القائمة حتى لا تتأخر الصفحة
+    setTimeout(function () { im.src = nat('appIcon', a.pkg) || ''; }, 0);
+  });
+}
+document.getElementById('q').oninput = render;
+render();
+fitStage();
+</script>
+</body>
+</html>

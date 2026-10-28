@@ -10,7 +10,10 @@
 .top{display:flex;justify-content:space-between;align-items:center;height:52px;padding:26px 40px 0}
 .clock{font-size:170px;font-weight:700;line-height:1;margin-top:18px;direction:ltr;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:2px}
 .dates{display:flex;gap:22px;justify-content:center;font-size:24px;color:#E4E8F2;margin-top:10px}
-.dua{margin-top:30px;min-height:120px;max-width:900px;margin-left:auto;margin-right:auto;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Amiri','Noto Naskh Arabic',serif;font-size:40px;line-height:1.6;padding:0 20px}
+.dua{margin-top:18px;min-height:110px;max-width:900px;margin-left:auto;margin-right:auto;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Amiri','Noto Naskh Arabic',serif;font-size:40px;line-height:1.6;padding:0 20px}
+.wird{margin:6px auto 0;max-width:980px;display:flex;align-items:center;gap:14px;padding:12px 24px;border-radius:22px;background:rgba(0,0,0,.35);border:1px solid rgba(242,200,121,.35);font-size:22px;line-height:1.5}
+.wird .wl{color:#F2C879;font-size:16px;white-space:nowrap}
+.wird .ws{color:#C9CFDD;font-size:15px;white-space:nowrap}
 .next{display:flex;align-items:center;justify-content:center;gap:26px;margin-top:auto}
 .foot{display:flex;gap:16px;justify-content:center;padding:22px 0 34px}
 .btn{height:64px;border-radius:32px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;gap:12px;font-size:22px;font-weight:500;padding:0 30px}
@@ -28,6 +31,7 @@
     <div class="clock" id="clock"></div>
     <div class="dates"><span id="hijri"></span><span aria-hidden="true" style="opacity:.5">|</span><span id="greg"></span></div>
     <div class="dua" id="dua"></div>
+    <div class="wird" id="wird"><span class="wl">ورد اليوم</span><span id="wirdText"></span><span class="ws" id="wirdSrc"></span></div>
     <div class="next">
       <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10M5 10V6M4 6h2M19 21V10M19 10V6M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M12 9v3M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>
       <div style="display:flex;flex-direction:column"><span style="font-size:18px;color:#F2C879">الصلاة القادمة</span><span id="nextName" style="font-size:38px;font-weight:600"></span></div>
@@ -63,7 +67,38 @@ function tick(){
   document.getElementById('nextName').textContent = np.name;
   document.getElementById('nextTime').textContent = np.time;
 }
-tick(); setDua();
+/* ورد اليوم: آية أو حديث يتغير يومياً */
+var WIRD = [
+  ['ألا بذكر الله تطمئن القلوب', 'الرعد: 28'],
+  ['فاذكروني أذكركم واشكروا لي ولا تكفرون', 'البقرة: 152'],
+  ['إن مع العسر يسرا', 'الشرح: 6'],
+  ['ومن يتوكل على الله فهو حسبه', 'الطلاق: 3'],
+  ['وقل رب زدني علما', 'طه: 114'],
+  ['لا يكلف الله نفسا إلا وسعها', 'البقرة: 286'],
+  ['واصبر فإن الله لا يضيع أجر المحسنين', 'هود: 115'],
+  ['وهو معكم أين ما كنتم', 'الحديد: 4'],
+  ['ادعوني أستجب لكم', 'غافر: 60'],
+  ['وإذا سألك عبادي عني فإني قريب أجيب دعوة الداع إذا دعان', 'البقرة: 186'],
+  ['ولا تيأسوا من روح الله', 'يوسف: 87'],
+  ['إنما الأعمال بالنيات', 'متفق عليه'],
+  ['الكلمة الطيبة صدقة', 'متفق عليه'],
+  ['من كان يؤمن بالله واليوم الآخر فليقل خيرا أو ليصمت', 'متفق عليه'],
+  ['كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن: سبحان الله وبحمده، سبحان الله العظيم', 'متفق عليه'],
+  ['أحب الأعمال إلى الله أدومها وإن قل', 'متفق عليه'],
+  ['لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه', 'متفق عليه'],
+  ['المسلم من سلم المسلمون من لسانه ويده', 'متفق عليه'],
+  ['يسروا ولا تعسروا، وبشروا ولا تنفروا', 'متفق عليه'],
+  ['الدين النصيحة', 'رواه مسلم'],
+  ['إن الله رفيق يحب الرفق في الأمر كله', 'متفق عليه']
+];
+function setWird(){
+  var d = new Date(), start = new Date(d.getFullYear(), 0, 0);
+  var day = Math.floor((d - start) / 86400000);
+  var w = WIRD[day % WIRD.length];
+  document.getElementById('wirdText').textContent = w[0];
+  document.getElementById('wirdSrc').textContent = '(' + w[1] + ')';
+}
+tick(); setDua(); setWird();
 setInterval(tick, 15000);
 setInterval(function(){ duaIndex = (duaIndex + 1) % DUAS.length; setDua(); }, 12000);
 fitStage();

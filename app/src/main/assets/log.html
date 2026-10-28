@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>سجل الرحلات</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.page{height:100%;box-sizing:border-box;padding:22px 28px;display:flex;flex-direction:column;gap:16px;background:#0a0f1f}
+.top{display:flex;align-items:center;gap:12px;height:52px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.box{border-radius:20px;background:#111a33;border:1px solid #222c4d;padding:16px 20px;display:flex;flex-direction:column;gap:6px}
+.box b{font-size:36px;direction:ltr;text-align:right}
+.list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.r{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;align-items:center;height:62px;border-radius:16px;background:#0f172d;border:1px solid #1d2747;padding:0 20px;font-size:19px}
+.r.h{background:none;border:none;height:34px;color:#8F9AB8;font-size:15px}
+.r span:not(:first-child){direction:ltr;text-align:right}
+.empty{text-align:center;color:#8F9AB8;font-size:22px;padding-top:60px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="top">
+      <a class="icon-btn" href="trip.html" aria-label="رجوع" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
+      <span style="font-size:26px;font-weight:700">سجل الرحلات</span>
+    </div>
+    <div class="sum">
+      <div class="box"><span class="sub">هذا الأسبوع</span><b id="w">0</b><span class="sub" id="wn"></span></div>
+      <div class="box"><span class="sub">هذا الشهر</span><b id="m">0</b><span class="sub" id="mn"></span></div>
+      <div class="box"><span class="sub">كل الرحلات المسجلة</span><b id="a">0</b><span class="sub" id="an"></span></div>
+    </div>
+    <div class="r h"><span>التاريخ</span><span>المسافة كم</span><span>المدة</span><span>المتوسط</span><span>الأعلى</span></div>
+    <div class="list" id="list"></div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+var log = natJSON('tripLog') || [];
+function pad(x){ return (x < 10 ? '0' : '') + x; }
+function dur(s){ return pad(Math.floor(s/3600)) + ':' + pad(Math.floor((s%3600)/60)); }
+function total(from){
+  var km = 0, n = 0;
+  log.forEach(function (t) { if (t.start >= from) { km += t.km; n++; } });
+  return { km: km, n: n };
+}
+var now = new Date();
+var weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // يبدأ الأحد
+var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+[['w', weekStart.getTime()], ['m', monthStart.getTime()], ['a', 0]].forEach(function (x) {
+  var t = total(x[1]);
+  document.getElementById(x[0]).textContent = Math.round(t.km).toLocaleString('en') + ' كم';
+  document.getElementById(x[0] + 'n').textContent = t.n + ' رحلة';
+});
+var L = document.getElementById('list');
+if (!log.length) L.innerHTML = '<div class="empty">لا توجد رحلات مسجلة بعد.<br>تُحفظ الرحلة تلقائياً بعد التوقف 10 دقائق.</div>';
+log.slice().reverse().forEach(function (t) {
+  var d = new Date(t.start);
+  var row = document.createElement('div'); row.className = 'r';
+  var cells = [
+    fmt({ weekday: 'short', day: 'numeric', month: 'short' }, 'ar-u-nu-latn', d) + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes()),
+    t.km.toFixed(1), dur(t.movingSec), t.movingSec > 60 ? Math.round(t.km / (t.movingSec / 3600)) : '—', t.maxSpeed || '—'
+  ];
+  cells.forEach(function (c) { var s = document.createElement('span'); s.textContent = c; row.appendChild(s); });
+  L.appendChild(row);
+});
+fitStage();
+</script>
+</body>
+</html>

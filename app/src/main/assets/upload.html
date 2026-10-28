@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>رفع من الجوال</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.page{height:100%;box-sizing:border-box;padding:24px 40px;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;align-items:center;gap:14px;height:56px}
+.body{flex:1;display:flex;gap:36px;align-items:center;min-height:0}
+.qr{width:380px;height:380px;border-radius:24px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.qr svg{width:340px;height:340px}
+.steps{display:flex;flex-direction:column;gap:16px;font-size:22px;line-height:1.5}
+.n{display:inline-flex;width:38px;height:38px;border-radius:19px;background:#2F7BFF;align-items:center;justify-content:center;font-weight:700;margin-left:12px;flex:none}
+.step{display:flex;align-items:flex-start}
+.addr{direction:ltr;font-size:20px;color:#9FD0FF;font-family:monospace}
+.ok{display:none;padding:16px 22px;border-radius:18px;background:#123a2c;border:1.5px solid #5AD1A0;font-size:22px}
+.err{padding:16px 22px;border-radius:18px;background:#3a1a12;border:1.5px solid #E89061;font-size:20px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="bg" src="bg/home_night.jpg" alt="">
+  <div class="shade" style="background:rgba(0,0,0,.55)"></div>
+  <div class="wrap"><div class="page">
+    <div class="top">
+      <a class="icon-btn" href="settings.html" aria-label="رجوع"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
+      <h1 style="font-size:28px;margin:0">رفع صورة من الجوال</h1>
+    </div>
+    <div class="body" id="body">
+      <div class="qr" id="qr" aria-label="باركود الرفع"></div>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span>تأكد أن الشاشة متصلة بنقطة اتصال جوالك (أو بنفس شبكة الواي فاي).</span></div>
+        <div class="step"><span class="n">2</span><span>امسح الباركود بكاميرا الجوال.</span></div>
+        <div class="step"><span class="n">3</span><span>اختر الصورة ومكانها: خلفية الرئيسية، أو الاستراحة، أو الشعار، ثم حرّكها وكبّرها داخل الإطار وأرسل.</span></div>
+        <div class="sub" style="font-size:17px">أو افتح في متصفح الجوال: <span class="addr" id="addr"></span></div>
+        <div class="ok" id="ok"></div>
+        <div class="sub" style="font-size:15px">النقل داخل السيارة فقط، بدون إنترنت. تتوقف الخدمة عند الخروج من هذه الصفحة أو بعد 15 دقيقة.</div>
+      </div>
+    </div>
+  </div></div>
+</div>
+<script src="lib/qrcode.js"></script>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.getElementById('bg').src = themeBg('night', 'home');
+
+function showError(msg){
+  document.getElementById('body').innerHTML = '<div class="err">' + msg + '</div>';
+}
+var info = natJSON('serverStart');
+if (!HAS_NATIVE) showError('هذه الميزة تعمل داخل التطبيق على الشاشة.');
+else if (!info || !info.ok) showError('تعذّر تشغيل خدمة الاستقبال. أعد فتح الصفحة، وإن تكرر أعد تشغيل الشاشة.');
+else if (!info.ips.length) showError('الشاشة غير متصلة بأي شبكة.<br>شغّل نقطة الاتصال في جوالك ثم اربط الشاشة بها من إعدادات الواي فاي، وارجع لهذه الصفحة.');
+else {
+  var url = 'http://' + info.ips[0] + ':' + info.port + '/?t=' + info.token;
+  var q = qrcode(0, 'M'); q.addData(url); q.make();
+  document.getElementById('qr').innerHTML = q.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+  document.getElementById('addr').textContent = url;
+  var seen = nat('uploadCount') || 0;
+  setInterval(function () {
+    var c = nat('uploadCount') || 0;
+    if (c > seen) {
+      seen = c; _imgs = null;
+      var list = userImages(), last = list[0];
+      if (last) {
+        // تطبيق الصورة الجديدة مباشرة في مكانها
+        if (last.slot === 'home') prefs.theme = 'user:' + last.name;
+        else if (last.slot === 'rest') prefs.restBg = 'user:' + last.name;
+        else if (last.slot === 'logo') { prefs.logoImg = last.name; prefs.brand = 'image'; }
+        savePrefs(prefs); applyPrefs('home', prefs);
+        document.getElementById('bg').src = last.slot === 'logo' ? themeBg('night', 'home') : last.url;
+      }
+      var ok = document.getElementById('ok'); ok.style.display = 'block';
+      ok.textContent = 'وصلت الصورة وطُبّقت ✓ (' + c + ')  يمكنك إرسال صورة أخرى.';
+    }
+  }, 1000);
+}
+window.addEventListener('pagehide', function () { nat('serverStop'); });
+window.addEventListener('beforeunload', function () { nat('serverStop'); });
+fitStage();
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>رفع صورة إلى شاشة السيارة</title>
+<style>
+:root{--bg:#0b1020;--card:#151d36;--line:#2a3660;--acc:#2F7BFF;--txt:#fff;--sub:#9FB0CC}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;padding:16px;min-height:100vh}
+h1{font-size:20px;margin:4px 0 14px}
+.seg{display:flex;gap:8px;margin-bottom:12px}
+.seg button{flex:1;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:15px}
+.seg button.on{background:var(--acc);border-color:#6FA8FF;font-weight:700}
+.pick{display:flex;align-items:center;justify-content:center;height:52px;border-radius:14px;border:1.5px dashed #4b5d93;color:#C3D1E8;font-size:16px;margin-bottom:12px}
+.frame{position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;touch-action:none;outline:2px solid #6FA8FF}
+.frame.logo{background-color:#333;background-image:linear-gradient(45deg,#444 25%,transparent 25%,transparent 75%,#444 75%),linear-gradient(45deg,#444 25%,transparent 25%,transparent 75%,#444 75%);background-size:20px 20px;background-position:0 0,10px 10px}
+canvas{display:block;width:100%;height:100%}
+.hint{font-size:13px;color:var(--sub);margin:8px 0 12px;line-height:1.6}
+input[type=range]{width:100%;margin:6px 0 14px}
+.send{width:100%;height:54px;border-radius:14px;border:none;background:var(--acc);color:#fff;font:inherit;font-size:18px;font-weight:700}
+.send:disabled{opacity:.4}
+.msg{margin-top:12px;padding:12px;border-radius:12px;font-size:15px;display:none}
+.msg.ok{display:block;background:#123a2c;border:1px solid #5AD1A0}
+.msg.err{display:block;background:#3a1a12;border:1px solid #E89061}
+.row{display:flex;gap:8px;margin-bottom:12px}
+.row button{flex:1;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:14px}
+</style>
+</head>
+<body>
+<h1>إرسال صورة إلى شاشة السيارة</h1>
+<div class="seg" id="slots">
+  <button data-s="home" class="on">خلفية الرئيسية</button>
+  <button data-s="rest">خلفية الاستراحة</button>
+  <button data-s="logo">الشعار</button>
+</div>
+<label class="pick">اضغط لاختيار صورة<input id="file" type="file" accept="image/*" hidden></label>
+<div class="frame" id="frame"><canvas id="cv"></canvas></div>
+<div class="hint" id="hint">حرّك الصورة بإصبع، وكبّرها أو صغّرها بإصبعين. ما داخل الإطار هو ما سيظهر على الشاشة بالضبط.</div>
+<div class="row"><button id="fit">ملء الإطار</button><button id="whole">الصورة كاملة</button><button id="center">توسيط</button></div>
+<input type="range" id="zoom" min="10" max="400" value="100" aria-label="التكبير">
+<button class="send" id="send" disabled>إرسال إلى الشاشة</button>
+<div class="msg" id="msg"></div>
+
+<script>
+var token = new URLSearchParams(location.search).get('t') || '';
+var screenW = 1280, screenH = 720;
+var slot = 'home', img = null, scale = 1, minScale = 0.1, ox = 0, oy = 0; // ox,oy = موضع الصورة داخل الإطار بوحدات الإخراج
+var cv = document.getElementById('cv'), ctx = cv.getContext('2d'), frame = document.getElementById('frame');
+
+fetch('/info?t=' + token).then(function (r) { return r.json(); }).then(function (j) { screenW = j.w; screenH = j.h; setup(); }).catch(setup);
+
+function outSize(){ return slot === 'logo' ? { w: 640, h: 160 } : { w: screenW, h: screenH }; }
+function setup(){
+  var o = outSize();
+  cv.width = o.w; cv.height = o.h;
+  frame.style.aspectRatio = o.w + ' / ' + o.h;
+  frame.style.height = (frame.clientWidth * o.h / o.w) + 'px';
+  frame.className = 'frame' + (slot === 'logo' ? ' logo' : '');
+  document.getElementById('hint').textContent = slot === 'logo'
+    ? 'الإطار بنسبة الشعار أعلى الشاشة. يفضَّل صورة PNG بخلفية شفافة. حرّك وكبّر بالأصابع.'
+    : 'الإطار بمقاس شاشتك (' + screenW + '×' + screenH + '). حرّك الصورة بإصبع، وكبّرها أو صغّرها بإصبعين.';
+  if (img) fill(); else draw();
+}
+function fill(){ var o = outSize(); scale = Math.max(o.w / img.width, o.h / img.height); center(); }
+function whole(){ var o = outSize(); scale = Math.min(o.w / img.width, o.h / img.height); center(); }
+function center(){ var o = outSize(); ox = (o.w - img.width * scale) / 2; oy = (o.h - img.height * scale) / 2; syncZoom(); draw(); }
+function syncZoom(){
+  var o = outSize(); var base = Math.max(o.w / img.width, o.h / img.height);
+  document.getElementById('zoom').value = Math.round(scale / base * 100);
+}
+function draw(){
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  if (slot !== 'logo') { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height); }
+  if (img) ctx.drawImage(img, ox, oy, img.width * scale, img.height * scale);
+  document.getElementById('send').disabled = !img;
+}
+
+document.getElementById('slots').onclick = function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  slot = b.getAttribute('data-s');
+  [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); });
+  setup();
+};
+document.getElementById('file').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  var u = URL.createObjectURL(f), im = new Image();
+  im.onload = function () { img = im; if (slot === 'logo') whole(); else fill(); };
+  im.src = u;
+};
+document.getElementById('fit').onclick = function () { if (img) fill(); };
+document.getElementById('whole').onclick = function () { if (img) whole(); };
+document.getElementById('center').onclick = function () { if (img) center(); };
+document.getElementById('zoom').oninput = function () {
+  if (!img) return;
+  var o = outSize(), base = Math.max(o.w / img.width, o.h / img.height);
+  zoomAt(base * this.value / 100, o.w / 2, o.h / 2);
+};
+function zoomAt(ns, cx, cy){
+  ns = Math.max(0.02, Math.min(ns, 20));
+  ox = cx - (cx - ox) * ns / scale; oy = cy - (cy - oy) * ns / scale; scale = ns; draw();
+}
+
+/* السحب والتكبير باللمس */
+var pts = {}, last = null;
+function k(){ return cv.width / frame.clientWidth; } // تحويل من بكسل الشاشة إلى بكسل الإخراج
+frame.addEventListener('pointerdown', function (e) { frame.setPointerCapture(e.pointerId); pts[e.pointerId] = { x: e.clientX, y: e.clientY }; last = snap(); });
+frame.addEventListener('pointermove', function (e) {
+  if (!pts[e.pointerId] || !img) return;
+  pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+  var now = snap();
+  if (last && now.n === last.n) {
+    var f = k(), r = frame.getBoundingClientRect();
+    if (now.n >= 2 && last.d > 0) {
+      zoomAt(scale * now.d / last.d, (now.x - r.left) * f, (now.y - r.top) * f);
+    }
+    ox += (now.x - last.x) * f; oy += (now.y - last.y) * f;
+    draw(); syncZoom();
+  }
+  last = now;
+});
+function up(e){ delete pts[e.pointerId]; last = snap(); }
+frame.addEventListener('pointerup', up); frame.addEventListener('pointercancel', up);
+function snap(){
+  var a = Object.keys(pts).map(function (i) { return pts[i]; });
+  if (!a.length) return null;
+  var x = 0, y = 0; a.forEach(function (p) { x += p.x; y += p.y; });
+  var d = a.length >= 2 ? Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) : 0;
+  return { n: a.length, x: x / a.length, y: y / a.length, d: d };
+}
+
+document.getElementById('send').onclick = function () {
+  var btn = this, msg = document.getElementById('msg');
+  btn.disabled = true; btn.textContent = 'جارٍ الإرسال…'; msg.className = 'msg';
+  var type = slot === 'logo' ? 'image/png' : 'image/jpeg';
+  cv.toBlob(function (blob) {
+    fetch('/upload?t=' + token + '&slot=' + slot, { method: 'POST', body: blob, headers: { 'Content-Type': type } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function () { msg.className = 'msg ok'; msg.textContent = 'تم الإرسال ✓ ستظهر الصورة على الشاشة الآن.'; })
+      .catch(function () { msg.className = 'msg err'; msg.textContent = 'تعذّر الإرسال. تأكد أن صفحة «رفع من الجوال» ما زالت مفتوحة على الشاشة، ثم امسح الباركود من جديد.'; })
+      .then(function () { btn.disabled = false; btn.textContent = 'إرسال إلى الشاشة'; });
+  }, type, 0.9);
+};
+window.addEventListener('resize', function () { var o = outSize(); frame.style.height = (frame.clientWidth * o.h / o.w) + 'px'; });
+setup();
+</script>
+</body>
+</html>
