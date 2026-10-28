@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>شاشة الاستراحة</title>
+<link rel="stylesheet" href="common.css">
+<style>
+@font-face{font-family:'Amiri';src:local('Amiri'),local('Noto Naskh Arabic')}
+.top{display:flex;justify-content:space-between;align-items:center;height:52px;padding:26px 40px 0}
+.clock{font-size:170px;font-weight:700;line-height:1;margin-top:18px;direction:ltr;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:2px}
+.dates{display:flex;gap:22px;justify-content:center;font-size:24px;color:#E4E8F2;margin-top:10px}
+.dua{margin-top:30px;min-height:120px;max-width:900px;margin-left:auto;margin-right:auto;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Amiri','Noto Naskh Arabic',serif;font-size:40px;line-height:1.6;padding:0 20px}
+.next{display:flex;align-items:center;justify-content:center;gap:26px;margin-top:auto}
+.foot{display:flex;gap:16px;justify-content:center;padding:22px 0 34px}
+.btn{height:64px;border-radius:32px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;gap:12px;font-size:22px;font-weight:500;padding:0 30px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="bg" src="bg/rest_night.jpg" alt="">
+  <div class="shade"></div>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo" style="width:150px;height:52px;border-radius:14px;border:2px dashed rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:15px;color:#D5DCEA">[ضع شعارك هنا]</div>
+      <div style="font-size:20px;color:#E4E8F2">وضع الاستراحة</div>
+    </div>
+    <div class="clock" id="clock"></div>
+    <div class="dates"><span id="hijri"></span><span aria-hidden="true" style="opacity:.5">|</span><span id="greg"></span></div>
+    <div class="dua" id="dua"></div>
+    <div class="next">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10M5 10V6M4 6h2M19 21V10M19 10V6M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M12 9v3M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>
+      <div style="display:flex;flex-direction:column"><span style="font-size:18px;color:#F2C879">الصلاة القادمة</span><span id="nextName" style="font-size:38px;font-weight:600"></span></div>
+      <span aria-hidden="true" style="font-size:38px;opacity:.4">|</span>
+      <span id="nextTime" style="font-size:44px;font-weight:700;direction:ltr"></span>
+    </div>
+    <div class="foot">
+      <a class="btn glass" href="index.html"><span>العودة للرئيسية</span></a>
+      <a class="btn glass" href="azkar.html"><span>الأذكار</span></a>
+    </div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+var DUAS = [
+  'اللهم إني أسألك من فضلك ورحمتك، فإنه لا يملكها إلا أنت',
+  'ربنا آتنا في الدنيا حسنة وفي الآخرة حسنة وقنا عذاب النار',
+  'سبحان الذي سخّر لنا هذا وما كنا له مقرنين، وإنا إلى ربنا لمنقلبون',
+  'لا حول ولا قوة إلا بالله',
+  'سبحان الله وبحمده، سبحان الله العظيم'
+];
+var prefs = loadPrefs();
+applyPrefs('rest', prefs);
+var duaIndex = 0;
+function setDua(){ document.getElementById('dua').textContent = DUAS[duaIndex]; }
+function tick(){
+  var d = new Date();
+  document.getElementById('clock').textContent = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
+  document.getElementById('greg').textContent = fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + ' م';
+  document.getElementById('hijri').textContent = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d);
+  var np = nextPrayer(d);
+  document.getElementById('nextName').textContent = np.name;
+  document.getElementById('nextTime').textContent = np.time;
+}
+tick(); setDua();
+setInterval(tick, 15000);
+setInterval(function(){ duaIndex = (duaIndex + 1) % DUAS.length; setDua(); }, 12000);
+fitStage();
+</script>
+</body>
+</html>

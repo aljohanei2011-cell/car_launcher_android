@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>مؤقت الصلاة</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.page{height:100%;box-sizing:border-box;padding:28px 40px;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(ellipse at 50% 40%,#16214a 0%,#0a0f1f 55%,#070a14 100%)}
+.top{display:flex;justify-content:space-between;align-items:flex-start}
+.ring{position:relative;align-self:center;width:440px;height:440px;margin-top:-60px}
+.ring svg{position:absolute;inset:0}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.list{display:flex;gap:12px;justify-content:center}
+.p{width:180px;height:96px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;background:#111a33;border:1px solid #222c4d}
+.p.on{background:#241d0e;border:1.5px solid #E8C061}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="top">
+      <a class="icon-btn" href="index.html" aria-label="العودة للرئيسية"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span id="clock" style="font-size:96px;font-weight:300;line-height:1;direction:ltr;font-variant-numeric:tabular-nums"></span>
+        <span id="dateLine" class="sub" style="font-size:20px"></span>
+        <span id="hijri" style="font-size:16px;color:#8F9AB8"></span>
+      </div>
+    </div>
+
+    <div class="ring">
+      <svg width="440" height="440" viewBox="0 0 440 440" aria-hidden="true">
+        <circle cx="220" cy="220" r="196" fill="none" stroke="#252e4d" stroke-width="18"/>
+        <circle id="arc" cx="220" cy="220" r="196" fill="none" stroke="#E8C061" stroke-width="18" stroke-linecap="round" stroke-dasharray="0 1232" transform="rotate(-90 220 220)"/>
+      </svg>
+      <div class="center">
+        <span class="sub" style="font-size:22px">الصلاة القادمة</span>
+        <span id="nextName" style="font-size:84px;font-weight:700;line-height:1.05"></span>
+        <span id="countdown" style="font-size:40px;color:#E8C061;direction:ltr;font-variant-numeric:tabular-nums"></span>
+        <span id="nextTime" style="font-size:18px;color:#8F9AB8;direction:ltr"></span>
+      </div>
+    </div>
+
+    <div class="list" id="list"></div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs();
+applyPrefs('home', prefs);
+document.body.style.background = '#070a14';
+
+function pad(x){ return (x < 10 ? '0' : '') + x; }
+function tick(){
+  var d = new Date();
+  var sh = new Date(d.getTime() + TZ * 3600000);
+  var nowMin = sh.getUTCHours() * 60 + sh.getUTCMinutes() + sh.getUTCSeconds() / 60;
+  document.getElementById('clock').textContent = (d.getHours() % 12 || 12) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  document.getElementById('dateLine').textContent = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d);
+  document.getElementById('hijri').textContent = fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d);
+
+  var list = prayerMinutes(d).filter(function (p) { return p.name !== 'الشروق'; });
+  var next = null, prev = null;
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].min > nowMin) { next = list[i]; prev = list[i-1] || { min: list[list.length-1].min - 1440 }; break; }
+  }
+  if (!next) { next = { name: list[0].name, min: list[0].min + 1440 }; prev = list[list.length-1]; }
+  var span = next.min - prev.min;
+  var frac = Math.max(0, Math.min(1, (nowMin - prev.min) / span));
+  var leftSec = Math.max(0, next.min - nowMin) * 60;
+
+  document.getElementById('arc').setAttribute('stroke-dasharray', Math.round(2 * Math.PI * 196 * frac) + ' 1232');
+  document.getElementById('nextName').textContent = next.name;
+  document.getElementById('nextTime').textContent = hhmm(next.min % 1440);
+  document.getElementById('countdown').textContent = pad(Math.floor(leftSec/3600)) + ':' + pad(Math.floor((leftSec%3600)/60)) + ':' + pad(Math.floor(leftSec%60));
+
+  var on = list.map(function (p) { return p.name; }).indexOf(next.name);
+  var html = '';
+  list.forEach(function (p, k) {
+    html += '<div class="p' + (k === on ? ' on' : '') + '" style="' + (k === on ? 'color:#E8C061' : 'color:#B9C3DC') + '">' +
+      '<span style="font-size:18px">' + p.name + '</span>' +
+      '<span style="font-size:26px;font-weight:700;direction:ltr">' + hhmm(p.min) + '</span></div>';
+  });
+  document.getElementById('list').innerHTML = html;
+}
+tick();
+setInterval(tick, 1000);
+fitStage();
+</script>
+</body>
+</html>
