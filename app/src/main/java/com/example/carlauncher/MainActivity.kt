@@ -1,18 +1,19 @@
 package com.example.carlauncher
 
 import android.Manifest
-import android.net.Uri
-import android.webkit.ValueCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.webkit.GeolocationPermissions
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,6 +25,7 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private val base = "file:///android_asset/"
 
     private val locationPermissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -31,14 +33,14 @@ class MainActivity : AppCompatActivity() {
     )
     private val locationRequestCode = 1001
 
-    // اختيار صورة الشعار من ذاكرة الجهاز (زر «صورة من الجهاز» في الإعدادات)
+    // اختيار صورة من ذاكرة الجهاز (زر «صورة من الجهاز» في الإعدادات)
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         fileCallback?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
         fileCallback = null
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         hideSystemBars()
@@ -47,28 +49,28 @@ class MainActivity : AppCompatActivity() {
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
-                // الأصول محلية فقط
+                // الأصول المحلية + صور المستخدم المحفوظة داخل التطبيق
                 allowFileAccess = true
+                @Suppress("DEPRECATION")
+                allowFileAccessFromFileURLs = true
                 allowContentAccess = false
                 cacheMode = WebSettings.LOAD_NO_CACHE
                 mediaPlaybackRequiresUserGesture = false
-                // الموقع للصفحة المحلية فقط (عداد الرحلة)
                 setGeolocationEnabled(true)
             }
+            addJavascriptInterface(Bridge(this@MainActivity), "Native")
             webViewClient = object : WebViewClient() {
                 // منع أي تنقل إلى الإنترنت من داخل التطبيق
                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                    return url == null || !url.startsWith("file:///android_asset/")
+                    return url == null || !url.startsWith(base)
                 }
             }
             webChromeClient = object : WebChromeClient() {
-                // تمرير إذن الموقع إلى WebView فقط بعد أن يمنحه المستخدم للتطبيق
                 override fun onGeolocationPermissionsShowPrompt(
                     origin: String?,
                     callback: GeolocationPermissions.Callback?
                 ) {
-                    val granted = hasLocationPermission()
-                    callback?.invoke(origin, granted, false)
+                    callback?.invoke(origin, hasLocationPermission(), false)
                 }
 
                 override fun onShowFileChooser(
@@ -89,18 +91,44 @@ class MainActivity : AppCompatActivity() {
             }
         }
         setContentView(webView)
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl(base + pageFrom(intent, "index.html"))
 
         if (!hasLocationPermission()) {
             ActivityCompat.requestPermissions(this, locationPermissions, locationRequestCode)
+        } else {
+            TripService.start(this)
         }
     }
 
-    private fun hasLocationPermission(): Boolean =
+    /** فتح صفحة معيّنة عند الضغط على إشعار (مثل الصلاة أو الاستراحة) */
+    private fun pageFrom(i: Intent?, def: String): String {
+        val p = i?.getStringExtra("page") ?: return def
+        return if (p.matches(Regex("^[a-z]+\\.html(\\?[a-z=]+)?$"))) p else def
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        val p = intent?.getStringExtra("page")
+        if (p != null) webView.loadUrl(base + pageFrom(intent, "index.html"))
+        else if (intent?.hasCategory(Intent.CATEGORY_HOME) == true) webView.loadUrl(base + "index.html")
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == locationRequestCode && hasLocationPermission()) TripService.start(this)
+    }
+
+    fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED ||
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
+
+    override fun onResume() {
+        super.onResume()
+        // تحديث الصفحة الحالية (مثلاً بعد منح الوصول للإشعارات)
+        webView.evaluateJavascript("window.onResumeNative && window.onResumeNative()", null)
+    }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
@@ -119,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         // اللانشر هو الشاشة الرئيسية: الرجوع يعود للصفحة السابقة داخله فقط
         if (webView.canGoBack()) webView.goBack()
