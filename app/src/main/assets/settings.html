@@ -23,6 +23,8 @@
 .sw::after{content:'';position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:14px;background:#fff;transition:left .15s}
 .sw.on::after{left:32px}
 .note{font-size:16px;color:#9FB0CC}
+.opt.sm{height:48px;font-size:17px;padding:0 18px}
+.txt{height:56px;width:360px;border-radius:16px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:20px;padding:0 16px;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -35,6 +37,16 @@
       <h1 class="title">الإعدادات</h1>
     </div>
     <div class="body">
+      <div class="glass section">
+        <span class="label">اسم السيارة أعلى الشاشة</span>
+        <div class="opts" id="brands"></div>
+        <div class="opts" id="brandExtra"></div>
+        <span class="note" id="subNote">ماركات تظهر بجانب الاسم:</span>
+        <div class="opts" id="subBrands"></div>
+        <span class="note">الحجم:</span>
+        <div class="opts" id="sizes"></div>
+        <input type="file" id="logoFile" accept="image/*" style="display:none">
+      </div>
       <div class="glass section">
         <span class="label">الخلفية</span>
         <div class="themes" id="themes"></div>
@@ -93,11 +105,56 @@ function renderAll(){
     b.onclick = function () { prefs.city = k; savePrefs(prefs); renderAll(); applyPrefs('home', prefs); };
     co.appendChild(b);
   });
+  renderBrandSettings();
   var sw = document.getElementById('solid');
   sw.className = 'sw' + (prefs.solid ? ' on' : '');
   sw.setAttribute('aria-checked', prefs.solid ? 'true' : 'false');
 }
 document.getElementById('solid').onclick = function () { prefs.solid = !prefs.solid; savePrefs(prefs); renderAll(); applyPrefs('home', prefs); };
+function upd(){ savePrefs(prefs); renderAll(); applyPrefs('home', prefs); }
+function btn(cls, label, on, fn){ var b = document.createElement('button'); b.className = cls + (on ? ' on' : ''); b.textContent = label; b.onclick = fn; return b; }
+function renderBrandSettings(){
+  var br = document.getElementById('brands'); br.innerHTML = '';
+  Object.keys(BRANDS).forEach(function (k) { br.appendChild(btn('opt', BRANDS[k].label, prefs.brand === k, function () { prefs.brand = k; upd(); })); });
+  br.appendChild(btn('opt', 'اسم مخصص', prefs.brand === 'text', function () { prefs.brand = 'text'; upd(); }));
+  br.appendChild(btn('opt', 'صورة من الجهاز', prefs.brand === 'image', function () { document.getElementById('logoFile').click(); }));
+  br.appendChild(btn('opt', 'بدون', prefs.brand === 'none', function () { prefs.brand = 'none'; upd(); }));
+
+  var ex = document.getElementById('brandExtra'); ex.innerHTML = '';
+  if (prefs.brand === 'text') {
+    var inp = document.createElement('input'); inp.className = 'txt'; inp.maxLength = 24; inp.placeholder = 'اكتب الاسم'; inp.value = prefs.brandText || '';
+    inp.oninput = function () { prefs.brandText = inp.value; savePrefs(prefs); applyPrefs('home', prefs); };
+    ex.appendChild(inp);
+  }
+  if (prefs.brand === 'image' && loadLogo()) {
+    ex.appendChild(btn('opt sm', 'تغيير الصورة', false, function () { document.getElementById('logoFile').click(); }));
+    ex.appendChild(btn('opt sm', 'حذف الصورة', false, function () { saveLogo(''); prefs.brand = 'toyota'; upd(); }));
+  }
+
+  var showSub = prefs.brand !== 'none' && prefs.brand !== 'image';
+  document.getElementById('subNote').style.display = showSub ? '' : 'none';
+  var sb = document.getElementById('subBrands'); sb.innerHTML = ''; sb.style.display = showSub ? '' : 'none';
+  Object.keys(BRANDS).filter(function (k) { return k !== prefs.brand; }).forEach(function (k) {
+    var on = (prefs.subBrands || []).indexOf(k) >= 0;
+    sb.appendChild(btn('opt sm', BRANDS[k].label, on, function () {
+      var a = (prefs.subBrands || []).slice(); var i = a.indexOf(k);
+      if (i >= 0) a.splice(i, 1); else a.push(k);
+      prefs.subBrands = a; upd();
+    }));
+  });
+
+  var sz = document.getElementById('sizes'); sz.innerHTML = '';
+  [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']].forEach(function (z) {
+    sz.appendChild(btn('opt sm', z[1], (prefs.brandSize || 'm') === z[0], function () { prefs.brandSize = z[0]; upd(); }));
+  });
+}
+document.getElementById('logoFile').onchange = function (e) {
+  var f = e.target.files && e.target.files[0]; if (!f) return;
+  resizeImage(f, function (d) {
+    if (d && saveLogo(d)) { prefs.brand = 'image'; upd(); }
+    e.target.value = '';
+  });
+};
 renderAll();
 fitStage();
 </script>

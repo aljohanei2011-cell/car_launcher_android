@@ -1,6 +1,9 @@
 package com.example.carlauncher
 
 import android.Manifest
+import android.net.Uri
+import android.webkit.ValueCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -27,6 +30,13 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.ACCESS_COARSE_LOCATION
     )
     private val locationRequestCode = 1001
+
+    // اختيار صورة الشعار من ذاكرة الجهاز (زر «صورة من الجهاز» في الإعدادات)
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        fileCallback?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
+        fileCallback = null
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +69,22 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     val granted = hasLocationPermission()
                     callback?.invoke(origin, granted, false)
+                }
+
+                override fun onShowFileChooser(
+                    view: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri>>?,
+                    fileChooserParams: FileChooserParams?
+                ): Boolean {
+                    fileCallback?.onReceiveValue(null)
+                    fileCallback = filePathCallback
+                    return try {
+                        pickImage.launch("image/*")
+                        true
+                    } catch (e: Exception) {
+                        fileCallback = null
+                        false
+                    }
                 }
             }
         }

@@ -11,7 +11,8 @@ window.addEventListener('resize', fitStage);
 
 /* ===== الإعدادات المحفوظة (آمنة إن فشل التخزين) ===== */
 var PREFS_KEY = 'carlauncher.prefs';
-var DEFAULT_PREFS = { theme: 'mountain', font: 'thmanyah', solid: false, city: 'dhahran' };
+var DEFAULT_PREFS = { theme: 'mountain', font: 'thmanyah', solid: false, city: 'dhahran',
+  brand: 'toyota', subBrands: [], brandText: '', brandSize: 'm' };
 function loadPrefs(){
   try {
     var raw = localStorage.getItem(PREFS_KEY);
@@ -46,6 +47,7 @@ function applyPrefs(bgKey, p){
   var stage = document.getElementById('stage');
   if (stage) stage.style.fontFamily = fontStack(p);
   document.body.classList.toggle('solid', !!p.solid);
+  renderBrand(p);
 }
 
 /* ===== مواقيت الصلاة محسوبة على الجهاز (بدون إنترنت) — الظهران، أم القرى ===== */
@@ -92,4 +94,54 @@ function nextPrayer(d){
 /* ===== التاريخ: يتجاهل الفشل إن لم يدعم الجهاز التقويم الهجري ===== */
 function fmt(opts, locale, d){
   try { return new Intl.DateTimeFormat(locale, opts).format(d); } catch (e) { return ''; }
+}
+
+/* ===== اسم السيارة مكان الشعار (نص فقط) أو صورة يختارها المستخدم ===== */
+var BRANDS = {
+  toyota:   { label: 'تويوتا',   text: 'TOYOTA' },
+  lexus:    { label: 'لكزس',     text: 'LEXUS' },
+  gr:       { label: 'GR',       text: 'GR' },
+  daihatsu: { label: 'دايهاتسو', text: 'DAIHATSU' },
+  hino:     { label: 'هينو',     text: 'HINO' }
+};
+var LOGO_KEY = 'carlauncher.logo';
+function loadLogo(){ try { return localStorage.getItem(LOGO_KEY) || ''; } catch (e) { return ''; } }
+function saveLogo(d){ try { if (d) localStorage.setItem(LOGO_KEY, d); else localStorage.removeItem(LOGO_KEY); return true; } catch (e) { return false; } }
+function renderBrand(p){
+  var els = document.querySelectorAll('.logo');
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    el.className = 'logo size-' + (p.brandSize || 'm');
+    el.innerHTML = '';
+    if (p.brand === 'none') { el.classList.add('hidden'); continue; }
+    if (p.brand === 'image') {
+      var src = loadLogo();
+      if (src) { var im = document.createElement('img'); im.src = src; im.alt = 'شعار'; el.appendChild(im); continue; }
+    }
+    var main = p.brand === 'text' ? (p.brandText || 'رفيق الطريق') : (BRANDS[p.brand] || BRANDS.toyota).text;
+    if (p.brand === 'text') el.style.direction = 'rtl'; else el.style.direction = '';
+    var m = document.createElement('span'); m.textContent = main; el.appendChild(m);
+    (p.subBrands || []).filter(function (k) { return k !== p.brand && BRANDS[k]; }).forEach(function (k) {
+      var s = document.createElement('span'); s.className = 'sep'; s.textContent = '|'; el.appendChild(s);
+      var b = document.createElement('span'); b.className = 'sub-brand'; b.textContent = BRANDS[k].text; el.appendChild(b);
+    });
+  }
+}
+/* تصغير الصورة قبل حفظها حتى لا تمتلئ الذاكرة */
+function resizeImage(file, cb){
+  var r = new FileReader();
+  r.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var h = Math.min(160, img.height), w = Math.round(img.width * h / img.height);
+      if (w > 640) { w = 640; h = Math.round(img.height * w / img.width); }
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL('image/png'));
+    };
+    img.onerror = function () { cb(''); };
+    img.src = r.result;
+  };
+  r.onerror = function () { cb(''); };
+  r.readAsDataURL(file);
 }

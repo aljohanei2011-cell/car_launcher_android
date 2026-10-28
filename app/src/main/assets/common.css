@@ -20,3 +20,12 @@ body.solid .glass{background:rgba(10,25,55,.92)}
 .sub{color:#C3D1E8}
 .accent{color:#5AB0FF;font-weight:600}
 .icon-btn{width:56px;height:56px;border-radius:16px;background:#13254a;border:1.5px solid #2b4a80;display:flex;align-items:center;justify-content:center}
+
+/* اسم/شعار السيارة أعلى الشاشة */
+.logo{height:56px;min-width:60px;display:flex;align-items:center;font-size:30px;font-weight:700;letter-spacing:6px;direction:ltr;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap}
+.logo .sep{opacity:.45;margin:0 14px;letter-spacing:0;font-weight:300}
+.logo .sub-brand{font-size:18px;font-weight:500;letter-spacing:4px;opacity:.8}
+.logo img{max-height:56px;max-width:260px;object-fit:contain}
+.logo.size-s{font-size:22px}.logo.size-s img{max-height:40px}
+.logo.size-l{font-size:38px}.logo.size-l img{max-height:64px;max-width:320px}
+.logo.hidden{visibility:hidden}
