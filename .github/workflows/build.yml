@@ -23,27 +23,21 @@ jobs:
         with:
           gradle-version: "8.14.3"
 
-      # مفتاح التوقيع من أسرار المستودع (لا يُحفظ في الكود حتى يكون المستودع عاماً بأمان)
+      # مفتاح التوقيع محفوظ مشفّراً (AES-256) في keystore/، وكلمة فك التشفير في سر المستودع KEYSTORE_PASS فقط
       - name: Restore signing key
         env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
           KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
         run: |
-          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASS" ]; then
-            echo "::error::أضف السرّين KEYSTORE_B64 و KEYSTORE_PASS في Settings > Secrets and variables > Actions"
-            exit 1
-          fi
-          mkdir -p signing
-          # إزالة أي مسافات أو أسطر زائدة قد تدخل مع النسخ واللصق
-          CLEAN_B64=$(printf "%s" "$KEYSTORE_B64" | tr -d ' \r\n\t')
           CLEAN_PASS=$(printf "%s" "$KEYSTORE_PASS" | tr -d ' \r\n\t')
-          echo "B64 length: ${#CLEAN_B64} (expected 3568), PASS length: ${#CLEAN_PASS} (expected 24)"
-          if ! printf "%s" "$CLEAN_B64" | base64 -d > signing/release.jks 2>/dev/null; then
-            echo "::error::قيمة KEYSTORE_B64 غير صحيحة. انسخ السطر الطويل كاملاً فقط بدون أي نص آخر."
+          if [ -z "$CLEAN_PASS" ]; then
+            echo "::error::أضف السر KEYSTORE_PASS في Settings > Secrets and variables > Actions"
             exit 1
           fi
-          if ! keytool -list -keystore signing/release.jks -storepass "$CLEAN_PASS" >/dev/null 2>&1; then
-            echo "::error::KEYSTORE_PASS لا يطابق المفتاح، أو KEYSTORE_B64 ناقص."
+          echo "PASS length: ${#CLEAN_PASS} (expected 24)"
+          mkdir -p signing
+          if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in keystore/release.jks.enc -out signing/release.jks -pass "pass:$CLEAN_PASS" 2>/dev/null \
+             || ! keytool -list -keystore signing/release.jks -storepass "$CLEAN_PASS" >/dev/null 2>&1; then
+            echo "::error::قيمة KEYSTORE_PASS غير صحيحة. انسخ كلمة المرور (السطر القصير) فقط."
             exit 1
           fi
           printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=carlauncher\n" "$CLEAN_PASS" "$CLEAN_PASS" > signing/signing.properties
