@@ -34,7 +34,7 @@ var DEFAULT_PREFS = {
   speedOn: false, speedLimit: 120, customSound: true,
   bootAction: 'none', pin: '', nightBright: false, nightPct: 30, reminders: true,
   /* العرض */
-  h24: false, digits: 'en',
+  h24: false, digits: 'en', clockFont: '', duaFont: 'amiri',
   /* الواجهة: التصميم، الصفحات والبطاقات لكل تصميم، القائمة السفلية */
   layout: 'classic', homes: null,
   dock: ['maps', 'music', 'apps', 'rest', 'azkar', 'trip', 'settings'], dockLabels: true,
@@ -95,11 +95,18 @@ function themeBg(key, which){
   return which === 'rest' ? t.rest : t.bg;
 }
 
-function fontStack(p){
-  return p.font === 'system'
-    ? "'Noto Sans Arabic', Tahoma, 'Segoe UI', Arial, sans-serif"
-    : "'Thmanyah', 'Noto Sans Arabic', Tahoma, sans-serif";
-}
+/* الخطوط: للواجهة، وللساعة والأرقام الكبيرة، وللأدعية */
+var FONTS = {
+  thmanyah: { label: 'ثمانية سانس', css: "'Thmanyah'" },
+  hacen:    { label: 'هاسن تونس', css: "'HacenTunisia'" },
+  mohammad: { label: 'محمد بولد آرت', css: "'MohammadBoldArt'" },
+  elgharib: { label: 'حياكم الله', css: "'ElgharibHayyakum'" },
+  komission:{ label: 'كوميشن', css: "'KOMission'" },
+  amiri:    { label: 'نسخ (للأدعية)', css: "'Amiri','Noto Naskh Arabic',serif" },
+  system:   { label: 'خط الجهاز', css: "'Noto Sans Arabic',Tahoma,'Segoe UI',Arial" }
+};
+function fontCss(key, fallback){ var f = FONTS[key] || FONTS[fallback] || FONTS.thmanyah; return f.css + ", 'Thmanyah', 'Noto Sans Arabic', Tahoma, sans-serif"; }
+function fontStack(p){ return fontCss(p.font, 'thmanyah'); }
 
 /* هل الوقت الآن ليل؟ (بين المغرب والشروق بتوقيت المدينة) */
 function isNight(d){
@@ -127,7 +134,11 @@ function applyPrefs(bgKey, p){
     if (img.getAttribute('src') !== src) img.src = src;
   }
   var stage = document.getElementById('stage');
-  if (stage) stage.style.fontFamily = fontStack(p);
+  if (stage) {
+    stage.style.fontFamily = fontStack(p);
+    stage.style.setProperty('--font-clock', fontCss(p.clockFont || p.font, 'thmanyah'));
+    stage.style.setProperty('--font-dua', fontCss(p.duaFont || 'amiri', 'amiri'));
+  }
   document.body.classList.toggle('solid', !!p.solid);
   renderBrand(p);
 }
@@ -723,10 +734,12 @@ function fitOneLine(el, maxPx, minPx){
   var inner = el.firstElementChild && el.firstElementChild.classList.contains('mq') ? el.firstElementChild : null;
   if (!inner) { inner = document.createElement('span'); inner.className = 'mq'; inner.textContent = el.textContent; el.textContent = ''; el.appendChild(inner); }
   inner.style.animation = 'none'; inner.style.display = 'inline-block'; inner.style.paddingLeft = '0';
+  el.style.justifyContent = '';
   var fs = maxPx;
   el.style.fontSize = fs + 'px';
   while (inner.offsetWidth > el.clientWidth && fs > minPx) { fs -= 2; el.style.fontSize = fs + 'px'; }
   if (inner.offsetWidth > el.clientWidth) {
+    el.style.justifyContent = 'flex-start';
     var dist = inner.offsetWidth - el.clientWidth + 40;
     inner.style.setProperty('--mq', dist + 'px');
     inner.style.animation = 'mq ' + Math.max(8, dist / 40) + 's linear infinite alternate';

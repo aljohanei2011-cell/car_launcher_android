@@ -3,6 +3,10 @@
 @font-face{font-family:'Thmanyah';font-weight:500;src:url(fonts/thmanyah-sans-Medium.woff2) format('woff2')}
 @font-face{font-family:'Thmanyah';font-weight:700;src:url(fonts/thmanyah-sans-Bold.woff2) format('woff2')}
 @font-face{font-family:'Thmanyah';font-weight:900;src:url(fonts/thmanyah-sans-Black.woff2) format('woff2')}
+@font-face{font-family:'HacenTunisia';src:url(fonts/hacen-tunisia.ttf) format('truetype')}
+@font-face{font-family:'MohammadBoldArt';src:url(fonts/mohammad-bold-art.ttf) format('truetype');unicode-range:U+0000-0039,U+003B-FFFF}
+@font-face{font-family:'ElgharibHayyakum';src:url(fonts/elgharib-hayyakum.ttf) format('truetype')}
+@font-face{font-family:'KOMission';src:url(fonts/komission-black.otf) format('opentype')}
 
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
 #stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center center;font-family:'Thmanyah','Noto Sans Arabic',Tahoma,sans-serif;color:#fff;overflow:hidden}
@@ -33,3 +37,7 @@ body.solid .glass{background:rgba(10,25,55,.92)}
 /* نص طويل في سطر واحد يتحرك ببطء */
 @keyframes mq { 0%,15% { transform: translateX(0) } 85%,100% { transform: translateX(var(--mq)) } }
 body.solid .glass{-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* خط الساعة والأرقام الكبيرة، وخط الأدعية */
+.font-clock,.k-huge,.k-big,#minClock,.clock,.clockTop,#clock{font-family:var(--font-clock)}
+.font-dua,.dua,.boot .t,.text{font-family:var(--font-dua)!important}

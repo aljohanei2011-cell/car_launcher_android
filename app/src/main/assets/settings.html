@@ -183,8 +183,24 @@ function renderLook(){
     opts(s, nightOpts, prefs.nightTheme, function (k) { prefs.nightTheme = k; upd(); }, true);
   }
 
-  s = section('الخط');
-  opts(s, [['thmanyah', 'ثمانية سانس'], ['system', 'خط الجهاز']], prefs.font, function (k) { prefs.font = k; upd(); });
+  s = section('الخطوط', 'كل زر مكتوب بخطه. الخطوط المضافة مسؤولية ترخيصها عليك.');
+  function fontRow(title, key, def, sample){
+    s.appendChild(el('span', 'note', title));
+    var o = el('div', 'opts');
+    var cur = prefs[key] || def;
+    Object.keys(FONTS).forEach(function (k) {
+      if (key === 'font' && k === 'amiri') return;
+      var b = el('button', 'opt' + (cur === k ? ' on' : ''));
+      var t1 = el('span', '', sample || FONTS[k].label); t1.style.fontFamily = FONTS[k].css; b.appendChild(t1);
+      if (sample) { var t2 = el('span', '', ' · ' + FONTS[k].label); t2.style.cssText = 'font-size:14px;opacity:.7'; b.appendChild(t2); }
+      b.onclick = function () { prefs[key] = k; upd(); };
+      o.appendChild(b);
+    });
+    s.appendChild(o);
+  }
+  fontRow('خط الواجهة:', 'font', 'thmanyah');
+  fontRow('خط الساعة والأرقام الكبيرة:', 'clockFont', prefs.font, '12:45');
+  fontRow('خط الأدعية والأذكار:', 'duaFont', 'amiri', 'سبحان الله');
 
   s = section('');
   toggle(s, 'بطاقات مصمتة (بدون ضبابية)', 'solid', 'مفيد للأجهزة القديمة (Android 9) أو لتحسين الوضوح.');
@@ -283,8 +299,50 @@ function renderApps(){
   s.appendChild(r);
 }
 
+function confirmBox(text, onYes){
+  var ov = el('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:70;background:rgba(5,10,25,.88);display:flex;align-items:center;justify-content:center';
+  var box = el('div', 'glass section'); box.style.cssText = 'width:620px;padding:28px;gap:18px;background:rgba(10,25,55,.97)';
+  box.appendChild(el('span', 'label', text));
+  var r = el('div', 'opts');
+  var y = el('button', 'opt on', 'نعم، نفّذ'); y.onclick = function () { ov.remove(); onYes(); };
+  var n = el('button', 'opt', 'إلغاء'); n.onclick = function () { ov.remove(); };
+  r.appendChild(y); r.appendChild(n); box.appendChild(r); ov.appendChild(box);
+  document.getElementById('stage').appendChild(ov);
+}
+var UI_KEYS = ['layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
+  'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
 function renderSystem(){
   var s;
+  s = section('الواجهة الافتراضية', 'حتى يفتح رفيق الطريق عند الضغط على زر الرئيسية وعند تشغيل الشاشة.');
+  var isDef = nat('isDefaultHome');
+  var ld = el('div', 'line');
+  ld.appendChild(el('span', '', 'الحالة:'));
+  ld.appendChild(el('span', 'v', !HAS_NATIVE ? 'داخل التطبيق فقط' : (isDef ? 'رفيق الطريق هو الواجهة الافتراضية ✓' : 'ليس الواجهة الافتراضية')));
+  if (HAS_NATIVE && !isDef) { var mk = el('button', 'opt sm on', 'اجعله الافتراضي'); mk.style.marginRight = 'auto'; mk.onclick = function () { nat('makeDefaultHome'); }; ld.appendChild(mk); }
+  s.appendChild(ld);
+  if (HAS_NATIVE && !isDef) s.appendChild(el('span', 'note', 'إذا لم تظهر نافذة الاختيار: افتح إعدادات الشاشة ▸ التطبيقات ▸ التطبيقات الافتراضية ▸ تطبيق الشاشة الرئيسية، واختر «رفيق الطريق». بعض الشاشات تقفل واجهتها الأصلية من إعدادات المصنع.'));
+
+  s = section('إعادة التعيين');
+  var rr = el('div', 'opts');
+  var r1 = el('button', 'opt', 'إعادة تعيين الواجهة');
+  r1.onclick = function () { confirmBox('إعادة التصميم والبطاقات والقائمة والخطوط والخلفيات وشاشة الاستراحة للوضع الافتراضي؟ (الملاحظات والتذكيرات والرحلات تبقى)', function () {
+    UI_KEYS.forEach(function (k) { prefs[k] = JSON.parse(JSON.stringify(DEFAULT_PREFS[k] === undefined ? null : DEFAULT_PREFS[k])); });
+    delete prefs.homes; savePrefs(prefs); location.href = 'index.html';
+  }); };
+  var r2 = el('button', 'opt', 'إعادة تعيين كل الإعدادات');
+  r2.onclick = function () { confirmBox('إرجاع كل الإعدادات للوضع الافتراضي؟ (الملاحظات والتذكيرات والصيانة والوقود والرحلات والصور تبقى)', function () {
+    try { localStorage.removeItem(PREFS_KEY); sessionStorage.clear(); } catch (e) {}
+    nat('resetNative', false); location.href = 'index.html';
+  }); };
+  var r3 = el('button', 'opt', 'مسح كل البيانات');
+  r3.style.borderColor = '#a04040';
+  r3.onclick = function () { confirmBox('مسح كل شيء: الإعدادات، الملاحظات، التذكيرات، الصيانة، الوقود، سجل الرحلات، الصور، الأصوات، التطبيقات المرفوعة، ورمز التحديث؟ لا يمكن التراجع. يُنصح بأخذ نسخة احتياطية أولاً.', function () {
+    try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.removeItem(k); }); sessionStorage.clear(); } catch (e) {}
+    nat('resetNative', true); location.href = 'index.html';
+  }); };
+  rr.appendChild(r1); rr.appendChild(r2); rr.appendChild(r3); s.appendChild(rr);
+  var bk = el('a', 'opt sm', 'أخذ نسخة احتياطية أولاً (من الجوال)'); bk.href = 'upload.html'; bk.style.display = 'flex'; bk.style.alignItems = 'center'; bk.style.alignSelf = 'flex-start'; s.appendChild(bk);
+
   s = section('القيادة والإنترنت');
   toggle(s, 'وضع القيادة الآمن', 'safeMode', 'أثناء الحركة تُقفل الإعدادات والكتابة والإرسال من الجوال، وتبقى الرئيسية والتطبيقات تعمل.');
   toggle(s, 'الطقس من الإنترنت', 'weatherOn', 'يُحدَّث كل 30 دقيقة عند توفر إنترنت (نقطة اتصال الجوال)، ويُحفظ آخر قراءة.');

@@ -281,4 +281,42 @@ class Bridge(private val act: MainActivity) {
 
     // ===== موقف السيارة =====
     @JavascriptInterface fun park(): String = TripStore.park(ctx)
+
+    // ===== الواجهة الافتراضية (الشاشة الرئيسية) =====
+    @JavascriptInterface
+    fun isDefaultHome(): Boolean = try {
+        val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        ctx.packageManager.resolveActivity(i, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName == ctx.packageName
+    } catch (e: Exception) { false }
+
+    @JavascriptInterface
+    fun makeDefaultHome() {
+        act.runOnUiThread {
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= 29) {
+                    val rm = act.getSystemService(android.app.role.RoleManager::class.java)
+                    if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) && !rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
+                        @Suppress("DEPRECATION")
+                        act.startActivityForResult(rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME), 77)
+                        return@runOnUiThread
+                    }
+                }
+                act.startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+            } catch (e: Exception) {
+                try { act.startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (x: Exception) {}
+            }
+        }
+    }
+
+    // ===== إعادة التعيين =====
+    /** all=false: الإعدادات فقط. all=true: كل البيانات (الرحلات، الصور، الأصوات، التطبيقات المرفوعة، رمز التحديث) */
+    @JavascriptInterface
+    fun resetNative(all: Boolean) {
+        listOf("launcher", "inbox", "weather").forEach { ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply() }
+        if (all) {
+            listOf("trip", "secure").forEach { ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply() }
+            listOf(Images.dir(ctx), Sounds.dir(ctx), Apks.dir(ctx)).forEach { d -> d.listFiles()?.forEach { it.delete() } }
+            Backup.file(ctx).delete()
+        }
+    }
 }
