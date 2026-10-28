@@ -27,20 +27,25 @@ jobs:
       - name: Restore signing key
         env:
           KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          CLEAN_PASS=$(printf "%s" "$KEYSTORE_PASS" | tr -d ' \r\n\t')
-          if [ -z "$CLEAN_PASS" ]; then
-            echo "::error::أضف السر KEYSTORE_PASS في Settings > Secrets and variables > Actions"
-            exit 1
-          fi
-          echo "PASS length: ${#CLEAN_PASS} (expected 24)"
           mkdir -p signing
-          if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in keystore/release.jks.enc -out signing/release.jks -pass "pass:$CLEAN_PASS" 2>/dev/null \
-             || ! keytool -list -keystore signing/release.jks -storepass "$CLEAN_PASS" >/dev/null 2>&1; then
-            echo "::error::قيمة KEYSTORE_PASS غير صحيحة. انسخ كلمة المرور (السطر القصير) فقط."
+          OK=""
+          # نجرّب السرّين (لو تبادلت القيم بالخطأ يعمل البناء أيضاً)
+          for CAND in "$KEYSTORE_PASS" "$KEYSTORE_B64"; do
+            P=$(printf "%s" "$CAND" | tr -d ' \r\n\t')
+            [ -z "$P" ] && continue
+            echo "candidate length: ${#P}"
+            if openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in keystore/release.jks.enc -out signing/release.jks -pass "pass:$P" 2>/dev/null \
+               && keytool -list -keystore signing/release.jks -storepass "$P" >/dev/null 2>&1; then
+              printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=carlauncher\n" "$P" "$P" > signing/signing.properties
+              OK=1; break
+            fi
+          done
+          if [ -z "$OK" ]; then
+            echo "::error::كلمة مرور مفتاح التوقيع غير صحيحة. ضع في السر KEYSTORE_PASS السطر القصير (24 حرفاً) فقط."
             exit 1
           fi
-          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=carlauncher\n" "$CLEAN_PASS" "$CLEAN_PASS" > signing/signing.properties
 
       # رقم الإصدار يزيد مع كل بناء حتى يعرف التطبيق أن هناك تحديثاً
       - name: Build signed APK
