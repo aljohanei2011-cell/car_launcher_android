@@ -308,6 +308,12 @@ function renderApps(){
   s.appendChild(r);
 }
 
+function showLog(text){
+  var ov = el('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:70;background:rgba(5,10,25,.95);display:flex;flex-direction:column;padding:30px 40px;gap:14px;box-sizing:border-box';
+  var pre = el('pre', 'latin', text.split('\n\n').reverse().join('\n\n')); pre.style.cssText = 'flex:1;overflow:auto;margin:0;font:14px/1.5 monospace;color:#C3D1E8;white-space:pre-wrap;direction:ltr;text-align:left;background:#0b1328;border-radius:16px;padding:16px';
+  var c = el('button', 'opt on', 'إغلاق'); c.style.alignSelf = 'flex-start'; c.onclick = function () { ov.remove(); };
+  ov.appendChild(c); ov.appendChild(pre); document.getElementById('stage').appendChild(ov);
+}
 function confirmBox(text, onYes){
   var ov = el('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:70;background:rgba(5,10,25,.88);display:flex;align-items:center;justify-content:center';
   var box = el('div', 'glass section'); box.style.cssText = 'width:620px;padding:28px;gap:18px;background:rgba(10,25,55,.97)';
@@ -358,6 +364,23 @@ function renderSystem(){
   }); };
   rr.appendChild(r1); rr.appendChild(r2); rr.appendChild(r3); s.appendChild(rr);
   var bk = el('a', 'opt sm', 'أخذ نسخة احتياطية أولاً (من الجوال)'); bk.href = 'upload.html'; bk.style.display = 'flex'; bk.style.alignItems = 'center'; bk.style.alignSelf = 'flex-start'; s.appendChild(bk);
+
+  s = section('الاستقرار');
+  toggle(s, 'إعادة فتح الواجهة تلقائياً إذا أغلقها الجهاز', 'watchdog', 'إذا أغلقت الشاشة رفيق الطريق لتوفير الذاكرة وهو ظاهر، يعود وحده.');
+  if (prefs.watchdog !== false && HAS_NATIVE && !nat('canOverlay')) {
+    var lo = el('div', 'line'); lo.appendChild(el('span', 'note', 'أندرويد الحديث يحتاج إذن «الظهور فوق التطبيقات» حتى تعمل إعادة الفتح.'));
+    var ob = el('button', 'opt sm on', 'منح الإذن'); ob.style.marginRight = 'auto'; ob.onclick = function () { nat('openOverlaySettings'); }; lo.appendChild(ob); s.appendChild(lo);
+  }
+  var log = HAS_NATIVE ? (nat('crashLog') || '') : '';
+  var cnt = log ? log.split('\n\n').filter(function (x) { return x.trim(); }).length : 0;
+  var ll = el('div', 'line'); ll.appendChild(el('span', '', 'سجل الأعطال:')); ll.appendChild(el('span', 'v', cnt ? cnt + ' مسجّل' : 'لا توجد أعطال ✓'));
+  var lr = el('div', 'opts'); lr.style.marginRight = 'auto';
+  if (cnt) {
+    var vb = el('button', 'opt sm', 'عرض'); vb.onclick = function () { showLog(log); }; lr.appendChild(vb);
+    var cb = el('button', 'opt sm', 'مسح'); cb.onclick = function () { nat('clearCrashLog'); render(); }; lr.appendChild(cb);
+    var sb = el('a', 'opt sm', 'إرساله للجوال'); sb.href = 'upload.html'; sb.style.display = 'flex'; sb.style.alignItems = 'center'; lr.appendChild(sb);
+  }
+  ll.appendChild(lr); s.appendChild(ll);
 
   s = section('الأداء', 'وضع الأداء يوقف الضبابية والظلال والحركات ليصبح التنقل أسرع على الشاشات الضعيفة.');
   opts(s, [['auto', 'تلقائي'], ['on', 'مفعّل'], ['off', 'مُطفأ']], prefs.perf, function (k) { prefs.perf = k; upd(); }, true);

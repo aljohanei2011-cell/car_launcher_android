@@ -11,6 +11,10 @@ window.addEventListener('resize', fitStage);
 
 /* ===== الجسر مع أندرويد (Native). في المتصفح يعمل كل شيء بدونه ===== */
 var HAS_NATIVE = typeof window.Native !== 'undefined';
+/* أي خطأ في الصفحات يُسجَّل في سجل الأعطال */
+window.addEventListener('error', function (e) {
+  try { if (HAS_NATIVE && Native.logError) Native.logError((location.pathname.split('/').pop() || '') + ': ' + (e.message || '') + ' @' + (e.lineno || 0)); } catch (x) {}
+});
 var _natCache = {}, NAT_READS = { trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
@@ -59,7 +63,7 @@ var DEFAULT_PREFS = {
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
   safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false,
-  perf: 'auto', perfDetected: null
+  perf: 'auto', perfDetected: null, watchdog: true
 };
 function loadPrefs(){
   try {
@@ -77,7 +81,7 @@ function savePrefs(p){
 function pushConfig(p){
   nat('setConfig', JSON.stringify({ adhan: p.adhan, preMin: +p.preMin, sound: p.sound, duck: p.duck,
     rest: p.rest, restMin: +p.restMin, travel: p.travel, travelKm: +p.travelKm,
-    speedOn: p.speedOn, speedLimit: +p.speedLimit, customSound: p.customSound }));
+    speedOn: p.speedOn, speedLimit: +p.speedLimit, customSound: p.customSound, watchdog: p.watchdog !== false }));
 }
 
 var THEMES = {

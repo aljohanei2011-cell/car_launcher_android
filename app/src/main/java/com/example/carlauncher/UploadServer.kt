@@ -109,6 +109,12 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                     val html = ctx.assets.open("phone/upload.html").use { it.readBytes() }
                     send(out, 200, "text/html; charset=utf-8", html)
                 }
+                method == "GET" && path == "/log" -> {
+                    val t = CrashLog.read(ctx).ifEmpty { "لا توجد أعطال مسجلة." }
+                    val head = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Disposition: attachment; filename=\"rafiq-log.txt\"\r\nConnection: close\r\n\r\n"
+                    out.write(head.toByteArray()); out.write(t.toByteArray(Charsets.UTF_8)); out.flush()
+                    event("log", "")
+                }
                 method == "GET" && path == "/info" -> {
                     val o = JSONObject().put("w", screenW).put("h", screenH)
                     send(out, 200, "application/json", o.toString().toByteArray())

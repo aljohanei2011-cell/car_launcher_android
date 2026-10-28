@@ -104,3 +104,22 @@ body.perf #stage::before,body.perf #stage::after{display:none!important}
 body.perf .mbtn.big,body.perf .dk:first-child,body.perf .k-img{box-shadow:none!important}
 body.perf .dk svg,body.perf .st svg{filter:none!important}
 body.perf .logo{text-shadow:none}
+
+/* ===== الثيمات على صفحات الصلاة والرحلة والأدوات ===== */
+body.skin-gold .page{background:linear-gradient(rgba(5,14,28,.80),rgba(5,14,28,.92)),url(skins/gold/bg_night.jpg) center/cover!important}
+body.skin-red .page{background:linear-gradient(rgba(8,9,11,.80),rgba(8,9,11,.92)),url(skins/red/bg_night.jpg) center/cover!important}
+body.skin-gold .page :is(.tile,.p,.box,.pcard,.it,.odo,.form,.card){background:linear-gradient(165deg,rgba(18,32,52,.85),rgba(7,20,38,.82))!important;border:1px solid rgba(230,184,92,.35)!important}
+body.skin-red .page :is(.tile,.p,.box,.pcard,.it,.odo,.form,.card){background:linear-gradient(170deg,rgba(30,34,40,.9),rgba(14,16,20,.88))!important;border:1px solid rgba(160,168,176,.35)!important;border-top:2px solid rgba(200,16,46,.75)!important}
+body.skin-gold .page :is(.pitem,.r:not(.h),.apk){background:rgba(10,22,40,.75)!important;border-color:rgba(230,184,92,.22)!important}
+body.skin-red .page :is(.pitem,.r:not(.h),.apk){background:rgba(18,20,24,.85)!important;border-color:rgba(160,168,176,.25)!important}
+body.skin-gold .page :is(.lbl,.ph,.h){color:#E6B85C!important}
+body.skin-red .page :is(.lbl,.ph,.h){color:#E8ECEF!important}
+body.skin-gold .page .p.on{background:rgba(230,184,92,.18)!important;border-color:#E6B85C!important}
+body.skin-red .page .p.on{background:rgba(200,16,46,.2)!important;border-color:#F02A48!important;color:#fff!important}
+body.skin-red #arc,body.skin-red #restArc{stroke:#C8102E}
+body.skin-red #speedBar{background:#C8102E!important}
+body.skin-gold .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:linear-gradient(165deg,#b98a35,#7a5a1f)!important;border-color:#F5D58A!important}
+body.skin-red .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:#C8102E!important;border-color:#F02A48!important}
+body.perf .page{background:#0a0f1f!important}
+body.perf.skin-gold .page{background:#071426!important}
+body.perf.skin-red .page{background:#0b0c0e!important}

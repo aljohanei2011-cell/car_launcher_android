@@ -49,6 +49,7 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <button data-m="rem">تذكير</button>
   <button data-m="st">محطة راديو</button>
   <button data-m="bak">نسخة احتياطية</button>
+  <button data-m="log">سجل الأعطال</button>
 </div>
 
 <section id="m-img" class="on">
@@ -109,6 +110,11 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <input id="stUrl" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:14px monospace;padding:0 12px;direction:ltr" placeholder="https://...">
   <button class="send" id="stSend" style="margin-top:12px">إرسال المحطة</button>
   <div class="msg" id="stMsg"></div>
+</section>
+
+<section id="m-log">
+  <div class="box">ملف نصي بأي أخطاء حدثت في التطبيق. أرسله للمطوّر ليعرف سبب المشكلة.</div>
+  <a class="send" id="logDl" download>تحميل سجل الأعطال</a>
 </section>
 
 <section id="m-bak">
@@ -255,6 +261,7 @@ document.getElementById('bakFile').onchange = function (e) {
   sendFile('/restore?t=' + token, f, 'bakProg', 'bakMsg', 'استُعيدت النسخة ✓ تحقق من الشاشة.');
 };
 document.getElementById('bakDl').href = '/backup?t=' + token;
+document.getElementById('logDl').href = '/log?t=' + token;
 
 /* ملاحظة / تذكير / محطة */
 function postJSON(path, obj, msgId, okText){

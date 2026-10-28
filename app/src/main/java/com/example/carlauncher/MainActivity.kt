@@ -24,6 +24,8 @@ import androidx.core.content.ContextCompat
  */
 class MainActivity : AppCompatActivity() {
 
+    companion object { @Volatile var alive = false }
+
     private lateinit var webView: WebView
     private val base = "file:///android_asset/"
 
@@ -43,6 +45,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashLog.install(this)
+        alive = true
         hideSystemBars()
 
         webView = WebView(this).apply {
@@ -63,6 +67,7 @@ class MainActivity : AppCompatActivity() {
                 // منع أي تنقل إلى الإنترنت من داخل التطبيق
                 // إذا توقف محرك الصفحات (نقص ذاكرة مثلاً) نعيد بناء الواجهة بدل أن يُغلق التطبيق
                 override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                    CrashLog.add(this@MainActivity, "webview", "توقف محرك الصفحات" + (if (detail?.didCrash() == true) " (عطل)" else " (أغلقه النظام لنقص الذاكرة)"))
                     try { (view?.parent as? android.view.ViewGroup)?.removeView(view); view?.destroy() } catch (e: Exception) {}
                     runOnUiThread { recreate() }
                     return true
@@ -146,13 +151,20 @@ class MainActivity : AppCompatActivity() {
             PackageManager.PERMISSION_GRANTED
 
     // عند فتح تطبيق آخر (الخرائط مثلاً) نوقف الواجهة مؤقتاً لتوفير المعالج؛ التنبيهات تعمل من الخدمة
+    override fun onDestroy() {
+        alive = false
+        super.onDestroy()
+    }
+
     override fun onPause() {
         super.onPause()
+        Watchdog.setForeground(this, false)
         try { webView.onPause(); webView.pauseTimers() } catch (e: Exception) {}
     }
 
     override fun onResume() {
         super.onResume()
+        Watchdog.setForeground(this, true)
         try { webView.resumeTimers(); webView.onResume() } catch (e: Exception) {}
         // تحديث الصفحة الحالية (مثلاً بعد منح الوصول للإشعارات)
         webView.evaluateJavascript("window.onResumeNative && window.onResumeNative()", null)

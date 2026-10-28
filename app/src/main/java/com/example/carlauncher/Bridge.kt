@@ -385,4 +385,15 @@ class Bridge(private val act: MainActivity) {
     }
 
     @JavascriptInterface fun keepOn(on: Boolean) = act.keepScreenOn(on)
+
+    // ===== سجل الأعطال ومراقب الإغلاق =====
+    @JavascriptInterface fun logError(msg: String) = CrashLog.add(ctx, "page", msg)
+    @JavascriptInterface fun crashLog(): String = CrashLog.read(ctx)
+    @JavascriptInterface fun clearCrashLog() = CrashLog.clear(ctx)
+    @JavascriptInterface fun canOverlay(): Boolean = Watchdog.canOverlay(ctx)
+    @JavascriptInterface fun openOverlaySettings() {
+        act.runOnUiThread {
+            try { act.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + ctx.packageName))) } catch (e: Exception) {}
+        }
+    }
 }
