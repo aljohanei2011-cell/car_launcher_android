@@ -45,7 +45,6 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <button data-m="img" class="on">صورة</button>
   <button data-m="apk">تطبيق APK</button>
   <button data-m="snd">صوت التنبيه</button>
-  <button data-m="tok">رمز التحديث</button>
   <button data-m="note">ملاحظة</button>
   <button data-m="rem">تذكير</button>
   <button data-m="st">محطة راديو</button>
@@ -81,22 +80,7 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <div class="msg" id="sndMsg"></div>
 </section>
 
-<section id="m-tok">
-  <div class="box">
-    التحديث من الشاشة يحتاج رمز قراءة فقط لمستودعك الخاص. أنشئه مرة واحدة:
-    <ol>
-      <li>افتح <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">صفحة إنشاء رمز في GitHub</a> (يحتاج إنترنت في الجوال).</li>
-      <li>الاسم: rafiq، والمدة: أطول مدة متاحة.</li>
-      <li>Repository access ▸ Only select repositories ▸ ‎car_launcher_android‎.</li>
-      <li>Permissions ▸ Contents ▸ Read-only. لا شيء غيره.</li>
-      <li>Generate token، انسخه والصقه هنا.</li>
-    </ol>
-    الرمز يُحفظ داخل الشاشة فقط، ويستطيع القراءة فقط.
-  </div>
-  <textarea id="tok" placeholder="github_pat_..."></textarea>
-  <button class="send" id="tokSend" style="margin-top:10px">حفظ الرمز في الشاشة</button>
-  <div class="msg" id="tokMsg"></div>
-</section>
+
 
 <section id="m-note">
   <div class="box">اكتب ملاحظة وأرسلها لتظهر في بطاقة «ملاحظاتي» على الشاشة.</div>
@@ -271,13 +255,7 @@ document.getElementById('bakFile').onchange = function (e) {
   sendFile('/restore?t=' + token, f, 'bakProg', 'bakMsg', 'استُعيدت النسخة ✓ تحقق من الشاشة.');
 };
 document.getElementById('bakDl').href = '/backup?t=' + token;
-document.getElementById('tokSend').onclick = function () {
-  var v = document.getElementById('tok').value.trim(), m = document.getElementById('tokMsg');
-  fetch('/token?t=' + token, { method: 'POST', body: v }).then(function (r) {
-    if (r.ok) { m.className = 'msg ok'; m.textContent = 'حُفظ الرمز ✓ اضغط «بحث عن تحديث» في الشاشة.'; document.getElementById('tok').value = ''; }
-    else { m.className = 'msg err'; m.textContent = 'الرمز غير صحيح. انسخه كاملاً.'; }
-  }).catch(function () { m.className = 'msg err'; m.textContent = 'انقطع الاتصال بالشاشة.'; });
-};
+
 /* ملاحظة / تذكير / محطة */
 function postJSON(path, obj, msgId, okText){
   var m = document.getElementById(msgId);

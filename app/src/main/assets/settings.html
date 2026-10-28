@@ -417,7 +417,7 @@ function renderSystem(){
   var ub = el('a', 'opt', 'تحديث التطبيق'); ub.href = 'update.html'; ub.style.display = 'flex'; ub.style.alignItems = 'center'; ub.style.marginRight = 'auto'; lv.appendChild(ub);
   s.appendChild(lv);
   var rb = el('div', 'opts');
-  [['update.html', 'تثبيت تطبيقات مرفوعة'], ['upload.html', 'نسخة احتياطية / استعادة (من الجوال)']].forEach(function (x) {
+  [['update.html?apks=1', 'تثبيت تطبيقات مرفوعة'], ['upload.html', 'نسخة احتياطية / استعادة (من الجوال)']].forEach(function (x) {
     var a = el('a', 'opt sm', x[1]); a.href = x[0]; a.style.display = 'flex'; a.style.alignItems = 'center'; rb.appendChild(a);
   });
   s.appendChild(rb);

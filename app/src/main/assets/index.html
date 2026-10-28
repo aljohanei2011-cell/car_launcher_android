@@ -460,6 +460,8 @@ function renderBanner(){
   bannerItems = [];
   if (due.length) bannerItems.push({ t: 'تذكير الصيانة: ' + due.join('، '), href: 'maintenance.html' });
   if (prefs.reminders && prefs.remPlace === 'banner') hijriReminders().forEach(function (r) { bannerItems.push({ t: r, href: 'azkar.html' }); });
+  var us = natJSON('updateState');
+  if (us && us.phase === 'available') bannerItems.unshift({ t: 'يوجد تحديث جديد (الإصدار ' + us.latest + ') — اضغط للتحديث', href: 'update.html' });
   if (HAS_NATIVE && nat('isDefaultHome') === false) bannerItems.unshift({ t: 'اضغط هنا لجعل رفيق الطريق الواجهة الافتراضية', href: 'javascript:nat(\'makeDefaultHome\')' });
   showBanner();
 }
@@ -527,6 +529,14 @@ buildPages(); renderDock(); renderStatus(); tick(); renderBanner(); bootAction()
 setInterval(function () { if (!document.hidden) tick(); }, 1000);
 setInterval(function () { if (!document.hidden) renderStatus(); }, 5000);
 autoDetectPerf();
+/* البحث عن تحديث بهدوء كل 6 ساعات عند توفر الإنترنت */
+function autoUpdateCheck(){
+  if (!HAS_NATIVE) return;
+  var s = natJSON('status') || {}, last = +(lsGet('carlauncher.updChecked', 0));
+  if (s.internet && Date.now() - last > 6 * 3600000) { lsSet('carlauncher.updChecked', Date.now()); nat('updateCheck'); setTimeout(renderBanner, 8000); }
+}
+setTimeout(autoUpdateCheck, 15000);
+setInterval(autoUpdateCheck, 10 * 60000);
 setInterval(function () { processInbox(); updatePlaceReminders(); autoRest(); }, 5000);
 setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 fitStage();

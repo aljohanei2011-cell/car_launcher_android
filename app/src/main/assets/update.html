@@ -37,20 +37,20 @@
   <div class="page">
     <div class="top">
       <a class="icon-btn" href="settings.html" aria-label="رجوع" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
-      <span style="font-size:26px;font-weight:700">التحديث والتطبيقات</span>
+      <span style="font-size:26px;font-weight:700" id="ptitle">تحديث التطبيق</span>
     </div>
-    <div class="cols">
-      <div class="card">
+    <div class="cols" id="cols">
+      <div class="card" id="updCard">
         <span class="h">تحديث رفيق الطريق</span>
         <div class="row"><span class="sub">الإصدار الحالي</span><span class="big" id="cur">—</span></div>
-        <div id="tokenBox"></div>
+        
         <button class="btn" id="check">بحث عن تحديث</button>
         <div class="bar" id="bar" style="display:none"><div id="barIn"></div></div>
         <div class="msg" id="umsg"></div>
         <div class="notes" id="notes"></div>
-        <span class="note sub" style="font-size:14px;margin-top:auto">يحتاج اتصالاً بالإنترنت وقت التحديث فقط (نقطة اتصال الجوال). أندرويد يطلب تأكيد التثبيت، ثم يعود التطبيق تلقائياً.</span>
+        <span class="note sub" style="font-size:15px;margin-top:auto">يحتاج إنترنت وقت التحديث فقط. أندرويد يطلب تأكيد التثبيت، ثم يعود التطبيق تلقائياً بإعداداتك.</span>
       </div>
-      <div class="card">
+      <div class="card" id="apkCard">
         <div class="row" style="justify-content:space-between"><span class="h">تطبيقات مرفوعة من الجوال</span><a class="btn g" href="upload.html" style="display:flex;align-items:center">+ رفع من الجوال</a></div>
         <div class="msg" id="perm"></div>
         <div class="list" id="apks"></div>
@@ -65,26 +65,14 @@ document.body.style.background = '#0a0f1f';
 function $(id){ return document.getElementById(id); }
 function mb(b){ return (b / 1048576).toFixed(1) + ' م.ب'; }
 
+/* الصفحة بوضعين: التحديث فقط (الافتراضي)، أو التطبيقات المرفوعة ?apks=1 */
+var APKS_MODE = /apks=1/.test(location.search);
+$('cols').style.gridTemplateColumns = '1fr';
+if (APKS_MODE) { $('updCard').style.display = 'none'; $('ptitle').textContent = 'تثبيت تطبيقات مرفوعة'; }
+else { $('apkCard').style.display = 'none'; $('updCard').style.cssText = 'max-width:760px;width:100%;justify-self:center;gap:20px;padding:30px 34px'; }
 var ver = natJSON('version');
 $('cur').textContent = ver ? ver.code : '—';
 
-function renderToken(){
-  var box = $('tokenBox'); box.innerHTML = '';
-  if (!HAS_NATIVE) { box.innerHTML = '<div class="msg">يعمل داخل التطبيق على الشاشة.</div>'; return; }
-  if (nat('hasToken')) {
-    box.innerHTML = '<div class="row"><span class="msg ok">رمز GitHub محفوظ ✓</span><button class="btn g" id="rmTok">حذف الرمز</button></div>';
-    $('rmTok').onclick = function () { nat('clearToken'); renderToken(); };
-  } else {
-    box.innerHTML = '<div class="msg">التحديث يعمل مباشرة ما دام المستودع عاماً. الرمز مطلوب فقط إذا كان المستودع خاصاً، وأسهل طريقة لإرساله من الجوال (تبويب «رمز التحديث»).</div>' +
-      '<div class="row"><a class="btn g" href="upload.html" style="display:flex;align-items:center">إرسال الرمز من الجوال</a></div>' +
-      '<div class="row"><input class="inp" id="tok" placeholder="أو الصقه هنا github_pat_…"><button class="btn g" id="saveTok">حفظ</button></div>';
-    $('saveTok').onclick = function () {
-      if (nat('setToken', $('tok').value)) renderToken();
-      else { $('umsg').className = 'msg err'; $('umsg').textContent = 'الرمز غير صحيح.'; }
-    };
-  }
-}
-renderToken();
 
 var polling = null;
 function poll(){
@@ -160,12 +148,12 @@ function pollInstall(){
   else if (st.indexOf('fail:') === 0) { p.className = 'msg err'; p.textContent = st.slice(5); installing = ''; }
   else if (st === 'need_user') { p.className = 'msg'; p.textContent = 'اضغط «تثبيت» في نافذة أندرويد.'; }
 }
-window.onPageResume = function () { renderToken(); renderApks(); poll(); pollInstall(); if (nat('canInstall')) $('perm').textContent = ''; };
+window.onPageResume = function () { renderApks(); poll(); pollInstall(); if (nat('canInstall')) $('perm').textContent = ''; };
 
 requirePin(function () {
   renderApks(); poll();
   setInterval(function () { poll(); pollInstall(); }, 700);
-  if (HAS_NATIVE && !nat('canInstall')) askInstallPermission();
+  if (APKS_MODE && HAS_NATIVE && !nat('canInstall')) askInstallPermission();
 });
 fitStage();
 </script>
