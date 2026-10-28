@@ -94,3 +94,13 @@ body.skin-red #stage::after{bottom:-4px;left:-4px;transform:scaleY(-1)}
 body.skin-gold .L-classic .k-img,body.skin-red .L-classic .k-img,body.skin-gold .L-side .k-img,body.skin-red .L-side .k-img{display:block}
 .k-art{display:none;width:5.2em;height:5.2em;border-radius:.8em;background-size:cover;background-position:center;flex:none}
 body.skin-gold .k-art,body.skin-red .k-art{display:block}
+
+/* ===================== وضع الأداء ===================== */
+body.perf .glass{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(10,25,55,.93);box-shadow:none!important}
+body.perf.skin-gold .glass{background:#0f1d30}
+body.perf.skin-red .glass{background:#16191e}
+body.perf *,body.perf *::before,body.perf *::after{animation:none!important;transition:none!important}
+body.perf #stage::before,body.perf #stage::after{display:none!important}
+body.perf .mbtn.big,body.perf .dk:first-child,body.perf .k-img{box-shadow:none!important}
+body.perf .dk svg,body.perf .st svg{filter:none!important}
+body.perf .logo{text-shadow:none}

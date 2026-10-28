@@ -99,6 +99,7 @@ class MainActivity : AppCompatActivity() {
         }
         // أولوية عالية لمحرك الصفحات حتى لا يُغلقه النظام عند ضغط الذاكرة
         try { webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false) } catch (e: Exception) {}
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         webView.keepScreenOn = false
         setContentView(webView)
         webView.loadUrl(base + pageFrom(intent, "index.html"))
@@ -144,8 +145,15 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
+    // عند فتح تطبيق آخر (الخرائط مثلاً) نوقف الواجهة مؤقتاً لتوفير المعالج؛ التنبيهات تعمل من الخدمة
+    override fun onPause() {
+        super.onPause()
+        try { webView.onPause(); webView.pauseTimers() } catch (e: Exception) {}
+    }
+
     override fun onResume() {
         super.onResume()
+        try { webView.resumeTimers(); webView.onResume() } catch (e: Exception) {}
         // تحديث الصفحة الحالية (مثلاً بعد منح الوصول للإشعارات)
         webView.evaluateJavascript("window.onResumeNative && window.onResumeNative()", null)
     }

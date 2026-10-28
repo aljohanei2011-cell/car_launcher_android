@@ -11,11 +11,24 @@ window.addEventListener('resize', fitStage);
 
 /* ===== الجسر مع أندرويد (Native). في المتصفح يعمل كل شيء بدونه ===== */
 var HAS_NATIVE = typeof window.Native !== 'undefined';
+var _natCache = {}, NAT_READS = { trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
+  if (!NAT_READS[fn]) _natCache = {}; // أي أمر (تشغيل، إيقاف...) يلغي القراءات المحفوظة
   try { return Native[fn].apply(Native, Array.prototype.slice.call(arguments, 1)); } catch (e) { return null; }
 }
+/* قراءات الجسر تُحفظ لأقل من ثانية حتى لا تتكرر من كل بطاقة (أخف على المعالج) */
 function natJSON(fn){
+  if (arguments.length === 1 && NAT_READS[fn]) {
+    var c = _natCache[fn];
+    if (c && Date.now() - c.t < 800) return c.v;
+    var v = natJSONraw(fn);
+    _natCache[fn] = { t: Date.now(), v: v };
+    return v;
+  }
+  return natJSONraw.apply(null, arguments);
+}
+function natJSONraw(fn){
   var r = nat.apply(null, arguments);
   if (r === null || r === undefined || r === '') return null;
   try { return JSON.parse(r); } catch (e) { return null; }
@@ -45,7 +58,8 @@ var DEFAULT_PREFS = {
   restStyle: 'classic', restShow: { dua: true, wird: true, remind: true, prayer: true, date: true },
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
-  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false
+  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false,
+  perf: 'auto', perfDetected: null
 };
 function loadPrefs(){
   try {
@@ -180,6 +194,7 @@ function applyPrefs(bgKey, p){
     stage.style.setProperty('--font-dua', fontCss(p.duaFont || 'amiri', 'amiri'));
   }
   document.body.classList.toggle('solid', !!p.solid);
+  document.body.classList.toggle('perf', perfOn(p));
   document.body.classList.remove('skin-gold', 'skin-red');
   if (p.skin === 'gold' || p.skin === 'red') document.body.classList.add('skin-' + p.skin);
   renderBrand(p);
@@ -832,4 +847,26 @@ function memText(){
   var m = natJSON('memInfo'); if (!m || !m.total) return null;
   var used = m.total - m.avail;
   return { pct: Math.round(used / m.total * 100), used: gb(used), total: gb(m.total), avail: gb(m.avail), low: m.low };
+}
+
+/* ===== وضع الأداء ===== */
+function perfOn(p){ p = p || loadPrefsCached(); return p.perf === 'on' || (p.perf === 'auto' && !!(p.perfDetected && p.perfDetected.on)); }
+/* قياس سرعة الرسم (إطارات في الثانية) */
+function measureFps(ms, cb){
+  var n = 0, t0 = 0;
+  function f(t){ if (!t0) t0 = t; n++; if (t - t0 < ms) requestAnimationFrame(f); else cb(Math.round(n * 1000 / (t - t0))); }
+  requestAnimationFrame(f);
+}
+/* أول تشغيل: نقيس الشاشة ونقرر وضع الأداء تلقائياً */
+function autoDetectPerf(){
+  var p = loadPrefs();
+  if (p.perf !== 'auto' || (p.perfDetected && p.perfDetected.v === 1)) return;
+  setTimeout(function () {
+    measureFps(3000, function (fps) {
+      var m = natJSON('memInfo'), ram = m && m.total ? m.total / 1073741824 : 4;
+      var q = loadPrefs(); q.perfDetected = { v: 1, fps: fps, ram: Math.round(ram * 10) / 10, on: fps < 45 || ram < 2.6, at: Date.now() };
+      savePrefs(q); _prefsCache = null;
+      document.body.classList.toggle('perf', perfOn(q));
+    });
+  }, 4000);
 }

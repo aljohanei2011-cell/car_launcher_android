@@ -398,10 +398,13 @@ card('ram', 'الذاكرة', function () {
 });
 function openRadioApp(){ if (prefs.radioApp && nat('launch', prefs.radioApp)) return; location.href = 'apps.html?pick=radio'; }
 function playStation(id){ var s = loadStations().filter(function (x) { return x.id === id; })[0]; if (s) { nat('radioPlay', s.url, s.name); later(); } }
-function later(){ setTimeout(tick, 500); setTimeout(tick, 1500); }
+function later(){ setTimeout(function () { forceCards = true; tick(); forceCards = false; }, 500); setTimeout(function () { forceCards = true; tick(); forceCards = false; }, 1500); }
 
 /* ================= رسم الصفحات ================= */
 var cardEls = [];
+/* كم ثانية بين تحديث كل بطاقة (الباقي كل 30 ثانية) */
+var CARD_RATE = { clock: 1, speed: 1, media: 2, trip: 2, qibla: 3, ram: 5, radio: 2, reminders: 5 };
+function cardRate(id){ if (id === 'prayer') return (prefs.skin === 'gold' || prefs.skin === 'red') ? 1 : 15; return CARD_RATE[id] || 30; }
 function buildPages(){
   var stage = document.getElementById('stage');
   stage.classList.remove('L-classic', 'L-grid', 'L-side', 'L-minimal');
@@ -435,10 +438,14 @@ function updateDots(){
 }
 document.getElementById('pages').addEventListener('scroll', function () { clearTimeout(this._t); this._t = setTimeout(updateDots, 80); });
 
+var forceCards = false;
 function renderCards(){
   // لا نعيد رسم البطاقات أثناء اللمس حتى لا تضيع الضغطة
   if (Date.now() - touchAt < 700) return;
+  var now = Date.now();
   cardEls.forEach(function (c) {
+    if (c.at && now - c.at < cardRate(c.id) * 1000 - 100 && !forceCards) return;
+    c.at = now;
     var h = '';
     try { h = CARDS[c.id].render(); } catch (e) { h = '<span class="k-lbl">' + CARDS[c.id].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
     if (h !== c.html) { c.el.innerHTML = h; c.html = h; }
@@ -513,12 +520,13 @@ function tick(){
   }
   renderCards(); renderRemChip();
 }
-window.onPageResume = function () { prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
+window.onPageResume = function () { forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
 
 processInbox();
 buildPages(); renderDock(); renderStatus(); tick(); renderBanner(); bootAction(); applyBrightness(); weatherRefreshIfStale();
-setInterval(tick, 1000);
-setInterval(renderStatus, 5000);
+setInterval(function () { if (!document.hidden) tick(); }, 1000);
+setInterval(function () { if (!document.hidden) renderStatus(); }, 5000);
+autoDetectPerf();
 setInterval(function () { processInbox(); updatePlaceReminders(); autoRest(); }, 5000);
 setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 fitStage();

@@ -117,7 +117,8 @@ function $(id){ return document.getElementById(id); }
 function vis(id, on){ $(id).classList.toggle('hidden', !on); }
 
 function applyStyle(){
-  document.body.className = 'S-' + style + (prefs.solid ? ' solid' : '');
+  STYLES.forEach(function (s) { document.body.classList.remove('S-' + s[0]); });
+  document.body.classList.add('S-' + style);
   var night = style === 'night', pattern = style === 'pattern', gallery = style === 'gallery';
   $('bg').style.display = (night || pattern || gallery) ? 'none' : '';
   $('pattern').style.display = pattern ? '' : 'none';
@@ -148,6 +149,7 @@ function setDua(){
     el.innerHTML = ''; el.textContent = duas[duaIndex % duas.length];
     var max = style === 'pattern' ? 46 : style === 'night' ? 30 : style === 'gallery' ? 30 : 40;
     fitOneLine(el, max, 24);
+    if (perfOn()) { var mq = el.querySelector('.mq'); if (mq) mq.style.animation = 'none'; }
     el.style.opacity = 1;
   }, 300);
 }

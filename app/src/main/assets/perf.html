@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>فحص الأداء</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.big{font-size:84px;font-weight:700;direction:ltr;text-align:center;line-height:1}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.box{border-radius:20px;background:#111a33;border:1px solid #222c4d;padding:18px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.box b{font-size:32px;direction:ltr}
+.bar{height:14px;border-radius:7px;background:#252e4d;overflow:hidden;width:100%}
+.bar div{height:100%;background:#5AD1A0}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="settings.html" aria-label="رجوع" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
+      <span class="ptitle">فحص الأداء</span>
+    </div>
+    <div class="pcard" style="align-items:center">
+      <span class="ph">سرعة الرسم الآن</span>
+      <div class="big" id="fps">—</div>
+      <span class="pnote">إطار في الثانية. 55 أو أكثر ممتاز، 40 إلى 55 مقبول، أقل من 40 يعني أن وضع الأداء سيفيدك.</span>
+    </div>
+    <div class="grid4">
+      <div class="box"><span class="sub">الذاكرة المستخدمة</span><b id="ram">—</b><div class="bar"><div id="ramBar" style="width:0"></div></div></div>
+      <div class="box"><span class="sub">وضع الأداء</span><b id="pm">—</b><span class="pnote" id="pmWhy"></span></div>
+      <div class="box"><span class="sub">إصدار محرك الصفحات</span><b id="wv" class="latin">—</b></div>
+      <div class="box"><span class="sub">الشاشة</span><b id="scr" class="latin">—</b></div>
+    </div>
+    <div class="prow">
+      <button class="pbtn" id="toggle">تجربة وضع الأداء الآن</button>
+      <button class="pbtn g" id="remeasure">إعادة القياس التلقائي</button>
+      <button class="pbtn g" id="free">تحرير الذاكرة</button>
+      <span class="pnote" id="msg"></span>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(id){ return document.getElementById(id); }
+function loop(){ measureFps(1500, function (f) { var e = $('fps'); e.textContent = f; e.style.color = f >= 55 ? '#5AD1A0' : f >= 40 ? '#E8C061' : '#FF6B5A'; loop(); }); }
+function info(){
+  var m = memText();
+  if (m) { $('ram').textContent = m.used + ' / ' + m.total + ' GB'; $('ramBar').style.width = m.pct + '%'; $('ramBar').style.background = m.pct > 85 ? '#FF6B5A' : m.pct > 70 ? '#E8C061' : '#5AD1A0'; }
+  else $('ram').textContent = '—';
+  prefs = loadPrefs(); _prefsCache = null;
+  $('pm').textContent = perfOn(prefs) ? 'مفعّل' : 'مُطفأ';
+  var d = prefs.perfDetected;
+  $('pmWhy').textContent = prefs.perf === 'auto' ? ('تلقائي' + (d ? ' (قياس ' + d.fps + ' إطار، ' + d.ram + ' GB)' : ' (لم يُقَس بعد)')) : (prefs.perf === 'on' ? 'مفعّل يدوياً' : 'مُطفأ يدوياً');
+  $('toggle').textContent = perfOn(prefs) ? 'إيقاف وضع الأداء' : 'تفعيل وضع الأداء';
+}
+var mv = navigator.userAgent.match(/Chrome\/([\d.]+)/); $('wv').textContent = mv ? 'Chrome ' + mv[1].split('.')[0] : '—';
+var s = natJSON('screen'); $('scr').textContent = s ? s.w + '×' + s.h : screen.width + '×' + screen.height;
+$('toggle').onclick = function () { prefs.perf = perfOn(prefs) ? 'off' : 'on'; savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); info(); };
+$('remeasure').onclick = function () { prefs.perf = 'auto'; prefs.perfDetected = null; savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); $('msg').textContent = 'سيُعاد القياس عند فتح الرئيسية.'; info(); };
+$('free').onclick = function () { nat('freeRam'); $('msg').textContent = 'جارٍ التحرير…'; setTimeout(function () { var r = natJSON('ramResult') || {}; $('msg').textContent = 'تم تحرير ' + Math.round((r.freed || 0) / 1048576) + ' م.ب'; info(); }, 2600); };
+info(); setInterval(info, 3000); loop();
+fitStage();
+</script>
+</body>
+</html>
