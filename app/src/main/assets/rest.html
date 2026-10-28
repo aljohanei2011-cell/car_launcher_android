@@ -6,103 +6,241 @@
 <title>شاشة الاستراحة</title>
 <link rel="stylesheet" href="common.css">
 <style>
-@font-face{font-family:'Amiri';src:local('Amiri'),local('Noto Naskh Arabic')}
-.top{display:flex;justify-content:space-between;align-items:center;height:52px;padding:26px 40px 0}
-.clock{font-size:170px;font-weight:700;line-height:1;margin-top:18px;direction:ltr;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:2px}
-.dates{display:flex;gap:22px;justify-content:center;font-size:24px;color:#E4E8F2;margin-top:10px}
-.dua{margin-top:18px;min-height:110px;max-width:900px;margin-left:auto;margin-right:auto;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Amiri','Noto Naskh Arabic',serif;font-size:40px;line-height:1.6;padding:0 20px}
-.wird{margin:6px auto 0;max-width:980px;display:flex;align-items:center;gap:14px;padding:12px 24px;border-radius:22px;background:rgba(0,0,0,.35);border:1px solid rgba(242,200,121,.35);font-size:22px;line-height:1.5}
-.wird .wl{color:#F2C879;font-size:16px;white-space:nowrap}
-.wird .ws{color:#C9CFDD;font-size:15px;white-space:nowrap}
-.next{display:flex;align-items:center;justify-content:center;gap:26px;margin-top:auto}
-.foot{display:flex;gap:16px;justify-content:center;padding:22px 0 34px}
-.btn{height:64px;border-radius:32px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;gap:12px;font-size:22px;font-weight:500;padding:0 30px}
+#stage{background:#000}
+.layer{position:absolute;inset:0}
+.wrap{position:relative;height:100%;display:flex;flex-direction:column;box-sizing:border-box;padding:22px 40px 24px}
+.top{display:flex;justify-content:space-between;align-items:center;height:56px;flex:none}
+.mid{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.clockBox{display:flex;flex-direction:column;align-items:center;gap:8px}
+svg.layer{width:100%;height:100%}
+.clock{font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums;letter-spacing:2px;white-space:nowrap}
+.dates{display:flex;gap:18px;justify-content:center;font-size:22px;color:#E4E8F2;white-space:nowrap}
+.dua{width:100%;max-width:1100px;height:64px;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Amiri','Noto Naskh Arabic',serif;transition:opacity .6s}
+.dua .mq{white-space:nowrap}
+.remind{font-size:19px;color:#F2C879;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:1000px;min-height:26px}
+.wird{display:flex;align-items:center;gap:14px;padding:10px 22px;border-radius:20px;background:rgba(0,0,0,.35);border:1px solid rgba(242,200,121,.35);font-size:20px;max-width:1000px;white-space:nowrap;overflow:hidden}
+.wird .wl{color:#F2C879;font-size:15px}
+.wird .ws{color:#C9CFDD;font-size:14px}
+.wird .wt{overflow:hidden;text-overflow:ellipsis}
+.next{display:flex;align-items:center;justify-content:center;gap:20px}
+.foot{display:flex;gap:14px;justify-content:center;flex:none;height:64px}
+.btn{height:60px;border-radius:30px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;gap:10px;font-size:20px;font-weight:500;padding:0 26px;color:#fff}
+.hidden{display:none!important}
+
+/* ===== الأنماط ===== */
+.S-classic .clock{font-size:150px}
+.S-clock .clock{font-size:250px}
+.S-clock .dates{font-size:26px}
+.S-night #stage,.S-night{background:#000}
+.S-night .clock{font-size:200px;color:#9a6f2c;font-weight:500}
+.S-night .dates,.S-night .dua,.S-night .next,.S-night .top{color:#6b5226!important;opacity:.85}
+.S-night .next *,.S-night .top *{color:#6b5226!important;text-shadow:none!important}
+.S-night .btn{background:none;border-color:#3a2c14;color:#6b5226}
+.S-pattern .clock{font-size:110px;color:#F3E2B3}
+.S-pattern .duaBox{border:2px solid rgba(232,192,97,.6);border-radius:30px;padding:26px 40px;background:rgba(6,30,32,.75);width:min(1050px,100%);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:8px}
+.S-gallery .clockBox{position:absolute;left:40px;top:96px;padding:16px 26px;border-radius:24px}
+.S-gallery .duaBox,.S-gallery .next{background:rgba(0,0,0,.5);border-radius:20px;padding:8px 22px;box-sizing:border-box}
+.S-gallery .duaBox{width:min(1000px,100%)}
+.S-gallery .clock{font-size:90px}
+.S-gallery .mid{justify-content:flex-end}
+.S-nap .clock{font-size:180px}
+.napOpts{display:flex;gap:14px}
+.napOpts button{height:70px;min-width:120px;border-radius:22px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);font-size:24px;color:#fff}
+.napOpts button.on{background:#2F7BFF;border-color:#6FA8FF}
+#gallery img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 1.5s}
 </style>
 </head>
 <body>
 <div id="stage">
   <img id="bg" src="bg/rest_night.jpg" alt="">
-  <div class="shade"></div>
+  <div class="layer" id="gallery"></div>
+  <svg class="layer" id="pattern" style="display:none" aria-hidden="true">
+    <defs>
+      <pattern id="pt" width="80" height="80" patternUnits="userSpaceOnUse">
+        <rect width="80" height="80" fill="#062024"/>
+        <g fill="none" stroke="rgba(232,192,97,.32)" stroke-width="1.4">
+          <rect x="20" y="20" width="40" height="40"/>
+          <rect x="20" y="20" width="40" height="40" transform="rotate(45 40 40)"/>
+          <circle cx="40" cy="40" r="9"/>
+          <path d="M0 0 20 20M80 0 60 20M0 80 20 60M80 80 60 60M40 0v11.7M40 80V68.3M0 40h11.7M80 40H68.3"/>
+        </g>
+      </pattern>
+      <radialGradient id="vg" cx="50%" cy="50%" r="70%"><stop offset="40%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".75"/></radialGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#pt)"/>
+    <rect width="100%" height="100%" fill="url(#vg)"/>
+  </svg>
+  <div class="shade" id="shade"></div>
   <div class="wrap">
     <div class="top">
       <div class="logo" id="brand" aria-label="اسم السيارة"></div>
-      <div style="font-size:20px;color:#E4E8F2">وضع الاستراحة</div>
+      <div style="font-size:19px;color:#E4E8F2" id="title">وضع الاستراحة</div>
     </div>
-    <div class="clock" id="clock"></div>
-    <div class="dates"><span id="hijri"></span><span aria-hidden="true" style="opacity:.5">|</span><span id="greg"></span></div>
-    <div class="dua" id="dua"></div>
-    <div id="remind" style="text-align:center;font-size:19px;color:#F2C879;margin-top:8px;min-height:26px"></div>
-    <div class="wird" id="wird"><span class="wl">ورد اليوم</span><span id="wirdText"></span><span class="ws" id="wirdSrc"></span></div>
-    <div class="next">
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10M5 10V6M4 6h2M19 21V10M19 10V6M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M12 9v3M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>
-      <div style="display:flex;flex-direction:column"><span style="font-size:18px;color:#F2C879">الصلاة القادمة</span><span id="nextName" style="font-size:38px;font-weight:600"></span></div>
-      <span aria-hidden="true" style="font-size:38px;opacity:.4">|</span>
-      <span id="nextTime" style="font-size:44px;font-weight:700;direction:ltr"></span>
+    <div class="mid" id="mid">
+      <div class="clockBox" id="clockBox">
+        <div class="clock" id="clock"></div>
+        <div class="dates" id="dates"><span id="hijri"></span><span style="opacity:.5">|</span><span id="greg"></span></div>
+      </div>
+      <div class="duaBox" id="duaBox">
+        <div class="dua" id="dua"></div>
+        <div class="wird" id="wird"><span class="wl">ورد اليوم</span><span class="wt" id="wirdText"></span><span class="ws" id="wirdSrc"></span></div>
+      </div>
+      <div class="remind" id="remind"></div>
+      <div class="next" id="next">
+        <span style="font-size:18px;color:#F2C879">الصلاة القادمة</span>
+        <span id="nextName" style="font-size:34px;font-weight:600"></span>
+        <span style="font-size:30px;opacity:.4">|</span>
+        <span id="nextTime" style="font-size:36px;font-weight:700"></span>
+        <span id="nextDiff" class="sub" style="font-size:20px"></span>
+      </div>
+      <div id="nap" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:16px">
+        <div class="napOpts" id="napOpts"></div>
+        <div id="napMsg" class="sub" style="font-size:20px;min-height:28px"></div>
+      </div>
     </div>
     <div class="foot">
-      <a class="btn glass" href="index.html"><span>العودة للرئيسية</span></a>
-      <a class="btn glass" href="azkar.html"><span>الأذكار</span></a>
+      <a class="btn glass" href="index.html">الرئيسية</a>
+      <button class="btn glass" id="styleBtn">تغيير النمط</button>
+      <a class="btn glass" href="azkar.html">الأذكار</a>
     </div>
   </div>
 </div>
 
 <script src="common.js"></script>
 <script>
-var DUAS = [
-  'اللهم إني أسألك من فضلك ورحمتك، فإنه لا يملكها إلا أنت',
-  'ربنا آتنا في الدنيا حسنة وفي الآخرة حسنة وقنا عذاب النار',
-  'سبحان الذي سخّر لنا هذا وما كنا له مقرنين، وإنا إلى ربنا لمنقلبون',
-  'لا حول ولا قوة إلا بالله',
-  'سبحان الله وبحمده، سبحان الله العظيم'
-];
 var prefs = loadPrefs();
 applyPrefs('rest', prefs);
-var duaIndex = 0;
-function setDua(){ document.getElementById('dua').textContent = DUAS[duaIndex]; }
+var STYLES = [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['night', 'ليلي خافت'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']];
+var style = (location.search.match(/style=(\w+)/) || [])[1] || prefs.restStyle || 'classic';
+var show = Object.assign({ dua: true, wird: true, remind: true, prayer: true, date: true }, prefs.restShow || {});
+function $(id){ return document.getElementById(id); }
+function vis(id, on){ $(id).classList.toggle('hidden', !on); }
+
+function applyStyle(){
+  document.body.className = 'S-' + style + (prefs.solid ? ' solid' : '');
+  var night = style === 'night', pattern = style === 'pattern', gallery = style === 'gallery';
+  $('bg').style.display = (night || pattern || gallery) ? 'none' : '';
+  $('pattern').style.display = pattern ? '' : 'none';
+  $('gallery').style.display = gallery ? '' : 'none';
+  $('shade').style.display = night ? 'none' : '';
+  $('clockBox').className = 'clockBox' + (gallery ? ' glass' : '');
+  $('title').textContent = (STYLES.filter(function (s) { return s[0] === style; })[0] || STYLES[0])[1];
+  // ما يظهر في كل نمط (ومع اختياراتك من الإعدادات)
+  var minimal = style === 'clock' || style === 'night';
+  vis('dates', show.date && style !== 'night');
+  vis('dua', show.dua && style !== 'clock' && style !== 'nap');
+  vis('wird', show.wird && !minimal && style !== 'gallery' && style !== 'nap');
+  vis('remind', show.remind && !minimal && style !== 'nap');
+  vis('next', show.prayer && style !== 'clock');
+  vis('nap', style === 'nap');
+  $('duaBox').classList.toggle('hidden', $('dua').classList.contains('hidden') && $('wird').classList.contains('hidden'));
+  if (gallery) startGallery(); else stopGallery();
+  if (style === 'nap') renderNap();
+  setTimeout(setDua, 50);
+}
+
+/* ===== الدعاء: سطر واحد ===== */
+var duas = duaList(), duaIndex = 0;
+function setDua(){
+  var el = $('dua'); if (el.classList.contains('hidden') || !duas.length) return;
+  el.style.opacity = 0;
+  setTimeout(function () {
+    el.innerHTML = ''; el.textContent = duas[duaIndex % duas.length];
+    var max = style === 'pattern' ? 46 : style === 'night' ? 30 : style === 'gallery' ? 30 : 40;
+    fitOneLine(el, max, 24);
+    el.style.opacity = 1;
+  }, 300);
+}
+setInterval(function () { duaIndex++; setDua(); }, (+prefs.duaSec || 15) * 1000);
+
+/* ===== المعرض ===== */
+var gTimer = null, gIdx = 0;
+function galleryList(){
+  var imgs = userImages().filter(function (im) { return im.slot === 'home' || im.slot === 'rest'; }).map(function (im) { return im.url; });
+  if (!imgs.length) imgs = Object.keys(THEMES).map(function (k) { return THEMES[k].bg; });
+  return imgs;
+}
+function startGallery(){
+  if (gTimer) return;
+  var g = $('gallery'), list = galleryList();
+  g.innerHTML = '';
+  list.forEach(function (u, i) { var im = document.createElement('img'); im.src = u; im.alt = ''; im.style.opacity = i === 0 ? 1 : 0; g.appendChild(im); });
+  gTimer = setInterval(function () {
+    var ims = g.children; if (ims.length < 2) return;
+    ims[gIdx % ims.length].style.opacity = 0; gIdx++; ims[gIdx % ims.length].style.opacity = 1;
+  }, 12000);
+}
+function stopGallery(){ if (gTimer) { clearInterval(gTimer); gTimer = null; } }
+
+/* ===== القيلولة ===== */
+var napEnd = 0, alarmCtx = null, alarmTimer = null;
+function renderNap(){
+  var o = $('napOpts'); o.innerHTML = '';
+  if (napEnd) {
+    var stop = document.createElement('button'); stop.textContent = alarmTimer ? 'إيقاف المنبّه' : 'إلغاء القيلولة'; stop.className = 'on';
+    stop.onclick = function () { napEnd = 0; stopAlarm(); renderNap(); tick(); };
+    o.appendChild(stop); return;
+  }
+  [10, 15, 20, 30].forEach(function (m) {
+    var b = document.createElement('button'); b.textContent = m + ' دقيقة';
+    b.onclick = function () {
+      try { alarmCtx = alarmCtx || new (window.AudioContext || window.webkitAudioContext)(); alarmCtx.resume(); } catch (e) {}
+      napEnd = Date.now() + m * 60000; renderNap(); tick();
+      var np = nextPrayer(new Date());
+      $('napMsg').textContent = np.diff <= m ? 'تنبيه: صلاة ' + np.name + ' تدخل خلال القيلولة (' + np.timeFmt + ')' : 'نوماً هنيئاً. المنبّه بعد ' + m + ' دقيقة.';
+    };
+    o.appendChild(b);
+  });
+  $('napMsg').textContent = 'اختر مدة القيلولة';
+}
+function beep(){
+  if (!alarmCtx) return;
+  [0, 0.35, 0.7].forEach(function (t) {
+    var o = alarmCtx.createOscillator(), g = alarmCtx.createGain();
+    o.frequency.value = 880; o.connect(g); g.connect(alarmCtx.destination);
+    var s = alarmCtx.currentTime + t;
+    g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.4, s + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.25);
+    o.start(s); o.stop(s + 0.3);
+  });
+}
+function startAlarm(){ if (alarmTimer) return; beep(); alarmTimer = setInterval(beep, 1500); renderNap(); $('napMsg').textContent = 'انتهت القيلولة'; }
+function stopAlarm(){ if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = null; } }
+
+function pad(x){ return (x < 10 ? '0' : '') + x; }
 function tick(){
   var d = new Date();
-  document.getElementById('clock').textContent = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
-  document.getElementById('greg').textContent = fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + ' م';
-  document.getElementById('hijri').textContent = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d);
+  if (style === 'nap' && napEnd) {
+    var left = Math.max(0, Math.round((napEnd - Date.now()) / 1000));
+    $('clock').textContent = pad(Math.floor(left / 60)) + ':' + pad(left % 60);
+    if (left === 0) startAlarm();
+  } else $('clock').textContent = clockStr(d);
+  $('greg').textContent = fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + ' م';
+  $('hijri').textContent = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d);
   var np = nextPrayer(d);
-  document.getElementById('nextName').textContent = np.name;
-  document.getElementById('nextTime').textContent = np.time;
+  $('nextName').textContent = np.name; $('nextTime').textContent = np.timeFmt; $('nextDiff').textContent = fmtDiff(np.diff);
+  var rems = activeReminders().map(function (r) { return r.text; });
+  if (prefs.reminders) rems = rems.concat(hijriReminders());
+  $('remind').textContent = rems.slice(0, 3).join(' · ');
 }
-/* ورد اليوم: آية أو حديث يتغير يومياً */
-var WIRD = [
-  ['ألا بذكر الله تطمئن القلوب', 'الرعد: 28'],
-  ['فاذكروني أذكركم واشكروا لي ولا تكفرون', 'البقرة: 152'],
-  ['إن مع العسر يسرا', 'الشرح: 6'],
-  ['ومن يتوكل على الله فهو حسبه', 'الطلاق: 3'],
-  ['وقل رب زدني علما', 'طه: 114'],
-  ['لا يكلف الله نفسا إلا وسعها', 'البقرة: 286'],
-  ['واصبر فإن الله لا يضيع أجر المحسنين', 'هود: 115'],
-  ['وهو معكم أين ما كنتم', 'الحديد: 4'],
-  ['ادعوني أستجب لكم', 'غافر: 60'],
-  ['وإذا سألك عبادي عني فإني قريب أجيب دعوة الداع إذا دعان', 'البقرة: 186'],
-  ['ولا تيأسوا من روح الله', 'يوسف: 87'],
-  ['إنما الأعمال بالنيات', 'متفق عليه'],
-  ['الكلمة الطيبة صدقة', 'متفق عليه'],
-  ['من كان يؤمن بالله واليوم الآخر فليقل خيرا أو ليصمت', 'متفق عليه'],
-  ['كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن: سبحان الله وبحمده، سبحان الله العظيم', 'متفق عليه'],
-  ['أحب الأعمال إلى الله أدومها وإن قل', 'متفق عليه'],
-  ['لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه', 'متفق عليه'],
-  ['المسلم من سلم المسلمون من لسانه ويده', 'متفق عليه'],
-  ['يسروا ولا تعسروا، وبشروا ولا تنفروا', 'متفق عليه'],
-  ['الدين النصيحة', 'رواه مسلم'],
-  ['إن الله رفيق يحب الرفق في الأمر كله', 'متفق عليه']
-];
-function setWird(){
-  var d = new Date(), start = new Date(d.getFullYear(), 0, 0);
-  var day = Math.floor((d - start) / 86400000);
-  var w = WIRD[day % WIRD.length];
-  document.getElementById('wirdText').textContent = w[0];
-  document.getElementById('wirdSrc').textContent = '(' + w[1] + ')';
-}
-tick(); setDua(); setWird();
-if (prefs.reminders) document.getElementById('remind').textContent = hijriReminders().join(' · ');
-setInterval(tick, 15000);
-setInterval(function(){ duaIndex = (duaIndex + 1) % DUAS.length; setDua(); }, 12000);
+var w = todayWird(); $('wirdText').textContent = w[0]; $('wirdSrc').textContent = '(' + w[1] + ')';
+
+$('styleBtn').onclick = function () {
+  var i = STYLES.map(function (s) { return s[0]; }).indexOf(style);
+  style = STYLES[(i + 1) % STYLES.length][0];
+  prefs = loadPrefs(); prefs.restStyle = style; savePrefs(prefs);
+  stopAlarm(); napEnd = 0; applyStyle(); tick();
+};
+
+/* العودة للرئيسية تلقائياً بعد مدة (إن اخترتها)، ما عدا أثناء القيلولة */
+var openedAt = Date.now();
+document.addEventListener('pointerdown', function () { openedAt = Date.now(); }, true);
+setInterval(function () {
+  var r = +prefs.restReturn || 0;
+  if (r && !napEnd && Date.now() - openedAt > r * 60000) location.href = 'index.html';
+}, 10000);
+
+applyStyle(); tick();
+setInterval(tick, 1000);
 fitStage();
 </script>
 </body>

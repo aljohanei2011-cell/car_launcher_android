@@ -1,0 +1,24 @@
+/* صفحات الأدوات (ملاحظات، تذكيرات، راديو، موقف) */
+.page{height:100%;box-sizing:border-box;padding:22px 28px;display:flex;flex-direction:column;gap:14px;background:#0a0f1f}
+.ptop{display:flex;align-items:center;gap:12px;height:52px;flex:none}
+.ptitle{font-size:26px;font-weight:700}
+.pcols{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.2fr;gap:16px}
+.pcard{border-radius:22px;background:#111a33;border:1px solid #222c4d;padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.ph{font-size:20px;font-weight:700;color:#8FD3C4}
+.plist{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.pitem{display:flex;align-items:center;gap:12px;border-radius:16px;background:#0f172d;border:1px solid #1d2747;padding:12px 14px;font-size:18px;text-align:right;color:#fff}
+.pitem.on{border-color:#6FA8FF;background:#13254a}
+.pitem .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pitem .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pitem .s{font-size:14px;color:#9FB0CC}
+.pbtn{height:52px;border-radius:16px;background:#1F5FD1;border:1px solid #6FA8FF;font-size:18px;font-weight:600;padding:0 20px;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.pbtn.g{background:#1b2748;border-color:#2b3658;font-weight:500}
+.pbtn.r{background:#3a1a1a;border-color:#6a3030}
+.pbtn.sm{height:42px;font-size:15px;padding:0 14px}
+.pbtn.on{background:#1F5FD1;border-color:#6FA8FF}
+.pbtn:disabled{opacity:.4}
+.pinp{height:52px;border-radius:14px;border:1px solid #2b3658;background:#0b1328;color:#fff;font:inherit;font-size:18px;padding:0 14px;box-sizing:border-box}
+textarea.pinp{height:auto;flex:1;min-height:0;padding:12px 14px;line-height:1.6;resize:none}
+.prow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pnote{font-size:15px;color:#9FB0CC;line-height:1.6}
+.pempty{text-align:center;color:#8F9AB8;font-size:19px;padding-top:40px;line-height:1.7}

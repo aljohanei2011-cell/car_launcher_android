@@ -32,7 +32,20 @@ var DEFAULT_PREFS = {
   rest: true, restMin: 120, travel: true, travelKm: 80,
   odoOffset: null,
   speedOn: false, speedLimit: 120, customSound: true,
-  bootAction: 'none', pin: '', nightBright: false, nightPct: 30, reminders: true
+  bootAction: 'none', pin: '', nightBright: false, nightPct: 30, reminders: true,
+  /* العرض */
+  h24: false, digits: 'en',
+  /* الواجهة: التصميم، الصفحات والبطاقات لكل تصميم، القائمة السفلية */
+  layout: 'classic', homes: null,
+  dock: ['maps', 'music', 'apps', 'rest', 'azkar', 'trip', 'settings'], dockLabels: true,
+  statusIcons: { bt: true, wifi: true, gps: true }, favApps: [], radioApp: '',
+  /* التذكيرات */
+  sysRem: { friday: true, fasting: true, white: true, ramadan: true, eid: true, dhulhijja: true }, remPlace: 'banner',
+  /* شاشة الاستراحة */
+  restStyle: 'classic', restShow: { dua: true, wird: true, remind: true, prayer: true, date: true },
+  duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
+  /* القيادة */
+  safeMode: true, weatherOn: true
 };
 function loadPrefs(){
   try {
@@ -124,6 +137,27 @@ function applyPrefs(bgKey, p){
    تمت مقارنتها بجدول أم القرى للرياض: الفرق دقيقة واحدة أو أقل. */
 var CITIES = {
   riyadh:  { label: 'الرياض',  lat: 24.7136, lng: 46.6753 },
+  yanbu:   { label: 'ينبع',    lat: 24.0895, lng: 38.0618 },
+  taif:    { label: 'الطائف',  lat: 21.2703, lng: 40.4158 },
+  hail:    { label: 'حائل',    lat: 27.5114, lng: 41.7208 },
+  jazan:   { label: 'جازان',   lat: 16.8892, lng: 42.5511 },
+  najran:  { label: 'نجران',   lat: 17.5656, lng: 44.2289 },
+  jubail:  { label: 'الجبيل',  lat: 27.0046, lng: 49.6460 },
+  hofuf:   { label: 'الأحساء', lat: 25.3830, lng: 49.5866 },
+  qatif:   { label: 'القطيف',  lat: 26.5196, lng: 50.0115 },
+  khamis:  { label: 'خميس مشيط', lat: 18.3000, lng: 42.7333 },
+  arar:    { label: 'عرعر',    lat: 30.9753, lng: 41.0381 },
+  sakaka:  { label: 'سكاكا',   lat: 29.9697, lng: 40.2064 },
+  baha:    { label: 'الباحة',  lat: 20.0129, lng: 41.4677 },
+  ula:     { label: 'العُلا',  lat: 26.6080, lng: 37.9232 },
+  hafar:   { label: 'حفر الباطن', lat: 28.4328, lng: 45.9708 },
+  kharj:   { label: 'الخرج',   lat: 24.1556, lng: 47.3120 },
+  unaizah: { label: 'عنيزة',   lat: 26.0843, lng: 43.9935 },
+  rabigh:  { label: 'رابغ',    lat: 22.7986, lng: 39.0349 },
+  dawadmi: { label: 'الدوادمي', lat: 24.5077, lng: 44.3924 },
+  qurayyat:{ label: 'القريات', lat: 31.3318, lng: 37.3428 },
+  bisha:   { label: 'بيشة',    lat: 20.0005, lng: 42.6052 },
+  khafji:  { label: 'الخفجي',  lat: 28.4391, lng: 48.4913 },
   dhahran: { label: 'الظهران', lat: 26.29,   lng: 50.11 },
   dammam:  { label: 'الدمام',  lat: 26.4207, lng: 50.0888 },
   khobar:  { label: 'الخبر',   lat: 26.2172, lng: 50.1971 },
@@ -189,7 +223,7 @@ function nextPrayer(d){
   var next = list.find(function (p) { return p.min > nowMin; });
   if (!next) next = prayerMinutes(new Date(d.getTime() + 86400000))[0];
   var diff = next.min > nowMin ? next.min - nowMin : next.min + 1440 - nowMin;
-  return { name: next.name, time: hhmm(next.min), diff: diff };
+  return { name: next.name, time: hhmm(next.min), timeFmt: fmtMin(next.min), diff: diff };
 }
 /* إرسال مواعيد اليوم والغد للخدمة لتنبّه حتى والخرائط مفتوحة */
 function pushPrayerSchedule(){
@@ -359,17 +393,18 @@ function hijriReminders(d){
   d = d || new Date();
   var out = [], wd = new Date(d.getTime() + TZ * 3600000).getUTCDay(), h = hijriParts(d);
   var tomorrow = new Date(d.getTime() + 86400000), ht = hijriParts(tomorrow);
-  if (wd === 5) out.push('يوم الجمعة: سورة الكهف والإكثار من الصلاة على النبي ﷺ');
-  if (wd === 0 || wd === 3) out.push('غداً ' + (wd === 0 ? 'الإثنين' : 'الخميس') + ': يُستحب صيامه');
-  if (ht && ht.d >= 13 && ht.d <= 15 && ht.m !== 9) out.push('الأيام البيض (13 و14 و15): يُستحب صيامها');
+  var sr = Object.assign({}, DEFAULT_PREFS.sysRem, loadPrefs().sysRem || {});
+  if (sr.friday && wd === 5) out.push('يوم الجمعة: سورة الكهف والإكثار من الصلاة على النبي ﷺ');
+  if (sr.fasting && (wd === 0 || wd === 3)) out.push('غداً ' + (wd === 0 ? 'الإثنين' : 'الخميس') + ': يُستحب صيامه');
+  if (sr.white && ht && ht.d >= 13 && ht.d <= 15 && ht.m !== 9) out.push('الأيام البيض (13 و14 و15): يُستحب صيامها');
   if (h) {
     var r = h.m === 9 ? null : daysUntilHijri(9, 1, d);
-    if (h.m === 9) out.push('رمضان مبارك — اليوم ' + h.d + ' من رمضان');
-    else if (r !== null && r <= 30) out.push('باقي ' + r + ' يوم على رمضان');
-    var f = daysUntilHijri(10, 1, d); if (f !== null && f > 0 && f <= 10) out.push('باقي ' + f + ' أيام على عيد الفطر');
-    var a = daysUntilHijri(12, 10, d); if (a !== null && a > 0 && a <= 10) out.push('باقي ' + a + ' أيام على عيد الأضحى');
-    if (h.m === 12 && h.d === 9) out.push('اليوم يوم عرفة: يُستحب صيامه لغير الحاج');
-    if (h.m === 12 && h.d >= 1 && h.d <= 8) out.push('العشر من ذي الحجة: أيام فاضلة');
+    if (sr.ramadan && h.m === 9) out.push('رمضان مبارك — اليوم ' + h.d + ' من رمضان');
+    else if (sr.ramadan && r !== null && r <= 30) out.push('باقي ' + r + ' يوم على رمضان');
+    var f = daysUntilHijri(10, 1, d); if (sr.eid && f !== null && f > 0 && f <= 10) out.push('باقي ' + f + ' أيام على عيد الفطر');
+    var a = daysUntilHijri(12, 10, d); if (sr.eid && a !== null && a > 0 && a <= 10) out.push('باقي ' + a + ' أيام على عيد الأضحى');
+    if (sr.dhulhijja && h.m === 12 && h.d === 9) out.push('اليوم يوم عرفة: يُستحب صيامه لغير الحاج');
+    if (sr.dhulhijja && h.m === 12 && h.d >= 1 && h.d <= 8) out.push('العشر من ذي الحجة: أيام فاضلة');
   }
   return out;
 }
@@ -428,3 +463,299 @@ window.onResumeNative = function () { _imgs = null; if (window.onPageResume) win
   try { if (applyPendingRestore()) { location.reload(); return; } } catch (e) {}
   try { pushConfig(loadPrefs()); setCity(loadPrefs().city); pushPrayerSchedule(); } catch (e) {}
 })();
+
+
+/* ================================================================
+   العرض: صيغة الوقت 12/24 والأرقام العربية أو الإنجليزية
+   ================================================================ */
+function clockStr(d, withSec){
+  var p = loadPrefsCached(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+  var hh = p.h24 ? (h < 10 ? '0' : '') + h : String(h % 12 || 12);
+  var out = hh + ':' + (m < 10 ? '0' : '') + m;
+  if (withSec) out += ':' + (s < 10 ? '0' : '') + s;
+  return out;
+}
+function ampm(d){ return loadPrefsCached().h24 ? '' : (d.getHours() < 12 ? 'ص' : 'م'); }
+/* وقت الصلاة من دقائق اليوم */
+function fmtMin(min){
+  var p = loadPrefsCached(), h = Math.floor(min / 60) % 24, m = min % 60;
+  if (p.h24) return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'ص' : 'م');
+}
+/* «بعد 50 د» أو «بعد 1 س 5 د» */
+function fmtDiff(min){
+  var h = Math.floor(min / 60), m = min % 60;
+  if (h === 0) return 'بعد ' + m + ' د';
+  return 'بعد ' + h + ' س' + (m ? ' ' + m + ' د' : '');
+}
+var _prefsCache = null, _prefsAt = 0;
+function loadPrefsCached(){
+  if (!_prefsCache || Date.now() - _prefsAt > 3000) { _prefsCache = loadPrefs(); _prefsAt = Date.now(); }
+  return _prefsCache;
+}
+/* تحويل الأرقام في الصفحة كلها إلى ٠١٢٣ عند اختيار الأرقام العربية */
+var AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+function toArDigits(t){ return t.replace(/[0-9]/g, function (c) { return AR_DIGITS[+c]; }); }
+function localizeDigits(root){
+  if (loadPrefsCached().digits !== 'ar' || !root) return;
+  var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n;
+  while ((n = w.nextNode())) {
+    var pe = n.parentNode;
+    if (!pe || pe.closest && pe.closest('input,textarea,script,style,.latin')) continue;
+    if (/[0-9]/.test(n.nodeValue)) n.nodeValue = toArDigits(n.nodeValue);
+  }
+}
+(function () {
+  if (typeof MutationObserver === 'undefined') return;
+  var pending = false;
+  var mo = new MutationObserver(function () {
+    if (pending) return; pending = true;
+    setTimeout(function () { pending = false; localizeDigits(document.body); }, 0);
+  });
+  function start(){ if (document.body) { mo.observe(document.body, { childList: true, subtree: true, characterData: true }); localizeDigits(document.body); } }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+/* ================================================================
+   وضع القيادة الآمن: صفحات الكتابة والإعدادات تُقفل أثناء الحركة
+   الصفحة تعلن ذلك بـ <body data-nodrive="1">
+   ================================================================ */
+function currentSpeed(){ var t = natJSON('trip'); return t && t.gps ? t.speed : 0; }
+function isDriving(){ return loadPrefsCached().safeMode && currentSpeed() > 10; }
+(function () {
+  function check(){
+    if (!document.body || !document.body.getAttribute('data-nodrive')) return;
+    var ov = document.getElementById('driveLock');
+    if (isDriving()) {
+      if (!ov) {
+        ov = document.createElement('div'); ov.id = 'driveLock';
+        ov.style.cssText = 'position:absolute;inset:0;z-index:60;background:rgba(5,10,25,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;color:#fff;text-align:center';
+        ov.innerHTML = '<div style="font-size:34px;font-weight:700">هذه الصفحة تعمل والسيارة متوقفة</div><div style="font-size:20px;color:#9FB0CC">للسلامة أثناء القيادة. يمكنك إيقاف هذا من الإعدادات ▸ النظام.</div><a href="index.html" style="height:64px;padding:0 34px;border-radius:20px;background:#1F5FD1;display:flex;align-items:center;font-size:22px">الرئيسية</a>';
+        (document.getElementById('stage') || document.body).appendChild(ov);
+      }
+    } else if (ov) ov.remove();
+  }
+  setInterval(check, 2000);
+  document.addEventListener('DOMContentLoaded', check);
+})();
+
+/* ================================================================
+   الملاحظات، التذكيرات الشخصية، محطات الراديو (تخزين محلي)
+   ================================================================ */
+function lsGet(k, def){ try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : def; } catch (e) { return def; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+var NOTES_KEY = 'carlauncher.notes', REM_KEY = 'carlauncher.reminders', ST_KEY = 'carlauncher.stations';
+function loadNotes(){ return lsGet(NOTES_KEY, []); }
+function saveNotes(l){ lsSet(NOTES_KEY, l); }
+function loadStations(){ return lsGet(ST_KEY, []); }
+function saveStations(l){ lsSet(ST_KEY, l); }
+function loadRems(){ return lsGet(REM_KEY, []); }
+function saveRems(l){ lsSet(REM_KEY, l); pushReminderAlarms(); }
+
+/* ما يصل من الجوال يُحفظ هنا */
+function processInbox(){
+  var items = natJSON('inbox');
+  if (!items || !items.length) return 0;
+  var notes = loadNotes(), rems = loadRems(), st = loadStations();
+  items.forEach(function (it) {
+    var d = it.data || {};
+    if (it.type === 'note' && d.text) notes.unshift({ id: uid(), text: String(d.text).slice(0, 4000), at: it.at || Date.now() });
+    if (it.type === 'reminder' && d.text) rems.push(Object.assign({ id: uid(), kind: 'once' }, d));
+    if (it.type === 'station' && d.url) st.push({ id: uid(), name: d.name || 'محطة', url: d.url });
+  });
+  saveNotes(notes); saveStations(st); saveRems(rems);
+  return items.length;
+}
+
+var WD_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+function todayStr(d){ d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function atTime(day, time){ var p = (time || '09:00').split(':'); var d = new Date(day); d.setHours(+p[0], +p[1], 0, 0); return d; }
+/* موعد التذكير القادم (للتذكيرات المرتبطة بوقت) */
+function remNext(r, from){
+  from = from || new Date();
+  if (r.kind === 'once') return r.date ? atTime(r.date + 'T00:00:00', r.time) : null;
+  if (r.kind === 'daily') { var t = atTime(todayStr(from) + 'T00:00:00', r.time); if (t < from) t.setDate(t.getDate() + 1); return t; }
+  if (r.kind === 'weekly') {
+    var w = atTime(todayStr(from) + 'T00:00:00', r.time);
+    var add = ((+r.wd) - w.getDay() + 7) % 7; w.setDate(w.getDate() + add);
+    if (w < from) w.setDate(w.getDate() + 7);
+    return w;
+  }
+  return null;
+}
+/* التذكيرات الظاهرة الآن */
+function activeReminders(){
+  var now = new Date(), list = loadRems(), out = [], t = natJSON('trip'), boot = String(nat('bootId'));
+  list.forEach(function (r) {
+    if (r.done) return;
+    if (r.kind === 'start') { if (r.doneBoot !== boot) out.push(r); return; }
+    if (r.kind === 'place') {
+      if (t && typeof t.lat === 'number' && r.lat) {
+        var inside = distKm(t.lat, t.lng, r.lat, r.lng) * 1000 <= (r.radius || 300);
+        if (inside && !r.dismissedInside) out.push(r);
+      }
+      return;
+    }
+    if (r.kind === 'once') { var a = remNext(r); if (a && now >= a) out.push(r); return; }
+    // يومي/أسبوعي: يظهر من وقته حتى نهاية اليوم، إلا إذا أُغلق اليوم
+    var start = remNext(r, new Date(now.getTime() - 86400000 + 1));
+    if (start && now >= start && todayStr(start) === todayStr(now) && r.doneDay !== todayStr(now)) out.push(r);
+  });
+  return out;
+}
+function dismissReminder(id){
+  var list = loadRems(), boot = String(nat('bootId'));
+  list.forEach(function (r) {
+    if (r.id !== id) return;
+    if (r.kind === 'once') r.done = true;
+    else if (r.kind === 'start') r.doneBoot = boot;
+    else if (r.kind === 'place') r.dismissedInside = true;
+    else r.doneDay = todayStr();
+  });
+  saveRems(list);
+}
+/* تذكيرات المكان: تعود بعد الخروج من المنطقة */
+function updatePlaceReminders(){
+  var t = natJSON('trip'); if (!t || typeof t.lat !== 'number') return;
+  var list = loadRems(), changed = false;
+  list.forEach(function (r) {
+    if (r.kind !== 'place' || !r.lat || !r.dismissedInside) return;
+    if (distKm(t.lat, t.lng, r.lat, r.lng) * 1000 > (r.radius || 300) * 1.5) { r.dismissedInside = false; changed = true; }
+  });
+  if (changed) lsSet(REM_KEY, list);
+}
+function remDesc(r){
+  if (r.kind === 'once') return (r.date || '') + ' ' + fmtMin(timeToMin(r.time));
+  if (r.kind === 'daily') return 'يومياً ' + fmtMin(timeToMin(r.time));
+  if (r.kind === 'weekly') return 'كل ' + WD_NAMES[+r.wd] + ' ' + fmtMin(timeToMin(r.time));
+  if (r.kind === 'start') return 'عند تشغيل السيارة';
+  if (r.kind === 'place') return 'عند الوصول للمكان المحفوظ';
+  return '';
+}
+function timeToMin(t){ var p = (t || '00:00').split(':'); return (+p[0]) * 60 + (+p[1]); }
+/* إرسال التذكيرات المؤقتة للخدمة لتنبّه في الخلفية */
+function pushReminderAlarms(){
+  if (!HAS_NATIVE) return;
+  var out = [], now = new Date();
+  loadRems().forEach(function (r) {
+    if (r.done || !(r.kind === 'once' || r.kind === 'daily' || r.kind === 'weekly')) return;
+    var n = remNext(r, now);
+    if (n && n - now < 2 * 86400000 && n >= now - 600000) out.push({ at: n.getTime(), title: r.text });
+  });
+  nat('setReminders', JSON.stringify(out));
+}
+
+/* ================================================================
+   الطقس (اختياري، يحتاج إنترنت)
+   ================================================================ */
+var WMO = { 0: 'صافٍ', 1: 'صافٍ غالباً', 2: 'غائم جزئياً', 3: 'غائم', 45: 'ضباب', 48: 'ضباب', 51: 'رذاذ خفيف', 53: 'رذاذ', 55: 'رذاذ كثيف',
+  61: 'مطر خفيف', 63: 'مطر', 65: 'مطر غزير', 71: 'ثلج خفيف', 73: 'ثلج', 75: 'ثلج كثيف', 80: 'زخات مطر', 81: 'زخات مطر', 82: 'زخات غزيرة',
+  95: 'عاصفة رعدية', 96: 'عاصفة رعدية وبَرَد', 99: 'عاصفة رعدية وبَرَد' };
+function weatherData(){ return natJSON('weather') || {}; }
+function weatherRefreshIfStale(){
+  if (!HAS_NATIVE || !loadPrefsCached().weatherOn) return;
+  var w = weatherData(), now = Date.now();
+  var t = natJSON('trip'), lat = t && typeof t.lat === 'number' ? t.lat : LAT, lng = t && typeof t.lng === 'number' ? t.lng : LNG;
+  var moved = w.lat ? distKm(w.lat, w.lng, lat, lng) > 25 : true;
+  if ((!w.at || now - w.at > 30 * 60000 || moved) && (!w.lastError || now - w.lastError > 5 * 60000)) nat('weatherRefresh', lat, lng);
+}
+function agoText(ms){
+  var m = Math.round((Date.now() - ms) / 60000);
+  if (m < 2) return 'الآن'; if (m < 60) return 'قبل ' + m + ' د';
+  var h = Math.round(m / 60); if (h < 24) return 'قبل ' + h + ' س';
+  return 'قبل ' + Math.round(h / 24) + ' يوم';
+}
+
+
+/* ================================================================
+   الأدعية وورد اليوم (مشتركة بين الرئيسية والاستراحة)
+   ================================================================ */
+var BASE_DUAS = [
+  'اللهم إني أسألك من فضلك ورحمتك، فإنه لا يملكها إلا أنت',
+  'ربنا آتنا في الدنيا حسنة وفي الآخرة حسنة وقنا عذاب النار',
+  'سبحان الذي سخّر لنا هذا وما كنا له مقرنين، وإنا إلى ربنا لمنقلبون',
+  'لا حول ولا قوة إلا بالله',
+  'سبحان الله وبحمده، سبحان الله العظيم',
+  'أستغفر الله وأتوب إليه',
+  'اللهم صلِّ وسلم على نبينا محمد',
+  'حسبي الله لا إله إلا هو عليه توكلت',
+  'رب اغفر لي ولوالديّ',
+  'لا إله إلا أنت سبحانك إني كنت من الظالمين'
+];
+function duaList(){
+  var p = loadPrefsCached();
+  var hidden = p.hiddenDuas || [];
+  return BASE_DUAS.filter(function (d) { return hidden.indexOf(d) < 0; }).concat(p.customDuas || []);
+}
+var WIRD = [
+  ['ألا بذكر الله تطمئن القلوب', 'الرعد: 28'],
+  ['فاذكروني أذكركم واشكروا لي ولا تكفرون', 'البقرة: 152'],
+  ['إن مع العسر يسرا', 'الشرح: 6'],
+  ['ومن يتوكل على الله فهو حسبه', 'الطلاق: 3'],
+  ['وقل رب زدني علما', 'طه: 114'],
+  ['لا يكلف الله نفسا إلا وسعها', 'البقرة: 286'],
+  ['واصبر فإن الله لا يضيع أجر المحسنين', 'هود: 115'],
+  ['وهو معكم أين ما كنتم', 'الحديد: 4'],
+  ['ادعوني أستجب لكم', 'غافر: 60'],
+  ['وإذا سألك عبادي عني فإني قريب أجيب دعوة الداع إذا دعان', 'البقرة: 186'],
+  ['ولا تيأسوا من روح الله', 'يوسف: 87'],
+  ['إنما الأعمال بالنيات', 'متفق عليه'],
+  ['الكلمة الطيبة صدقة', 'متفق عليه'],
+  ['من كان يؤمن بالله واليوم الآخر فليقل خيرا أو ليصمت', 'متفق عليه'],
+  ['كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن: سبحان الله وبحمده، سبحان الله العظيم', 'متفق عليه'],
+  ['أحب الأعمال إلى الله أدومها وإن قل', 'متفق عليه'],
+  ['لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه', 'متفق عليه'],
+  ['المسلم من سلم المسلمون من لسانه ويده', 'متفق عليه'],
+  ['يسروا ولا تعسروا، وبشروا ولا تنفروا', 'متفق عليه'],
+  ['الدين النصيحة', 'رواه مسلم'],
+  ['إن الله رفيق يحب الرفق في الأمر كله', 'متفق عليه']
+];
+function todayWird(){
+  var d = new Date(), start = new Date(d.getFullYear(), 0, 0);
+  return WIRD[Math.floor((d - start) / 86400000) % WIRD.length];
+}
+/* تصغير الخط حتى يتسع النص في سطر واحد، وإن طال جداً يتحرك ببطء */
+function fitOneLine(el, maxPx, minPx){
+  if (!el) return;
+  el.classList.remove('marquee');
+  el.style.whiteSpace = 'nowrap'; el.style.overflow = 'hidden';
+  var inner = el.firstElementChild && el.firstElementChild.classList.contains('mq') ? el.firstElementChild : null;
+  if (!inner) { inner = document.createElement('span'); inner.className = 'mq'; inner.textContent = el.textContent; el.textContent = ''; el.appendChild(inner); }
+  inner.style.animation = 'none'; inner.style.display = 'inline-block'; inner.style.paddingLeft = '0';
+  var fs = maxPx;
+  el.style.fontSize = fs + 'px';
+  while (inner.offsetWidth > el.clientWidth && fs > minPx) { fs -= 2; el.style.fontSize = fs + 'px'; }
+  if (inner.offsetWidth > el.clientWidth) {
+    var dist = inner.offsetWidth - el.clientWidth + 40;
+    inner.style.setProperty('--mq', dist + 'px');
+    inner.style.animation = 'mq ' + Math.max(8, dist / 40) + 's linear infinite alternate';
+  }
+}
+
+
+/* ================================================================
+   الواجهة: البطاقات المتاحة والتصاميم الافتراضية
+   ================================================================ */
+var CARD_CATALOG = [
+  ['clock', 'الساعة'], ['prayer', 'الصلاة القادمة'], ['times', 'مواقيت اليوم'], ['media', 'الموسيقى'],
+  ['speed', 'عداد السرعة'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس'],
+  ['apps', 'تطبيقاتي المفضلة'], ['notes', 'الملاحظات'], ['reminders', 'تذكيراتي'], ['sysrem', 'تذكيرات اليوم'],
+  ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة']
+];
+var LAYOUTS = [['classic', 'كلاسيكي'], ['grid', 'شبكة'], ['side', 'جانبي'], ['minimal', 'بسيط']];
+function defaultHomes(p){
+  return {
+    classic: [[{ id: 'clock', size: 'l' }, { id: (p && p.midCard) || 'media', size: 'm' }, { id: 'prayer', size: 'm' }],
+              [{ id: 'speed', size: 'm' }, { id: 'trip', size: 'm' }, { id: 'times', size: 'm' }]],
+    grid:    [[{ id: 'clock', size: 'l' }, { id: 'prayer', size: 's' }, { id: 'media', size: 'm' }, { id: 'times', size: 'm' }],
+              [{ id: 'speed', size: 's' }, { id: 'weather', size: 's' }, { id: 'qibla', size: 's' }, { id: 'notes', size: 'm' }, { id: 'sysrem', size: 'm' }]],
+    side:    [[{ id: 'clock', size: 'm' }, { id: 'prayer', size: 'm' }, { id: 'media', size: 'm' }, { id: 'times', size: 'm' }]],
+    minimal: [[{ id: 'prayer', size: 's' }, { id: 'media', size: 's' }, { id: 'weather', size: 's' }]]
+  };
+}
+function getHomes(p){
+  var d = defaultHomes(p), h = p.homes || {}, out = {};
+  Object.keys(d).forEach(function (k) { out[k] = (h[k] && h[k].length) ? h[k] : d[k]; });
+  return out;
+}

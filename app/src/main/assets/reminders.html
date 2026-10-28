@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>التذكيرات</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body data-nodrive="1">
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">تذكيراتي</span>
+      <a class="pbtn g" href="upload.html" style="margin-right:auto">إضافة من الجوال</a>
+    </div>
+    <div class="pcols">
+      <div class="pcard"><span class="ph">القائمة</span><div class="plist" id="list"></div></div>
+      <div class="pcard">
+        <span class="ph">تذكير جديد</span>
+        <input class="pinp" id="txt" maxlength="120" placeholder="مثال: لا تنسَ أوراق السيارة">
+        <div class="prow" id="kinds"></div>
+        <div class="prow" id="opts"></div>
+        <div class="prow" style="margin-top:auto"><button class="pbtn" id="add">إضافة</button><span class="pnote" id="msg"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+processInbox();
+function $(id){ return document.getElementById(id); }
+var KINDS = [['once', 'مرة واحدة'], ['daily', 'يومياً'], ['weekly', 'أسبوعياً'], ['start', 'عند تشغيل السيارة'], ['place', 'عند الوصول لمكان']];
+var kind = 'once', wd = new Date().getDay(), radius = 300;
+function btn(label, on, fn, cls){ var b = document.createElement('button'); b.className = 'pbtn sm ' + (on ? 'on' : 'g') + (cls ? ' ' + cls : ''); b.textContent = label; b.onclick = fn; return b; }
+function renderForm(){
+  var k = $('kinds'); k.innerHTML = '';
+  KINDS.forEach(function (x) { k.appendChild(btn(x[1], kind === x[0], function () { kind = x[0]; renderForm(); })); });
+  var o = $('opts'); o.innerHTML = '';
+  if (kind === 'once') o.innerHTML = '<input class="pinp" id="date" type="date" value="' + todayStr() + '"><input class="pinp" id="time" type="time" value="' + (function () { var d = new Date(Date.now() + 3600000); return String(d.getHours()).padStart(2, '0') + ':00'; })() + '">';
+  if (kind === 'daily') o.innerHTML = '<input class="pinp" id="time" type="time" value="08:00">';
+  if (kind === 'weekly') {
+    WD_NAMES.forEach(function (n, i) { o.appendChild(btn(n, wd === i, function () { wd = i; renderForm(); })); });
+    var t = document.createElement('input'); t.className = 'pinp'; t.id = 'time'; t.type = 'time'; t.value = '08:00'; o.appendChild(t);
+  }
+  if (kind === 'start') o.innerHTML = '<span class="pnote">يظهر بجوار الساعة كل مرة تشتغل فيها السيارة حتى تضغط «تم».</span>';
+  if (kind === 'place') {
+    var tr = natJSON('trip');
+    o.innerHTML = '<span class="pnote">' + (tr && typeof tr.lat === 'number' ? 'سيُحفظ موقعك الحالي. يظهر التذكير عند الاقتراب منه.' : 'يحتاج إشارة GPS. افتح الصفحة والسيارة في المكان المطلوب.') + '</span>';
+    [150, 300, 1000].forEach(function (r) { o.appendChild(btn(r < 1000 ? r + ' م' : '1 كم', radius === r, function () { radius = r; renderForm(); })); });
+  }
+}
+function renderList(){
+  var L = $('list'); L.innerHTML = '';
+  var list = loadRems();
+  if (!list.length) L.innerHTML = '<div class="pempty">لا توجد تذكيرات.</div>';
+  var active = activeReminders().map(function (r) { return r.id; });
+  list.forEach(function (r) {
+    var row = document.createElement('div'); row.className = 'pitem' + (active.indexOf(r.id) >= 0 ? ' on' : '');
+    var t = document.createElement('div'); t.className = 't';
+    var a = document.createElement('span'); a.className = 'n'; a.textContent = r.text + (r.done ? ' ✓' : '');
+    var s = document.createElement('span'); s.className = 's'; s.textContent = remDesc(r) + (active.indexOf(r.id) >= 0 ? ' · ظاهر الآن' : '');
+    t.appendChild(a); t.appendChild(s); row.appendChild(t);
+    if (active.indexOf(r.id) >= 0) row.appendChild(btn('تم', false, function () { dismissReminder(r.id); renderList(); }));
+    row.appendChild(btn('حذف', false, function () { saveRems(loadRems().filter(function (x) { return x.id !== r.id; })); renderList(); }, 'r'));
+    L.appendChild(row);
+  });
+}
+$('add').onclick = function () {
+  var text = $('txt').value.trim(); if (!text) { $('msg').textContent = 'اكتب نص التذكير'; return; }
+  var r = { id: uid(), text: text, kind: kind };
+  if ($('time')) r.time = $('time').value || '08:00';
+  if (kind === 'once') r.date = $('date').value || todayStr();
+  if (kind === 'weekly') r.wd = wd;
+  if (kind === 'place') {
+    var tr = natJSON('trip');
+    if (!tr || typeof tr.lat !== 'number') { $('msg').textContent = 'لا يوجد موقع GPS الآن'; return; }
+    r.lat = tr.lat; r.lng = tr.lng; r.radius = radius; r.dismissedInside = true; // لا يظهر وأنت في المكان نفسه الآن
+  }
+  var list = loadRems(); list.push(r); saveRems(list);
+  $('txt').value = ''; $('msg').textContent = 'أُضيف ✓'; setTimeout(function () { $('msg').textContent = ''; }, 1500);
+  renderList();
+};
+renderForm(); renderList();
+setInterval(function () { if (processInbox()) renderList(); }, 3000);
+fitStage();
+</script>
+</body>
+</html>

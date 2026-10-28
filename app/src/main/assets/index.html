@@ -6,71 +6,115 @@
 <title>رفيق الطريق</title>
 <link rel="stylesheet" href="common.css">
 <style>
-.row{display:flex;align-items:center;justify-content:space-between;height:56px;padding:26px 40px 0}
-.status{display:flex;align-items:center;gap:22px;font-size:26px;font-weight:500}
-.cards{display:flex;gap:20px;flex:1;min-height:0;padding:22px 40px 0;box-sizing:border-box}
-.card{padding:26px 28px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
-.apps{display:flex;gap:14px;height:150px;padding:22px 40px 34px;box-sizing:border-box}
-.app{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:22px;font-weight:500;border:none;color:#fff}
-.app svg{width:52px;height:52px}
-.mbtn{width:64px;height:64px;border-radius:32px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center}
-.mbtn.main{width:76px;height:76px;border-radius:38px;background:#2F7BFF;border-color:#6FA8FF}
-.ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.banner{position:absolute;top:24px;left:50%;transform:translateX(-50%);height:52px;padding:0 22px;border-radius:26px;background:rgba(80,50,10,.85);border:1.5px solid #E8C061;display:none;align-items:center;gap:10px;font-size:19px;color:#FFE6A8;z-index:5}
+/* ===== الهيكل ===== */
+.top{display:flex;align-items:center;gap:16px;height:56px;padding:22px 40px 0;position:relative;z-index:3}
+.right{display:flex;align-items:center;gap:14px;min-width:0}
+.left{display:flex;align-items:center;gap:14px;min-width:0;flex:none}
+.status{display:flex;align-items:center;gap:12px}
+.st{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:none;border:none;padding:0}
+.st svg{width:26px;height:26px}
+.st.off{opacity:.35}
+.clockTop{font-size:26px;font-weight:600;direction:ltr;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip{display:flex;align-items:center;gap:10px;height:44px;padding:0 8px 0 16px;border-radius:22px;background:rgba(232,192,97,.18);border:1.5px solid rgba(232,192,97,.7);color:#FFE6A8;font-size:17px;max-width:300px}
+.chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip button{width:32px;height:32px;border-radius:16px;border:none;background:#E8C061;color:#3a2a05;font-size:18px;font-weight:700;flex:none}
+.center{flex:1;min-width:0;display:flex;justify-content:center}
+.banner{height:46px;padding:0 20px;border-radius:23px;background:rgba(80,50,10,.85);border:1.5px solid #E8C061;display:none;align-items:center;font-size:17px;color:#FFE6A8;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
+
+.body{flex:1;min-height:0;display:flex;flex-direction:column;padding-top:18px;box-sizing:border-box}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;padding:0 40px}
+#dock{order:2}
+.L-side .body{flex-direction:row;gap:18px;padding:18px 40px 0}
+.L-side .main{padding:0}
+.L-side #dock{order:-1}
+#pages{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
+#pages::-webkit-scrollbar{display:none}
+.page{flex:none;width:100%;height:100%;scroll-snap-align:start;box-sizing:border-box}
+.dots{height:20px;display:flex;justify-content:center;align-items:center;gap:8px}
+.dots i{width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.35)}
+.dots i.on{width:22px;background:#fff}
+
+/* ===== التصاميم ===== */
+.cards{height:100%;box-sizing:border-box}
+.L-classic .cards{display:flex;gap:20px}
+.L-classic .card.s{flex:.7}.L-classic .card.m{flex:1}.L-classic .card.l{flex:1.45}
+.L-grid .cards,.L-side .cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));grid-auto-rows:0;gap:16px;overflow:hidden}
+.L-grid .card.s,.L-side .card.s{grid-column:span 2}.L-grid .card.m,.L-side .card.m{grid-column:span 3}.L-grid .card.l,.L-side .card.l{grid-column:span 4}
+.L-minimal .cards{display:flex;gap:16px;height:150px;margin-top:auto}
+.L-minimal .card{flex:1}
+.minClock{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:1}
+.L-minimal .minClock{display:flex}
+.L-minimal .page{display:flex;flex-direction:column}
+
+/* حجم الخط داخل البطاقة يتبع حجمها والتصميم */
+.card{--fs:17px;font-size:var(--fs);padding:1.3em 1.4em;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:0;overflow:hidden;color:#fff;position:relative}
+.L-classic .card.s{--fs:15px}.L-classic .card.l{--fs:19px}
+.L-grid .card,.L-side .card{--fs:13px;padding:1.1em 1.3em}
+.L-grid .card.l,.L-side .card.l{--fs:14.5px}
+.L-side .card{--fs:14px}.L-side .card.l{--fs:16px}
+.L-minimal .card{--fs:12px;padding:1em 1.2em}
+.k-row{display:flex;justify-content:space-between;align-items:center;gap:.6em;min-width:0}
+.k-lbl{font-size:1.15em;color:#5AB0FF;font-weight:600;white-space:nowrap}
+.k-sub{font-size:1.1em;color:#C3D1E8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-mid{font-size:1.7em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-big{font-size:3em;font-weight:700;line-height:1;direction:ltr;white-space:nowrap}
+.k-huge{font-size:6.6em;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums;white-space:nowrap}
+.k-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;height:100%;text-align:center}
+.k-btn{height:2.8em;padding:0 1.1em;border-radius:1em;background:rgba(19,37,74,.85);border:1px solid #2b4a80;font-size:1em;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:.4em;flex:none}
+.k-list{display:flex;flex-direction:column;gap:.35em;min-height:0;overflow:hidden}
+.k-li{display:flex;justify-content:space-between;align-items:center;font-size:1.15em;padding:.25em .5em;border-radius:.6em}
+.k-li.on{background:rgba(232,192,97,.2);color:#FFE6A8;font-weight:700}
+.k-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;font-size:1.25em;line-height:1.55}
+.mbtn{flex:none;width:3.6em;height:3.6em;border-radius:50%;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;padding:0}
+.mbtn.big{width:4.3em;height:4.3em;background:#2F7BFF;border-color:#6FA8FF}
+.mbtn svg{width:1.6em;height:1.6em}
+.fav{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em;flex:1;min-height:0;align-content:center}
+.fav button{display:flex;flex-direction:column;align-items:center;gap:.3em;background:none;border:none;color:#fff;font-size:.95em;min-width:0}
+.fav img{width:3.4em;height:3.4em;border-radius:.8em}
+.fav span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gauge{width:100%;flex:1;min-height:0}
+
+/* ===== القائمة (Dock) ===== */
+#dock{display:flex;gap:14px;box-sizing:border-box}
+.L-classic #dock,.L-grid #dock,.L-minimal #dock{height:150px;padding:20px 40px 30px}
+.L-side #dock{flex-direction:column;width:118px;padding:0 0 18px;flex:none;order:-1}
+.dk{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:20px;font-weight:500;border:none;color:#fff;min-width:0;min-height:0;padding:4px}
+.dk svg,.dk img{width:48px;height:48px;border-radius:12px}
+.dk span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.L-side .dk{gap:4px;font-size:14px}
+.L-side .dk svg,.L-side .dk img{width:38px;height:38px}
+.nolabels .dk span{display:none}
+
 .boot{position:absolute;inset:0;z-index:20;background:rgba(5,10,25,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center}
 .boot .t{font-family:'Amiri','Noto Naskh Arabic',serif;font-size:46px;line-height:1.7;max-width:1000px}
-.mini{font-size:15px;padding:8px 16px;border-radius:14px;background:#13254a;border:1px solid #2b4a80;color:#fff}
 </style>
 </head>
 <body>
 <div id="stage">
   <img id="bg" src="bg/home_mountain.jpg" alt="">
   <div class="shade"></div>
-  <a class="banner" id="banner" href="maintenance.html"></a>
   <div class="boot" id="boot" onclick="this.style.display='none'">
     <div style="color:#F2C879;font-size:22px">دعاء الركوب</div>
     <div class="t">سبحان الذي سخّر لنا هذا وما كنا له مقرنين، وإنا إلى ربنا لمنقلبون</div>
     <div class="sub" style="font-size:18px">اضغط للإغلاق</div>
   </div>
-  <div class="wrap">
-    <div class="row">
-      <div class="logo" id="brand" aria-label="اسم السيارة"></div>
-      <div class="status">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="بلوتوث"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>
-        <span id="clockTop" style="direction:ltr;font-variant-numeric:tabular-nums"></span>
+  <div class="wrap" id="wrap">
+    <div class="top">
+      <div class="right"><div class="logo" id="brand" aria-label="اسم السيارة"></div></div>
+      <div class="center"><a class="banner" id="banner" href="maintenance.html"></a></div>
+      <div class="left">
+        <span class="clockTop" id="clockTop" ondblclick="location.href='rest.html'"></span>
+        <div class="status" id="status"></div>
+        <div id="remChip"></div>
       </div>
     </div>
-
-    <div class="cards">
-      <div class="glass card" style="flex:1.35;align-items:center;justify-content:center;gap:4px">
-        <div id="dateLine" class="sub" style="font-size:22px"></div>
-        <div id="clock" style="font-size:124px;font-weight:700;line-height:1.05;direction:ltr;font-variant-numeric:tabular-nums"></div>
-        <div id="hijri" class="sub" style="font-size:22px"></div>
+    <div class="body" id="body">
+      <nav id="dock"></nav>
+      <div class="main">
+        <div id="pages"></div>
+        <div class="dots" id="dots"></div>
       </div>
-
-      <div class="glass card" id="mid" style="flex:1"></div>
-
-      <a class="glass card" href="prayer.html" style="flex:1;color:inherit">
-        <div style="display:flex;justify-content:space-between"><span class="accent" style="font-size:20px">الصلاة القادمة</span><span id="cityName" class="sub" style="font-size:16px"></span></div>
-        <div style="display:flex;flex-direction:column;gap:2px">
-          <span id="nextName" style="font-size:40px;font-weight:600"></span>
-          <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <span id="untilText" class="sub" style="font-size:20px"></span>
-            <span id="nextTime" style="font-size:52px;font-weight:700;direction:ltr"></span>
-          </div>
-        </div>
-      </a>
     </div>
-
-    <nav class="apps">
-      <button class="glass app" onclick="openRole('maps')"><svg viewBox="0 0 24 24"><path d="M12 2 20 21 12 17 4 21Z" fill="#3B9DFF"/></svg><span>الخرائط</span></button>
-      <button class="glass app" onclick="openRole('music')"><svg viewBox="0 0 24 24" fill="none" stroke="#FF4FA3" stroke-width="2.2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" fill="#FF4FA3"/><circle cx="18" cy="16" r="3" fill="#FF4FA3"/></svg><span>الموسيقى</span></button>
-      <a class="glass app" href="apps.html"><svg viewBox="0 0 24 24" fill="#B79CFF"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>التطبيقات</span></a>
-      <a class="glass app" href="rest.html"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="#FFD24A"/></svg><span>الاستراحة</span></a>
-      <a class="glass app" href="azkar.html"><svg viewBox="0 0 24 24" fill="none" stroke="#5AD1A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg><span>الأذكار</span></a>
-      <a class="glass app" href="trip.html"><svg viewBox="0 0 24 24" fill="none" stroke="#8FD3C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M3 13l2-6h14l2 6v5h-3v-2H6v2H3z"/></svg><span>الرحلة</span></a>
-      <a class="glass app" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="#5AB0FF" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>الإعدادات</span></a>
-    </nav>
   </div>
 </div>
 
@@ -79,88 +123,293 @@
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
 
-var ICON = {
-  play: '<svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M7 4v16l13-8z"/></svg>',
-  pause: '<svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
-  next: '<svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M5 4v16l10-8zM17 4h2v16h-2z"/></svg>',
-  prev: '<svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M19 4v16L9 12zM5 4h2v16H5z"/></svg>'
+/* ================= التصاميم والصفحات الافتراضية ================= */
+function homePages(){ return getHomes(prefs)[prefs.layout] || getHomes(prefs).classic; }
+
+/* ================= أيقونات ================= */
+var IC = {
+  maps: '<svg viewBox="0 0 24 24"><path d="M12 2 20 21 12 17 4 21Z" fill="#3B9DFF"/></svg>',
+  music: '<svg viewBox="0 0 24 24" fill="none" stroke="#FF4FA3" stroke-width="2.2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" fill="#FF4FA3"/><circle cx="18" cy="16" r="3" fill="#FF4FA3"/></svg>',
+  apps: '<svg viewBox="0 0 24 24" fill="#B79CFF"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
+  rest: '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="#FFD24A"/></svg>',
+  azkar: '<svg viewBox="0 0 24 24" fill="none" stroke="#5AD1A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>',
+  trip: '<svg viewBox="0 0 24 24" fill="none" stroke="#8FD3C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M3 13l2-6h14l2 6v5h-3v-2H6v2H3z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="#5AB0FF" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
+  radio: '<svg viewBox="0 0 24 24" fill="none" stroke="#FF9F5A" stroke-width="2" stroke-linecap="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8 17 3"/><circle cx="15.5" cy="14" r="2.5"/><path d="M6.5 12h3M6.5 15h3"/></svg>',
+  notes: '<svg viewBox="0 0 24 24" fill="none" stroke="#FFD24A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h6"/></svg>',
+  reminders: '<svg viewBox="0 0 24 24" fill="none" stroke="#E8C061" stroke-width="2" stroke-linecap="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+  prayer: '<svg viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10M4 6h2M19 21V10M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>',
+  parking: '<svg viewBox="0 0 24 24" fill="none" stroke="#6FA8FF" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3" stroke-linecap="round"/></svg>',
+  fuel: '<svg viewBox="0 0 24 24" fill="none" stroke="#5AD1A0" stroke-width="2" stroke-linecap="round"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M7 7h4"/></svg>',
+  maint: '<svg viewBox="0 0 24 24" fill="none" stroke="#9FB0CC" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>'
 };
+var DOCK_ITEMS = {
+  maps: { label: 'الخرائط', go: function () { openRole('maps'); } },
+  music: { label: 'الموسيقى', go: function () { openRole('music'); } },
+  radio: { label: 'الراديو', href: 'radio.html' },
+  apps: { label: 'التطبيقات', href: 'apps.html' },
+  rest: { label: 'الاستراحة', href: 'rest.html' },
+  azkar: { label: 'الأذكار', href: 'azkar.html' },
+  trip: { label: 'الرحلة', href: 'trip.html' },
+  prayer: { label: 'الصلاة', href: 'prayer.html' },
+  notes: { label: 'الملاحظات', href: 'notes.html' },
+  reminders: { label: 'التذكيرات', href: 'reminders.html' },
+  parking: { label: 'الموقف', href: 'parking.html' },
+  fuel: { label: 'الوقود', href: 'fuel.html' },
+  maint: { label: 'الصيانة', href: 'maintenance.html' },
+  settings: { label: 'الإعدادات', href: 'settings.html' }
+};
+var appCache = {};
+function appInfo(pkg){
+  if (!appCache[pkg]) {
+    var a = (natJSON('apps') || []).filter(function (x) { return x.pkg === pkg; })[0];
+    appCache[pkg] = { label: a ? a.label : pkg.split('.').pop(), icon: nat('appIcon', pkg) || '' };
+  }
+  return appCache[pkg];
+}
+function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
-/* ===== البطاقة الوسطى: الموسيقى / الرحلة / القبلة / الطقس ===== */
-var mid = document.getElementById('mid'), midKind = '', midHtml = '', lastMediaSig = '';
-function setMid(kind, html){ if (midKind !== kind || midHtml !== html) { mid.innerHTML = html; midHtml = html; midKind = kind; } }
+function renderDock(){
+  var d = document.getElementById('dock'); d.innerHTML = '';
+  var items = (prefs.dock || []).slice();
+  if (items.indexOf('settings') < 0) items.push('settings');
+  items.forEach(function (id) {
+    var b = document.createElement('button'); b.className = 'glass dk';
+    if (id.indexOf('app:') === 0) {
+      var pkg = id.slice(4), a = appInfo(pkg);
+      b.innerHTML = (a.icon ? '<img alt="" src="' + a.icon + '">' : IC.apps) + '<span>' + esc(a.label) + '</span>';
+      b.onclick = function () { nat('launch', pkg); };
+    } else {
+      var it = DOCK_ITEMS[id]; if (!it) return;
+      b.innerHTML = (IC[id] || IC.apps) + '<span>' + it.label + '</span>';
+      b.onclick = it.go || function () { location.href = it.href; };
+    }
+    d.appendChild(b);
+  });
+  document.getElementById('wrap').classList.toggle('nolabels', !prefs.dockLabels);
+}
 
-function renderMedia(){
+/* ================= أيقونات الحالة ================= */
+var SI = {
+  bt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>',
+  wifi: function (lvl) {
+    var c = function (i) { return lvl >= i ? 'currentColor' : 'rgba(255,255,255,.25)'; };
+    return '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0" stroke="' + c(3) + '"/><path d="M5 12a10 10 0 0 1 14 0" stroke="' + c(2) + '"/><path d="M8.5 15.5a5 5 0 0 1 7 0" stroke="' + c(1) + '"/><circle cx="12" cy="19" r="1.4" fill="' + c(0) + '"/></svg>';
+  },
+  gps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>'
+};
+function renderStatus(){
+  var el = document.getElementById('status'), si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
+  if (!HAS_NATIVE) { el.innerHTML = si.bt ? '<span class="st off" style="color:#fff">' + SI.bt + '</span>' : ''; return; }
+  var s = natJSON('status') || {}, t = natJSON('trip') || {};
+  var html = '';
+  if (si.gps) html += '<button class="st' + (t.gps ? '' : ' off') + '" style="color:' + (t.gps ? '#5AD1A0' : '#fff') + '" onclick="nat(\'openSystem\',\'gps\')" aria-label="GPS ' + (t.gps ? 'متصل' : 'يبحث') + '">' + SI.gps + '</button>';
+  if (si.wifi) html += '<button class="st' + (s.wifi ? '' : ' off') + '" style="color:' + (s.internet ? '#fff' : '#F2C879') + '" onclick="nat(\'openSystem\',\'wifi\')" aria-label="واي فاي">' + SI.wifi(s.wifi ? (s.wifiLevel == null ? 3 : s.wifiLevel) : -1) + '</button>';
+  if (si.bt) html += '<button class="st' + (s.bt === 'connected' || s.bt === 'on' ? '' : ' off') + '" style="color:' + (s.bt === 'connected' ? '#6FA8FF' : '#fff') + '" onclick="nat(\'openSystem\',\'bt\')" aria-label="بلوتوث">' + SI.bt + '</button>';
+  el.innerHTML = html;
+}
+
+/* ================= البطاقات ================= */
+var CARDS = {};
+function card(id, label, render){ CARDS[id] = { label: label, render: render }; }
+
+card('clock', 'الساعة', function () {
+  var d = new Date();
+  return '<div class="k-center" ondblclick="location.href=\'rest.html\'">' +
+    '<div class="k-sub">' + fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + '</div>' +
+    '<div class="k-huge">' + clockStr(d) + '<span style="font-size:.25em;font-weight:500;margin-left:.2em">' + ampm(d) + '</span></div>' +
+    '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div></div>';
+});
+card('prayer', 'الصلاة القادمة', function () {
+  var np = nextPrayer(new Date());
+  return '<a href="prayer.html" style="display:contents"><div class="k-row"><span class="k-lbl">الصلاة القادمة</span><span class="k-sub" style="font-size:.95em">' + esc(cityLabel()) + '</span></div>' +
+    '<div><div class="k-mid" style="font-size:2.3em">' + np.name + '</div><div class="k-row" style="align-items:baseline"><span class="k-sub">' + fmtDiff(np.diff) + '</span>' +
+    '<span class="k-big">' + np.timeFmt + '</span></div></div></a>';
+});
+card('times', 'مواقيت اليوم', function () {
+  var d = new Date(), now = riyadhMinutes(d), list = prayerMinutes(d), next = list.filter(function (p) { return p.min > now; })[0];
+  var h = '<div class="k-row"><span class="k-lbl">مواقيت اليوم</span><span class="k-sub" style="font-size:.95em">' + esc(cityLabel()) + '</span></div><div class="k-list">';
+  list.forEach(function (p) { h += '<div class="k-li' + (next && p.key === next.key ? ' on' : '') + '"><span>' + p.name + '</span><span>' + fmtMin(p.min) + '</span></div>'; });
+  return h + '</div>';
+});
+var MI = {
+  play: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4v16l13-8z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+  next: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M5 4v16l10-8zM17 4h2v16h-2z"/></svg>',
+  prev: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M19 4v16L9 12zM5 4h2v16H5z"/></svg>'
+};
+card('media', 'الموسيقى', function () {
+  if (!HAS_NATIVE) return '<span class="k-lbl">الموسيقى</span><div class="k-sub">يعمل داخل التطبيق</div><div></div>';
   var m = natJSON('media');
-  if (!HAS_NATIVE) {
-    setMid('media0', '<span class="accent" style="font-size:20px">الموسيقى</span><div class="sub" style="font-size:20px">يعمل داخل التطبيق على الشاشة</div><div></div>');
-    return;
-  }
-  if (!m || m.access === false) {
-    setMid('media1', '<span class="accent" style="font-size:20px">الموسيقى</span>' +
-      '<div class="sub" style="font-size:18px;line-height:1.5">لعرض ما يُشغَّل الآن والتحكم به، فعّل «الوصول إلى الإشعارات» لرفيق الطريق مرة واحدة.</div>' +
-      '<button class="mini" style="align-self:flex-start;height:48px;font-size:17px" onclick="nat(\'openNotificationAccess\')">تفعيل الآن</button>');
-    return;
-  }
-  if (!m.title) {
-    setMid('media2', '<span class="accent" style="font-size:20px">الموسيقى</span>' +
-      '<div class="sub" style="font-size:20px">لا يوجد تشغيل الآن</div>' +
-      '<button class="mini" style="align-self:flex-start;height:48px;font-size:17px" onclick="openRole(\'music\')">فتح تطبيق الموسيقى</button>');
-    return;
-  }
-  var sig = m.title + '|' + m.artist + '|' + m.playing;
-  if (midKind === 'media3' && sig === lastMediaSig) return;
-  lastMediaSig = sig;
-  var e = function (s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
-  setMid('media3',
-    '<div style="display:flex;justify-content:space-between"><span class="accent" style="font-size:20px">يُشغَّل الآن</span><span class="sub" style="font-size:16px">' + e(m.app) + '</span></div>' +
-    '<div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="ellip" style="font-size:30px;font-weight:700">' + e(m.title) + '</span><span class="sub ellip" style="font-size:20px">' + e(m.artist) + '</span></div>' +
-    '<div style="display:flex;justify-content:center;align-items:center;gap:20px;direction:ltr">' +
-      '<button class="mbtn" aria-label="السابق" onclick="nat(\'mediaCmd\',\'prev\');setTimeout(tick,400)">' + ICON.prev + '</button>' +
-      '<button class="mbtn main" aria-label="تشغيل أو إيقاف" onclick="nat(\'mediaCmd\',\'' + (m.playing ? 'pause' : 'play') + '\');setTimeout(tick,400)">' + (m.playing ? ICON.pause : ICON.play) + '</button>' +
-      '<button class="mbtn" aria-label="التالي" onclick="nat(\'mediaCmd\',\'next\');setTimeout(tick,400)">' + ICON.next + '</button>' +
-    '</div>');
-}
-function renderTripMini(){
-  var t = natJSON('trip');
-  var km = t ? t.km.toFixed(1) : '0.0';
-  var sp = t ? Math.round(t.speed) : 0;
-  setMid('trip', '<a href="trip.html" style="display:contents"><span class="accent" style="font-size:20px">الرحلة</span>' +
-    '<div style="direction:ltr;text-align:right"><span style="font-size:72px;font-weight:700">' + km + '</span><span class="sub" style="font-size:24px"> كم</span></div>' +
-    '<div class="sub" style="font-size:20px">السرعة ' + sp + ' كم/س' + (t && t.gps ? '' : ' · بانتظار GPS') + '</div></a>');
-}
-function renderQiblaMini(){
+  if (!m || m.access === false) return '<span class="k-lbl">الموسيقى</span><div class="k-sub" style="white-space:normal">فعّل «الوصول إلى الإشعارات» مرة واحدة لعرض ما يُشغَّل.</div><button class="k-btn" style="align-self:flex-start" onclick="nat(\'openNotificationAccess\')">تفعيل</button>';
+  if (!m.title) return '<span class="k-lbl">الموسيقى</span><div class="k-sub">لا يوجد تشغيل الآن</div><button class="k-btn" style="align-self:flex-start" onclick="openRole(\'music\')">فتح تطبيق الموسيقى</button>';
+  return '<div class="k-row"><span class="k-lbl">يُشغَّل الآن</span><span class="k-sub" style="font-size:.95em">' + esc(m.app) + '</span></div>' +
+    '<div style="min-width:0"><div class="k-mid">' + esc(m.title) + '</div><div class="k-sub">' + esc(m.artist) + '</div></div>' +
+    '<div style="display:flex;justify-content:center;align-items:center;gap:1em;direction:ltr">' +
+    '<button class="mbtn" aria-label="السابق" onclick="nat(\'mediaCmd\',\'prev\');later()">' + MI.prev + '</button>' +
+    '<button class="mbtn big" aria-label="تشغيل أو إيقاف" onclick="nat(\'mediaCmd\',\'' + (m.playing ? 'pause' : 'play') + '\');later()">' + (m.playing ? MI.pause : MI.play) + '</button>' +
+    '<button class="mbtn" aria-label="التالي" onclick="nat(\'mediaCmd\',\'next\');later()">' + MI.next + '</button></div>';
+});
+card('speed', 'عداد السرعة', function () {
+  var t = natJSON('trip') || {}, v = t.gps ? Math.round(t.speed) : 0, max = 200;
+  var lim = +prefs.speedLimit || 120, over = prefs.speedOn && v > lim;
+  var a = -120 + 240 * Math.min(v, max) / max;
+  function pt(deg, r){ var rad = (deg - 90) * Math.PI / 180; return (100 + r * Math.cos(rad)).toFixed(1) + ' ' + (105 + r * Math.sin(rad)).toFixed(1); }
+  var arc = function (from, to, col, w){ var large = (to - from) > 180 ? 1 : 0; return '<path d="M' + pt(from, 80) + ' A80 80 0 ' + large + ' 1 ' + pt(to, 80) + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round"/>'; };
+  var ticks = '';
+  for (var k = 0; k <= max; k += 20) { var dg = -120 + 240 * k / max; ticks += '<text x="' + pt(dg, 62).split(' ')[0] + '" y="' + (+pt(dg, 62).split(' ')[1] + 4) + '" fill="#9FB0CC" font-size="9" text-anchor="middle">' + k + '</text>'; }
+  var limDeg = -120 + 240 * Math.min(lim, max) / max;
+  return '<div class="k-row"><span class="k-lbl">السرعة</span><span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span></div>' +
+    '<svg class="gauge" viewBox="0 0 200 150" aria-hidden="true">' + arc(-120, 120, 'rgba(255,255,255,.15)', 10) + arc(-120, a, over ? '#FF6B5A' : '#5AB0FF', 10) +
+    (prefs.speedOn ? '<path d="M' + pt(limDeg, 70) + ' L' + pt(limDeg, 90) + '" stroke="#E8C061" stroke-width="3"/>' : '') + ticks +
+    '<g transform="rotate(' + a + ' 100 105)"><path d="M100 30 L104 105 L96 105Z" fill="' + (over ? '#FF6B5A' : '#fff') + '"/></g><circle cx="100" cy="105" r="7" fill="#fff"/>' +
+    '<text x="100" y="140" text-anchor="middle" fill="' + (over ? '#FF6B5A' : '#fff') + '" font-size="26" font-weight="700">' + v + '</text></svg>';
+});
+card('trip', 'الرحلة', function () {
+  var t = natJSON('trip') || { km: 0, speed: 0, movingSec: 0 };
+  var mins = Math.floor((t.movingSec || 0) / 60);
+  return '<a href="trip.html" style="display:contents"><span class="k-lbl">الرحلة</span>' +
+    '<div style="direction:ltr;text-align:right"><span class="k-big" style="font-size:3.6em">' + (t.km || 0).toFixed(1) + '</span><span class="k-sub"> كم</span></div>' +
+    '<div class="k-sub">مدة القيادة ' + Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0') + '</div></a>';
+});
+card('qibla', 'القبلة', function () {
   var t = natJSON('trip');
   var lat = t && typeof t.lat === 'number' ? t.lat : LAT, lng = t && typeof t.lng === 'number' ? t.lng : LNG;
   var b = Math.round(qiblaBearing(lat, lng));
   var rel = (t && t.heading >= 0 && t.speed > 5) ? norm360(b - t.heading) : null;
-  var rot = rel !== null ? rel : b;
-  setMid('qibla', '<span class="accent" style="font-size:20px">القبلة</span>' +
-    '<div style="display:flex;align-items:center;gap:20px">' +
-    '<svg width="120" height="120" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>' +
+  return '<span class="k-lbl">القبلة</span><div style="display:flex;align-items:center;gap:1em;flex:1;min-height:0">' +
+    '<svg viewBox="0 0 100 100" style="height:100%;max-height:7.5em;flex:none" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>' +
     (rel === null ? '<text x="50" y="16" text-anchor="middle" fill="#9FB0CC" font-size="11">N</text>' : '<path d="M50 10 46 20h8z" fill="#9FB0CC"/>') +
-    '<g transform="rotate(' + rot + ' 50 50)"><path d="M50 14 60 52 50 46 40 52Z" fill="#E8C061"/></g></svg>' +
-    '<div style="display:flex;flex-direction:column"><span style="font-size:44px;font-weight:700;direction:ltr">' + b + '°</span><span class="sub" style="font-size:16px">' +
-    (rel === null ? 'من الشمال' : 'السهم بالنسبة لاتجاه السير') + '</span></div></div>' +
-    '<div class="sub" style="font-size:15px">' + (t && typeof t.lat === 'number' ? 'من موقعك الحالي' : 'من ' + cityLabel()) + '</div>');
+    '<g transform="rotate(' + (rel !== null ? rel : b) + ' 50 50)"><path d="M50 14 60 52 50 46 40 52Z" fill="#E8C061"/></g></svg>' +
+    '<div><div class="k-big">' + b + '°</div><div class="k-sub">' + (rel === null ? 'من الشمال' : 'بالنسبة لاتجاهك') + '</div></div></div>';
+});
+card('weather', 'الطقس', function () {
+  if (!prefs.weatherOn) return '<span class="k-lbl">الطقس</span><div class="k-sub">مُطفأ من الإعدادات</div><div></div>';
+  var w = weatherData();
+  if (!w.at) return '<span class="k-lbl">الطقس</span><div class="k-sub" style="white-space:normal">يحتاج إنترنت مرة (نقطة اتصال الجوال)</div><button class="k-btn" style="align-self:flex-start" onclick="nat(\'weatherRefresh\',LAT,LNG)">تحديث</button>';
+  return '<div class="k-row"><span class="k-lbl">الطقس</span><span class="k-sub" style="font-size:.95em">' + agoText(w.at) + '</span></div>' +
+    '<div class="k-row" style="align-items:flex-end"><div><div class="k-mid">' + (WMO[w.code] || '') + '</div><div class="k-sub">' +
+    (w.max != null ? 'العظمى ' + Math.round(w.max) + '° · الصغرى ' + Math.round(w.min) + '°' : '') + '</div></div>' +
+    '<span class="k-big" style="font-size:3.6em">' + Math.round(w.temp) + '°</span></div>';
+});
+card('apps', 'تطبيقاتي المفضلة', function () {
+  var fav = (prefs.favApps || []).slice(0, 6);
+  if (!fav.length) return '<span class="k-lbl">تطبيقاتي</span><div class="k-sub">اختر تطبيقاتك المفضلة</div><a class="k-btn" style="align-self:flex-start" href="apps.html?pick=fav">اختيار</a>';
+  var h = '<div class="fav">';
+  fav.forEach(function (pkg) { var a = appInfo(pkg); h += '<button onclick="nat(\'launch\',\'' + pkg + '\')">' + (a.icon ? '<img alt="" src="' + a.icon + '">' : IC.apps) + '<span>' + esc(a.label) + '</span></button>'; });
+  return h + '</div>';
+});
+card('notes', 'الملاحظات', function () {
+  var n = loadNotes();
+  return '<a href="notes.html" style="display:contents"><div class="k-row"><span class="k-lbl">ملاحظاتي</span><span class="k-sub" style="font-size:.95em">' + n.length + '</span></div>' +
+    '<div class="k-clamp" style="flex:1;margin-top:.5em">' + (n.length ? esc(n[0].text) : '<span style="color:#9FB0CC">لا توجد ملاحظات. اضغط لإضافة ملاحظة.</span>') + '</div></a>';
+});
+card('reminders', 'تذكيراتي', function () {
+  var a = activeReminders(), all = loadRems().filter(function (r) { return !r.done; });
+  var h = '<div class="k-row"><span class="k-lbl">تذكيراتي</span><a class="k-sub" href="reminders.html" style="font-size:.95em">الكل (' + all.length + ')</a></div><div class="k-list" style="flex:1;margin-top:.4em">';
+  if (!a.length) h += '<div class="k-sub" style="white-space:normal">' + (all.length ? 'لا يوجد تذكير الآن' : 'أضف تذكيراً من صفحة التذكيرات') + '</div>';
+  a.slice(0, 4).forEach(function (r) { h += '<div class="k-li on"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.text) + '</span><button class="k-btn" style="height:2em" onclick="dismissReminder(\'' + r.id + '\');tick()">تم</button></div>'; });
+  return h + '</div>';
+});
+card('sysrem', 'تذكيرات اليوم', function () {
+  var list = hijriReminders();
+  var h = '<span class="k-lbl">تذكيرات اليوم</span><div class="k-list" style="flex:1;margin-top:.4em">';
+  if (!list.length) h += '<div class="k-sub">لا توجد تذكيرات اليوم</div>';
+  list.slice(0, 4).forEach(function (r) { h += '<div class="k-li" style="font-size:1.05em;white-space:normal">' + esc(r) + '</div>'; });
+  return h + '</div>';
+});
+card('maint', 'الصيانة القادمة', function () {
+  var best = null;
+  loadMaint().forEach(function (it) {
+    var s = maintStatus(it), score = Math.min(s.kmLeft !== null ? s.kmLeft / 50 : 1e9, s.daysLeft !== null ? s.daysLeft : 1e9);
+    if (score < 1e9 && (!best || score < best.score)) best = { it: it, s: s, score: score };
+  });
+  var h = '<a href="maintenance.html" style="display:contents"><span class="k-lbl">الصيانة</span>';
+  if (!best) return h + '<div class="k-sub" style="white-space:normal">أدخل مواعيد الصيانة لتظهر هنا</div><div></div></a>';
+  var txt = best.s.kmLeft !== null ? (best.s.kmLeft >= 0 ? 'باقي ' + best.s.kmLeft.toLocaleString('en') + ' كم' : 'متأخر') : (best.s.daysLeft >= 0 ? 'باقي ' + best.s.daysLeft + ' يوم' : 'منتهي');
+  return h + '<div class="k-mid" style="color:' + (best.s.due ? '#FFE6A8' : '#fff') + '">' + esc(best.it.name) + '</div><div class="k-sub">' + txt + '</div></a>';
+});
+card('fuel', 'الوقود', function () {
+  var items = lsGet('carlauncher.fuel', []).slice().sort(function (a, b) { return a.odo - b.odo; });
+  var last = null, lit = 0, km = 0, L = 0;
+  items.forEach(function (it) { if (last) lit += it.liters; if (it.full) { if (last && it.odo > last.odo && lit > 0) { km += it.odo - last.odo; L += lit; } last = it; lit = 0; } });
+  return '<a href="fuel.html" style="display:contents"><span class="k-lbl">الوقود</span>' +
+    (L ? '<div><span class="k-big">' + (km / L).toFixed(1) + '</span><span class="k-sub"> كم/لتر</span></div>' : '<div class="k-sub">سجّل تعبئتين كاملتين</div>') + '<div class="k-sub">' + items.length + ' تعبئة مسجلة</div></a>';
+});
+card('wird', 'ورد اليوم', function () {
+  var w = todayWird();
+  return '<span class="k-lbl" style="color:#F2C879">ورد اليوم</span><div class="k-clamp" style="font-family:\'Amiri\',serif;font-size:1.45em">' + w[0] + '</div><div class="k-sub">' + w[1] + '</div>';
+});
+card('radio', 'الراديو', function () {
+  var r = natJSON('radioState') || { state: 'idle' }, st = loadStations();
+  var h = '<div class="k-row"><span class="k-lbl" style="color:#FF9F5A">الراديو</span><a class="k-sub" href="radio.html" style="font-size:.95em">المحطات</a></div>';
+  if (r.state === 'playing' || r.state === 'buffering') {
+    return h + '<div><div class="k-mid">' + esc(r.name) + '</div><div class="k-sub">' + (r.state === 'buffering' ? 'جارٍ الاتصال…' : 'يُبث الآن') + '</div></div><button class="k-btn" style="align-self:flex-start" onclick="nat(\'radioStop\');later()">إيقاف</button>';
+  }
+  h += '<div style="display:flex;flex-wrap:wrap;gap:.5em">';
+  h += '<button class="k-btn" onclick="openRadioApp()">راديو FM</button>';
+  st.slice(0, 3).forEach(function (s) { h += '<button class="k-btn" onclick="playStation(\'' + s.id + '\')">' + esc(s.name) + '</button>'; });
+  return h + '</div>' + (r.state === 'error' ? '<div class="k-sub" style="color:#FFB59A">تعذّر التشغيل (تحقق من الإنترنت)</div>' : '<div></div>');
+});
+card('parking', 'موقف السيارة', function () {
+  return '<a href="parking.html" style="display:contents"><span class="k-lbl">موقف السيارة</span><div class="k-sub" style="white-space:normal">احفظ مكان وقوفك وأرسله لجوالك بالباركود</div><span class="k-btn" style="align-self:flex-start">فتح</span></a>';
+});
+
+function openRadioApp(){ if (prefs.radioApp && nat('launch', prefs.radioApp)) return; location.href = 'apps.html?pick=radio'; }
+function playStation(id){ var s = loadStations().filter(function (x) { return x.id === id; })[0]; if (s) { nat('radioPlay', s.url, s.name); later(); } }
+function later(){ setTimeout(tick, 500); setTimeout(tick, 1500); }
+
+/* ================= رسم الصفحات ================= */
+var cardEls = [];
+function buildPages(){
+  var stage = document.getElementById('stage');
+  stage.classList.remove('L-classic', 'L-grid', 'L-side', 'L-minimal');
+  stage.classList.add('L-' + prefs.layout);
+  var pagesEl = document.getElementById('pages'); pagesEl.innerHTML = ''; cardEls = [];
+  var pages = homePages();
+  if (prefs.layout === 'minimal') pages = pages.slice(0, 1);
+  pages.forEach(function (cards, pi) {
+    var pg = document.createElement('div'); pg.className = 'page';
+    if (prefs.layout === 'minimal') {
+      pg.innerHTML = '<div class="minClock" ondblclick="location.href=\'rest.html\'"><div class="sub" id="minDate" style="font-size:24px"></div><div id="minClock" style="font-size:190px;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums"></div><div class="sub" id="minPrayer" style="font-size:26px"></div></div>';
+      cards = cards.slice(0, 3);
+    }
+    var wrap = document.createElement('div'); wrap.className = 'cards';
+    cards.forEach(function (c) {
+      if (!CARDS[c.id]) return;
+      var el = document.createElement('div'); el.className = 'glass card ' + (c.size || 'm');
+      wrap.appendChild(el); cardEls.push({ el: el, id: c.id, html: '' });
+    });
+    pg.appendChild(wrap);
+    pagesEl.appendChild(pg);
+  });
+  var dots = document.getElementById('dots'); dots.innerHTML = '';
+  if (pages.length > 1) pages.forEach(function () { dots.appendChild(document.createElement('i')); });
+  updateDots();
 }
-function renderWeather(){
-  setMid('weather', '<div style="display:flex;flex-direction:column;gap:6px"><span class="accent" style="font-size:20px">الطقس</span><span style="font-size:24px">' + cityLabel() + '</span></div>' +
-    '<div style="display:flex;justify-content:space-between;align-items:flex-end"><span class="sub" style="font-size:18px">قيمة ثابتة (بدون إنترنت)</span><span style="font-size:76px;font-weight:700;line-height:1;direction:ltr">35°</span></div>');
+function updateDots(){
+  var p = document.getElementById('pages'), w = p.clientWidth || 1;
+  var idx = Math.round(Math.abs(p.scrollLeft) / w);
+  [].forEach.call(document.getElementById('dots').children, function (d, i) { d.classList.toggle('on', i === idx); });
 }
-function renderMid(){
-  var k = prefs.midCard;
-  if (k === 'trip') renderTripMini(); else if (k === 'qibla') renderQiblaMini(); else if (k === 'weather') renderWeather(); else renderMedia();
+document.getElementById('pages').addEventListener('scroll', function () { clearTimeout(this._t); this._t = setTimeout(updateDots, 80); });
+
+function renderCards(){
+  cardEls.forEach(function (c) {
+    var h = '';
+    try { h = CARDS[c.id].render(); } catch (e) { h = '<span class="k-lbl">' + CARDS[c.id].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
+    if (h !== c.html) { c.el.innerHTML = h; c.html = h; }
+  });
 }
 
-/* الشريط العلوي: يتناوب بين تذكير الصيانة وتذكيرات اليوم */
+/* ================= الشريط العلوي: التذكيرات ================= */
 var bannerItems = [], bannerIdx = 0;
 function renderBanner(){
   var due = [];
-  loadMaint().forEach(function (it) { var s = maintStatus(it); if (s.due) due.push(it.name); });
+  loadMaint().forEach(function (it) { if (maintStatus(it).due) due.push(it.name); });
   bannerItems = [];
   if (due.length) bannerItems.push({ t: 'تذكير الصيانة: ' + due.join('، '), href: 'maintenance.html' });
-  if (prefs.reminders) hijriReminders().forEach(function (r) { bannerItems.push({ t: r, href: 'azkar.html' }); });
+  if (prefs.reminders && prefs.remPlace === 'banner') hijriReminders().forEach(function (r) { bannerItems.push({ t: r, href: 'azkar.html' }); });
   showBanner();
 }
 function showBanner(){
@@ -170,8 +419,14 @@ function showBanner(){
   b.textContent = it.t; b.href = it.href; b.style.display = 'flex';
 }
 setInterval(function () { bannerIdx++; showBanner(); }, 8000);
+function renderRemChip(){
+  var el = document.getElementById('remChip'), a = activeReminders(), html = '';
+  if (a.length) html = '<div class="chip"><span>' + esc(a[0].text) + (a.length > 1 ? ' (+' + (a.length - 1) + ')' : '') + '</span><button aria-label="تم" onclick="dismissReminder(\'' + a[0].id + '\');renderRemChip()">✓</button></div>';
+  else if (prefs.reminders && prefs.remPlace === 'clock') { var s = hijriReminders(); if (s.length) html = '<div class="chip" style="padding-left:16px"><span>' + esc(s[0]) + '</span></div>'; }
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
 
-/* عند تشغيل السيارة: مرة واحدة لكل تشغيل للشاشة */
+/* ================= عند التشغيل / الإضاءة / الاستراحة التلقائية ================= */
 function bootAction(){
   var id = nat('bootId'); if (id === null) return;
   var last = null; try { last = localStorage.getItem('carlauncher.lastBoot'); } catch (e) {}
@@ -185,24 +440,42 @@ function bootAction(){
 }
 function applyBrightness(){ if (prefs.nightBright) nat('applyNight', isNight(), +prefs.nightPct); else nat('applyNight', false, 100); }
 
+var lastTouch = Date.now(), stoppedSince = 0, movedSinceStop = false;
+document.addEventListener('pointerdown', function () { lastTouch = Date.now(); }, true);
+function autoRest(){
+  var mode = prefs.restAuto, min = (+prefs.restAutoMin || 5) * 60000, now = Date.now();
+  if (mode === 'manual') return;
+  if (mode === 'idle' && now - lastTouch > min) location.href = 'rest.html?auto=1';
+  if (mode === 'night' && isNight() && now - lastTouch > min) location.href = 'rest.html?auto=1';
+  if (mode === 'stopped') {
+    var t = natJSON('trip'); if (!t || !t.gps) return;
+    if (t.speed > 5) { movedSinceStop = true; stoppedSince = 0; return; }
+    if (!stoppedSince) stoppedSince = now;
+    if (movedSinceStop && now - stoppedSince > min && now - lastTouch > 30000) { movedSinceStop = false; location.href = 'rest.html?auto=1'; }
+  }
+}
+
+/* ================= التحديث الدوري ================= */
 function tick(){
   var d = new Date();
-  var clk = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
-  document.getElementById('clock').textContent = clk;
-  document.getElementById('clockTop').textContent = clk;
-  document.getElementById('dateLine').textContent = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d);
-  document.getElementById('hijri').textContent = fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d);
-  var np = nextPrayer(d);
-  document.getElementById('nextName').textContent = np.name;
-  document.getElementById('nextTime').textContent = np.time;
-  document.getElementById('cityName').textContent = cityLabel();
-  document.getElementById('untilText').textContent = 'بعد ' + Math.floor(np.diff / 60) + ' س ' + (np.diff % 60) + ' د';
-  renderMid();
+  document.getElementById('clockTop').textContent = clockStr(d) + (ampm(d) ? ' ' + ampm(d) : '');
+  if (prefs.layout === 'minimal') {
+    var mc = document.getElementById('minClock'); if (mc) {
+      mc.textContent = clockStr(d);
+      document.getElementById('minDate').textContent = fmt({ weekday: 'long', day: 'numeric', month: 'long' }, 'ar-u-nu-latn', d) + ' · ' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d);
+      var np = nextPrayer(d); document.getElementById('minPrayer').textContent = np.name + ' ' + np.timeFmt + ' · ' + fmtDiff(np.diff);
+    }
+  }
+  renderCards(); renderRemChip();
 }
-window.onPageResume = function () { prefs = loadPrefs(); applyPrefs('home', prefs); tick(); renderBanner(); bootAction(); applyBrightness(); };
-tick(); renderBanner(); bootAction(); applyBrightness();
+window.onPageResume = function () { prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
+
+processInbox();
+buildPages(); renderDock(); renderStatus(); tick(); renderBanner(); bootAction(); applyBrightness(); weatherRefreshIfStale();
 setInterval(tick, 2000);
-setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); renderBanner(); applyBrightness(); }, 60000);
+setInterval(renderStatus, 5000);
+setInterval(function () { processInbox(); updatePlaceReminders(); autoRest(); }, 5000);
+setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 fitStage();
 </script>
 </body>

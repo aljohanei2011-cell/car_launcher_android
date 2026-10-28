@@ -29,3 +29,7 @@ body.solid .glass{background:rgba(10,25,55,.92)}
 .logo.size-s{font-size:22px}.logo.size-s img{max-height:40px}
 .logo.size-l{font-size:38px}.logo.size-l img{max-height:64px;max-width:320px}
 .logo.hidden{visibility:hidden}
+
+/* نص طويل في سطر واحد يتحرك ببطء */
+@keyframes mq { 0%,15% { transform: translateX(0) } 85%,100% { transform: translateX(var(--mq)) } }
+body.solid .glass{-webkit-backdrop-filter:none;backdrop-filter:none}

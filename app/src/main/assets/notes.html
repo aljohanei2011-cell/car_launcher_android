@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>الملاحظات</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">الملاحظات</span>
+      <button class="pbtn" id="new" style="margin-right:auto">+ ملاحظة جديدة</button>
+      <a class="pbtn g" href="upload.html">من الجوال</a>
+    </div>
+    <div class="pcols">
+      <div class="pcard"><span class="ph">ملاحظاتي</span><div class="plist" id="list"></div></div>
+      <div class="pcard">
+        <div id="lock" class="pnote" style="display:none;color:#FFD48A">الكتابة متوقفة أثناء القيادة للسلامة. يمكنك القراءة فقط.</div>
+        <textarea class="pinp" id="ed" placeholder="اكتب ملاحظتك هنا…"></textarea>
+        <div class="prow"><button class="pbtn" id="save">حفظ</button><button class="pbtn r" id="del">حذف</button><span class="pnote" id="msg"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+processInbox();
+var notes = loadNotes(), cur = notes.length ? notes[0].id : null;
+function $(id){ return document.getElementById(id); }
+function when(t){ return fmt({ day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }, 'ar-u-nu-latn', new Date(t)); }
+function render(){
+  var L = $('list'); L.innerHTML = '';
+  if (!notes.length) L.innerHTML = '<div class="pempty">لا توجد ملاحظات بعد.<br>اكتب هنا والسيارة متوقفة، أو أرسلها من الجوال.</div>';
+  notes.forEach(function (n) {
+    var b = document.createElement('button'); b.className = 'pitem' + (n.id === cur ? ' on' : '');
+    var t = document.createElement('div'); t.className = 't';
+    var a = document.createElement('span'); a.className = 'n'; a.textContent = n.text.split('\n')[0] || '(فارغة)';
+    var s = document.createElement('span'); s.className = 's'; s.textContent = when(n.at);
+    t.appendChild(a); t.appendChild(s); b.appendChild(t);
+    b.onclick = function () { cur = n.id; render(); };
+    L.appendChild(b);
+  });
+  var n = notes.filter(function (x) { return x.id === cur; })[0];
+  $('ed').value = n ? n.text : '';
+  $('del').disabled = !n;
+}
+$('new').onclick = function () { cur = null; render(); $('ed').focus(); };
+$('save').onclick = function () {
+  var v = $('ed').value.trim(); if (!v) return;
+  var n = notes.filter(function (x) { return x.id === cur; })[0];
+  if (n) { n.text = v; n.at = Date.now(); notes = [n].concat(notes.filter(function (x) { return x !== n; })); }
+  else { n = { id: uid(), text: v, at: Date.now() }; notes.unshift(n); cur = n.id; }
+  saveNotes(notes); $('msg').textContent = 'حُفظت ✓'; setTimeout(function () { $('msg').textContent = ''; }, 1500); render();
+};
+$('del').onclick = function () { notes = notes.filter(function (x) { return x.id !== cur; }); saveNotes(notes); cur = notes.length ? notes[0].id : null; render(); };
+setInterval(function () {
+  var d = isDriving();
+  $('lock').style.display = d ? 'block' : 'none';
+  $('ed').readOnly = d; $('save').disabled = d; $('new').disabled = d;
+  if (processInbox()) { notes = loadNotes(); render(); }
+}, 2000);
+render();
+fitStage();
+</script>
+</body>
+</html>

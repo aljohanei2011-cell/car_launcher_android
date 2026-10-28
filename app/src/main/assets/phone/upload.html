@@ -46,6 +46,9 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <button data-m="apk">تطبيق APK</button>
   <button data-m="snd">صوت التنبيه</button>
   <button data-m="tok">رمز التحديث</button>
+  <button data-m="note">ملاحظة</button>
+  <button data-m="rem">تذكير</button>
+  <button data-m="st">محطة راديو</button>
   <button data-m="bak">نسخة احتياطية</button>
 </div>
 
@@ -93,6 +96,35 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <textarea id="tok" placeholder="github_pat_..."></textarea>
   <button class="send" id="tokSend" style="margin-top:10px">حفظ الرمز في الشاشة</button>
   <div class="msg" id="tokMsg"></div>
+</section>
+
+<section id="m-note">
+  <div class="box">اكتب ملاحظة وأرسلها لتظهر في بطاقة «ملاحظاتي» على الشاشة.</div>
+  <textarea id="noteTxt" style="height:160px;direction:rtl;font:16px system-ui" placeholder="ملاحظتك…"></textarea>
+  <button class="send" id="noteSend" style="margin-top:10px">إرسال الملاحظة</button>
+  <div class="msg" id="noteMsg"></div>
+</section>
+
+<section id="m-rem">
+  <div class="box">تذكير يظهر بجوار الساعة في الشاشة، وينبّهك في وقته حتى لو كانت الخرائط مفتوحة.</div>
+  <input id="remTxt" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:16px system-ui;padding:0 12px" placeholder="مثال: موعد الفحص الدوري">
+  <div class="seg" id="remKind" style="margin-top:10px">
+    <button data-k="once" class="on">مرة</button><button data-k="daily">يومياً</button><button data-k="start">عند التشغيل</button>
+  </div>
+  <div id="remWhen" style="display:flex;gap:8px">
+    <input id="remDate" type="date" style="flex:1;height:46px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;padding:0 10px">
+    <input id="remTime" type="time" value="09:00" style="flex:1;height:46px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;padding:0 10px">
+  </div>
+  <button class="send" id="remSend" style="margin-top:12px">إرسال التذكير</button>
+  <div class="msg" id="remMsg"></div>
+</section>
+
+<section id="m-st">
+  <div class="box">أضف محطة راديو إنترنت بلصق رابط البث المباشر (ينتهي غالباً بـ mp3 أو aac أو m3u8). تعمل المحطة عندما تكون الشاشة متصلة بالإنترنت.</div>
+  <input id="stName" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:16px system-ui;padding:0 12px;margin-bottom:8px" placeholder="اسم المحطة">
+  <input id="stUrl" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:14px monospace;padding:0 12px;direction:ltr" placeholder="https://...">
+  <button class="send" id="stSend" style="margin-top:12px">إرسال المحطة</button>
+  <div class="msg" id="stMsg"></div>
 </section>
 
 <section id="m-bak">
@@ -245,6 +277,37 @@ document.getElementById('tokSend').onclick = function () {
     if (r.ok) { m.className = 'msg ok'; m.textContent = 'حُفظ الرمز ✓ اضغط «بحث عن تحديث» في الشاشة.'; document.getElementById('tok').value = ''; }
     else { m.className = 'msg err'; m.textContent = 'الرمز غير صحيح. انسخه كاملاً.'; }
   }).catch(function () { m.className = 'msg err'; m.textContent = 'انقطع الاتصال بالشاشة.'; });
+};
+/* ملاحظة / تذكير / محطة */
+function postJSON(path, obj, msgId, okText){
+  var m = document.getElementById(msgId);
+  fetch(path + '?t=' + token, { method: 'POST', body: JSON.stringify(obj) }).then(function (r) {
+    if (r.ok) { m.className = 'msg ok'; m.textContent = okText; } else { m.className = 'msg err'; m.textContent = 'رفضت الشاشة الطلب.'; }
+  }).catch(function () { m.className = 'msg err'; m.textContent = 'انقطع الاتصال بالشاشة.'; });
+}
+document.getElementById('noteSend').onclick = function () {
+  var t = document.getElementById('noteTxt').value.trim(); if (!t) return;
+  postJSON('/note', { text: t }, 'noteMsg', 'وصلت الملاحظة ✓'); document.getElementById('noteTxt').value = '';
+};
+var remKind = 'once';
+document.getElementById('remDate').value = new Date().toISOString().slice(0, 10);
+document.getElementById('remKind').onclick = function (e) {
+  var b = e.target.closest('button'); if (!b) return; remKind = b.getAttribute('data-k');
+  [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); });
+  document.getElementById('remWhen').style.display = remKind === 'start' ? 'none' : 'flex';
+  document.getElementById('remDate').style.display = remKind === 'once' ? '' : 'none';
+};
+document.getElementById('remSend').onclick = function () {
+  var t = document.getElementById('remTxt').value.trim(); if (!t) return;
+  var r = { text: t, kind: remKind };
+  if (remKind !== 'start') r.time = document.getElementById('remTime').value || '09:00';
+  if (remKind === 'once') r.date = document.getElementById('remDate').value;
+  postJSON('/reminder', r, 'remMsg', 'وصل التذكير ✓'); document.getElementById('remTxt').value = '';
+};
+document.getElementById('stSend').onclick = function () {
+  var u = document.getElementById('stUrl').value.trim(), n = document.getElementById('stName').value.trim();
+  if (!/^https?:\/\//.test(u)) { var m = document.getElementById('stMsg'); m.className = 'msg err'; m.textContent = 'الرابط يجب أن يبدأ بـ http'; return; }
+  postJSON('/station', { name: n || 'محطة', url: u }, 'stMsg', 'وصلت المحطة ✓');
 };
 window.addEventListener('resize', function () { var o = outSize(); frame.style.height = (frame.clientWidth * o.h / o.w) + 'px'; });
 setup();

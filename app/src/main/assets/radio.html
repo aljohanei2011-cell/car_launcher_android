@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>الراديو</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">الراديو</span>
+      <button class="pbtn g" id="fm" style="margin-right:auto">راديو FM (تطبيق الشاشة)</button>
+    </div>
+    <div class="pcols">
+      <div class="pcard">
+        <div class="prow" style="justify-content:space-between"><span class="ph">محطات الإنترنت</span><span class="pnote" id="state"></span></div>
+        <div class="plist" id="list"></div>
+      </div>
+      <div class="pcard">
+        <span class="ph">إضافة محطة</span>
+        <div class="pnote">راديو الإنترنت يحتاج اتصالاً (نقطة اتصال الجوال). الأسهل: أرسل رابط البث من الجوال (تبويب «محطة راديو» بعد مسح الباركود).</div>
+        <a class="pbtn g" href="upload.html" style="align-self:flex-start">إرسال من الجوال</a>
+        <input class="pinp" id="name" placeholder="اسم المحطة">
+        <input class="pinp latin" id="url" placeholder="https://… رابط البث (mp3 / aac)" style="direction:ltr">
+        <div class="prow"><button class="pbtn" id="add">إضافة</button><span class="pnote" id="msg"></span></div>
+        <div class="pnote" style="margin-top:auto">راديو FM مدمج في الشاشة ولا يمكن التحكم بموجاته من تطبيق آخر، لذلك زر «راديو FM» يفتح تطبيق الراديو الأصلي.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+processInbox();
+function $(id){ return document.getElementById(id); }
+$('fm').onclick = function () { if (prefs.radioApp && nat('launch', prefs.radioApp)) return; location.href = 'apps.html?pick=radio'; };
+function render(){
+  var r = natJSON('radioState') || { state: 'idle' }, list = loadStations(), L = $('list');
+  var labels = { idle: '', buffering: 'جارٍ الاتصال…', playing: 'يُبث الآن', error: 'تعذّر التشغيل. تحقق من الإنترنت أو الرابط.' };
+  $('state').textContent = labels[r.state] || '';
+  L.innerHTML = '';
+  if (!list.length) L.innerHTML = '<div class="pempty">لا توجد محطات بعد.<br>أضف رابط بث من هنا أو من الجوال.</div>';
+  list.forEach(function (s) {
+    var playing = r.url === s.url && (r.state === 'playing' || r.state === 'buffering');
+    var row = document.createElement('div'); row.className = 'pitem' + (playing ? ' on' : '');
+    var t = document.createElement('div'); t.className = 't';
+    var a = document.createElement('span'); a.className = 'n'; a.textContent = s.name;
+    var u = document.createElement('span'); u.className = 's latin'; u.style.direction = 'ltr'; u.style.textAlign = 'right'; u.textContent = s.url;
+    t.appendChild(a); t.appendChild(u); row.appendChild(t);
+    var p = document.createElement('button'); p.className = 'pbtn sm'; p.textContent = playing ? 'إيقاف' : 'تشغيل';
+    p.onclick = function () { if (playing) nat('radioStop'); else nat('radioPlay', s.url, s.name); setTimeout(render, 400); };
+    var d = document.createElement('button'); d.className = 'pbtn sm r'; d.textContent = 'حذف';
+    d.onclick = function () { saveStations(loadStations().filter(function (x) { return x.id !== s.id; })); render(); };
+    row.appendChild(p); row.appendChild(d); L.appendChild(row);
+  });
+}
+$('add').onclick = function () {
+  var n = $('name').value.trim(), u = $('url').value.trim();
+  if (!/^https?:\/\//.test(u)) { $('msg').textContent = 'الرابط يجب أن يبدأ بـ http'; return; }
+  var l = loadStations(); l.push({ id: uid(), name: n || 'محطة', url: u }); saveStations(l);
+  $('name').value = ''; $('url').value = ''; $('msg').textContent = 'أُضيفت ✓'; render();
+};
+render();
+setInterval(function () { processInbox(); render(); }, 1500);
+fitStage();
+</script>
+</body>
+</html>

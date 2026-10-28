@@ -19,7 +19,7 @@
 .err{padding:16px 22px;border-radius:18px;background:#3a1a12;border:1.5px solid #E89061;font-size:20px;line-height:1.6}
 </style>
 </head>
-<body>
+<body data-nodrive="1">
 <div id="stage">
   <img id="bg" src="bg/home_night.jpg" alt="">
   <div class="shade" style="background:rgba(0,0,0,.55)"></div>
@@ -33,7 +33,7 @@
       <div class="steps">
         <div class="step"><span class="n">1</span><span>تأكد أن الشاشة متصلة بنقطة اتصال جوالك (أو بنفس شبكة الواي فاي).</span></div>
         <div class="step"><span class="n">2</span><span>امسح الباركود بكاميرا الجوال.</span></div>
-        <div class="step"><span class="n">3</span><span>اختر ما تريد: صورة (خلفية أو شعار)، تطبيق APK، صوت التنبيه، رمز التحديث، أو النسخة الاحتياطية.</span></div>
+        <div class="step"><span class="n">3</span><span>اختر ما تريد: صورة، تطبيق APK، صوت التنبيه، رمز التحديث، ملاحظة، تذكير، محطة راديو، أو النسخة الاحتياطية.</span></div>
         <div class="sub" style="font-size:17px">أو افتح في متصفح الجوال: <span class="addr" id="addr"></span></div>
         <div class="ok" id="ok"></div>
         <div class="sub" style="font-size:15px">النقل داخل السيارة فقط، بدون إنترنت. تتوقف الخدمة عند الخروج من هذه الصفحة أو بعد 15 دقيقة.</div>
@@ -63,9 +63,10 @@ else {
   // نسخة احتياطية جاهزة للتحميل من الجوال
   nat('backupPrepare', webBackupJSON());
   var seen = nat('uploadCount') || 0;
-  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «التحديث والتطبيقات».', sound: 'وصل صوت التنبيه ✓', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…' };
+  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «التحديث والتطبيقات».', sound: 'وصل صوت التنبيه ✓', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', station: 'وصلت محطة الراديو ✓' };
   setInterval(function () {
     var ev = natJSON('uploadLast') || {}, c = ev.count || 0;
+    if (c > seen && (ev.type === 'note' || ev.type === 'reminder' || ev.type === 'station')) processInbox();
     if (c > seen && ev.type && ev.type !== 'image') {
       seen = c;
       var ok0 = document.getElementById('ok'); ok0.style.display = 'block'; ok0.textContent = LABEL[ev.type] || 'تم ✓';

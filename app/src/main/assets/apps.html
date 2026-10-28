@@ -35,11 +35,13 @@
 <script>
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
-var pick = (location.search.match(/pick=(maps|music)/) || [])[1] || '';
+var pick = (location.search.match(/pick=(maps|music|radio|fav|dock)/) || [])[1] || '';
+var MULTI = pick === 'fav' || pick === 'dock';
+var PICK_TITLES = { maps: 'اختر تطبيق الخرائط', music: 'اختر تطبيق الموسيقى', radio: 'اختر تطبيق الراديو (FM)', fav: 'اختر تطبيقاتك المفضلة (حتى 6)', dock: 'أضف تطبيقات إلى القائمة السفلية' };
 if (pick) {
-  document.getElementById('title').textContent = pick === 'maps' ? 'اختر تطبيق الخرائط' : 'اختر تطبيق الموسيقى';
+  document.getElementById('title').textContent = PICK_TITLES[pick];
   var h = document.getElementById('hint'); h.style.display = 'block';
-  h.textContent = 'اختر التطبيق الذي يفتح عند الضغط على زر ' + (pick === 'maps' ? 'الخرائط' : 'الموسيقى') + '. يمكنك تغييره لاحقاً من الإعدادات.';
+  h.innerHTML = MULTI ? 'اضغط على التطبيق لاختياره أو إلغائه، ثم <a href="' + (pick === 'dock' ? 'settings.html' : 'index.html') + '" style="text-decoration:underline">تم</a>.' : 'اختر التطبيق الذي يفتح من هذا الزر. يمكنك تغييره لاحقاً من الإعدادات.';
 }
 var apps = natJSON('apps') || [];
 function render(){
@@ -53,9 +55,23 @@ function render(){
     var im = document.createElement('img'); im.alt = ''; im.loading = 'lazy';
     var s = document.createElement('span'); s.textContent = a.label;
     b.appendChild(im); b.appendChild(s);
+    function sel(){
+      if (pick === 'fav') return (prefs.favApps || []).indexOf(a.pkg) >= 0;
+      if (pick === 'dock') return (prefs.dock || []).indexOf('app:' + a.pkg) >= 0;
+      return false;
+    }
+    if (sel()) b.style.outline = '3px solid #5AD1A0';
     b.onclick = function () {
+      if (MULTI) {
+        var key = pick === 'fav' ? 'favApps' : 'dock', val = pick === 'fav' ? a.pkg : 'app:' + a.pkg;
+        var arr = (prefs[key] || []).slice(), i = arr.indexOf(val);
+        if (i >= 0) arr.splice(i, 1); else if (pick === 'fav' && arr.length >= 6) return; else arr.push(val);
+        prefs[key] = arr; savePrefs(prefs);
+        b.style.outline = sel() ? '3px solid #5AD1A0' : 'none';
+        return;
+      }
       if (pick) {
-        if (pick === 'maps') prefs.mapsApp = a.pkg; else prefs.musicApp = a.pkg;
+        if (pick === 'maps') prefs.mapsApp = a.pkg; else if (pick === 'music') prefs.musicApp = a.pkg; else if (pick === 'radio') prefs.radioApp = a.pkg;
         savePrefs(prefs);
       }
       nat('launch', a.pkg);

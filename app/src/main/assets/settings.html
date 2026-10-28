@@ -9,7 +9,7 @@
 .top{display:flex;align-items:center;gap:16px;height:60px;padding:22px 40px 0}
 .title{font-size:28px;font-weight:600;margin:0}
 .tabs{display:flex;gap:10px;margin-right:auto}
-.tab{height:52px;padding:0 18px;border-radius:26px;border:1px solid #2b4a80;background:rgba(19,37,74,.85);font-size:19px}
+.tab{height:50px;padding:0 15px;font-size:17px !important;border-radius:26px;border:1px solid #2b4a80;background:rgba(19,37,74,.85);font-size:19px}
 .tab.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
 .body{flex:1;display:flex;flex-direction:column;gap:12px;padding:14px 40px 20px;box-sizing:border-box;min-height:0;overflow-y:auto}
 .section{padding:14px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
@@ -32,9 +32,12 @@
 .txt{height:54px;width:360px;border-radius:16px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:20px;padding:0 16px;box-sizing:border-box}
 .line{display:flex;align-items:center;gap:14px;font-size:18px}
 .line .v{color:#9FD0FF}
+.prev i{display:block;background:#2b4a80;border-radius:4px;flex:1}
+.prev b{display:block;background:#4b6ea8;border-radius:3px;flex:1;height:100%}
+.opt:disabled{opacity:.35}
 </style>
 </head>
-<body>
+<body data-nodrive="1">
 <div id="stage">
   <img id="bg" src="bg/home_mountain.jpg" alt="">
   <div class="shade"></div>
@@ -53,8 +56,8 @@
 <script>
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
-var TABS = [['look', 'المظهر'], ['prayer', 'الصلاة والتنبيهات'], ['apps', 'التطبيقات والسيارة'], ['system', 'النظام والتحديث']];
-var tab = 'look';
+var TABS = [['look', 'المظهر'], ['home', 'الواجهة'], ['restT', 'الاستراحة'], ['prayer', 'الصلاة والتنبيهات'], ['apps', 'التطبيقات'], ['system', 'النظام']];
+var tab = 'look', citySearch = '', pageIdx = 0;
 try { tab = sessionStorage.getItem('settings.tab') || 'look'; } catch (e) {}
 
 function upd(){ savePrefs(prefs); applyPrefs('home', prefs); render(); }
@@ -127,6 +130,9 @@ function appLabel(pkg){
 
 /* ===== تبويب المظهر ===== */
 function renderLook(){
+  var s0 = section('الوقت والأرقام');
+  opts(s0, [[false, '12 ساعة (ص/م)'], [true, '24 ساعة']], prefs.h24, function (k) { prefs.h24 = k; upd(); });
+  opts(s0, [['en', 'أرقام 0123'], ['ar', 'أرقام ٠١٢٣']], prefs.digits, function (k) { prefs.digits = k; savePrefs(prefs); location.reload(); });
   var s = section('اسم السيارة أعلى الشاشة');
   var brands = Object.keys(BRANDS).map(function (k) { return [k, BRANDS[k].label]; }).concat([['text', 'اسم مخصص'], ['image', 'صورة'], ['none', 'بدون']]);
   opts(s, brands, prefs.brand, function (k) {
@@ -177,9 +183,6 @@ function renderLook(){
     opts(s, nightOpts, prefs.nightTheme, function (k) { prefs.nightTheme = k; upd(); }, true);
   }
 
-  s = section('البطاقة الوسطى في الرئيسية');
-  opts(s, [['media', 'الموسيقى'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس (ثابت)']], prefs.midCard, function (k) { prefs.midCard = k; upd(); });
-
   s = section('الخط');
   opts(s, [['thmanyah', 'ثمانية سانس'], ['system', 'خط الجهاز']], prefs.font, function (k) { prefs.font = k; upd(); });
 
@@ -190,7 +193,16 @@ function renderLook(){
 /* ===== تبويب الصلاة والتنبيهات ===== */
 function renderPrayer(){
   var s = section('المدينة (لمواقيت الصلاة)', 'طريقة أم القرى. «موقعي الحالي» يستخدم GPS ويتغير معك في السفر.');
-  opts(s, [['gps', 'موقعي الحالي']].concat(Object.keys(CITIES).map(function (k) { return [k, CITIES[k].label]; })), prefs.city, function (k) { prefs.city = k; upd(); pushPrayerSchedule(); }, true);
+  var q = el('input', 'txt'); q.placeholder = 'ابحث عن مدينة'; q.value = citySearch; s.appendChild(q);
+  var holder = el('div'); s.appendChild(holder);
+  function drawCities(){
+    holder.innerHTML = '';
+    var list = [['gps', 'موقعي الحالي']].concat(Object.keys(CITIES).map(function (k) { return [k, CITIES[k].label]; }))
+      .filter(function (x) { return !citySearch || x[1].indexOf(citySearch) >= 0 || x[0] === prefs.city; });
+    opts(holder, list, prefs.city, function (k) { prefs.city = k; citySearch = ''; upd(); pushPrayerSchedule(); }, true);
+  }
+  q.oninput = function () { citySearch = q.value.trim(); drawCities(); };
+  drawCities();
 
   s = section('تنبيه الصلاة');
   toggle(s, 'تنبيه عند دخول وقت الصلاة', 'adhan');
@@ -216,7 +228,23 @@ function renderPrayer(){
   if (prefs.speedOn) opts(s, [[80, '80'], [100, '100'], [110, '110'], [120, '120'], [130, '130'], [140, '140']].map(function (x) { return [x[0], x[1] + ' كم/س']; }), prefs.speedLimit, function (k) { prefs.speedLimit = k; upd(); }, true);
 
   s = section('تذكيرات');
-  toggle(s, 'تذكيرات اليوم (الجمعة، الصيام، الأيام البيض، رمضان والعيدين)', 'reminders', 'تظهر في الشريط العلوي للرئيسية وفي شاشة الاستراحة.');
+  toggle(s, 'تذكيرات اليوم من التقويم', 'reminders');
+  if (prefs.reminders) {
+    var SR = [['friday', 'الجمعة'], ['fasting', 'صيام الإثنين والخميس'], ['white', 'الأيام البيض'], ['ramadan', 'رمضان'], ['eid', 'العيدان'], ['dhulhijja', 'عشر ذي الحجة وعرفة']];
+    var sr = Object.assign({}, DEFAULT_PREFS.sysRem, prefs.sysRem || {});
+    var o2 = el('div', 'opts');
+    SR.forEach(function (x) {
+      var b = el('button', 'opt sm' + (sr[x[0]] ? ' on' : ''), x[1]);
+      b.onclick = function () { sr[x[0]] = !sr[x[0]]; prefs.sysRem = sr; upd(); };
+      o2.appendChild(b);
+    });
+    s.appendChild(o2);
+    s.appendChild(el('span', 'note', 'مكان ظهورها في الرئيسية:'));
+    opts(s, [['banner', 'الشريط العلوي'], ['clock', 'بجوار الساعة'], ['none', 'شاشة الاستراحة فقط']], prefs.remPlace, function (k) { prefs.remPlace = k; upd(); }, true);
+  }
+  var rl = el('div', 'line'); rl.appendChild(el('span', '', 'تذكيراتي الخاصة: تكتبها وتظهر بجوار الساعة في وقتها.'));
+  var ra = el('a', 'opt sm', 'فتح التذكيرات'); ra.href = 'reminders.html'; ra.style.display = 'flex'; ra.style.alignItems = 'center'; ra.style.marginRight = 'auto'; rl.appendChild(ra);
+  s.appendChild(rl);
 
   s = section('تنبيه الاستراحة');
   toggle(s, 'تنبيه بعد قيادة متواصلة', 'rest', 'يُصفَّر العداد إذا توقفت 15 دقيقة أو أكثر.');
@@ -230,7 +258,7 @@ function renderPrayer(){
 /* ===== تبويب التطبيقات والسيارة ===== */
 function renderApps(){
   var s = section('التطبيقات');
-  [['maps', 'تطبيق الخرائط', 'mapsApp'], ['music', 'تطبيق الموسيقى', 'musicApp']].forEach(function (x) {
+  [['maps', 'تطبيق الخرائط', 'mapsApp'], ['music', 'تطبيق الموسيقى', 'musicApp'], ['radio', 'تطبيق الراديو FM', 'radioApp']].forEach(function (x) {
     var l = el('div', 'line');
     l.appendChild(el('span', '', x[1] + ':'));
     l.appendChild(el('span', 'v', appLabel(prefs[x[2]])));
@@ -249,7 +277,7 @@ function renderApps(){
 
   s = section('السيارة');
   var r = el('div', 'opts');
-  [['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['upload.html', 'رفع صورة من الجوال']].forEach(function (x) {
+  [['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['notes.html', 'الملاحظات'], ['reminders.html', 'التذكيرات'], ['radio.html', 'الراديو'], ['parking.html', 'موقف السيارة'], ['upload.html', 'الإرسال من الجوال']].forEach(function (x) {
     var a = el('a', 'opt', x[1]); a.href = x[0]; a.style.display = 'flex'; a.style.alignItems = 'center'; r.appendChild(a);
   });
   s.appendChild(r);
@@ -257,6 +285,9 @@ function renderApps(){
 
 function renderSystem(){
   var s;
+  s = section('القيادة والإنترنت');
+  toggle(s, 'وضع القيادة الآمن', 'safeMode', 'أثناء الحركة تُقفل الإعدادات والكتابة والإرسال من الجوال، وتبقى الرئيسية والتطبيقات تعمل.');
+  toggle(s, 'الطقس من الإنترنت', 'weatherOn', 'يُحدَّث كل 30 دقيقة عند توفر إنترنت (نقطة اتصال الجوال)، ويُحفظ آخر قراءة.');
   s = section('عند تشغيل السيارة', 'يُنفَّذ مرة واحدة كلما اشتغلت الشاشة.');
   opts(s, [['none', 'لا شيء'], ['dua', 'دعاء الركوب'], ['maps', 'فتح الخرائط'], ['music', 'استئناف الموسيقى'], ['dua_music', 'الدعاء ثم الموسيقى']], prefs.bootAction, function (k) { prefs.bootAction = k; upd(); }, true);
 
@@ -295,6 +326,153 @@ function renderSystem(){
 
 }
 
+/* ===== تبويب الواجهة ===== */
+var LAYOUT_PREV = {
+  classic: '<div style="display:flex;gap:3px;height:60%"><i style="flex:1.4"></i><i style="flex:1"></i><i style="flex:1"></i></div><div style="display:flex;gap:3px;height:22%;margin-top:6%"><b></b><b></b><b></b><b></b><b></b></div>',
+  grid: '<div style="display:grid;grid-template-columns:2fr 1fr;gap:3px;height:38%"><i></i><i></i></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;height:38%;margin-top:3px"><i></i><i></i><i></i></div><div style="display:flex;gap:3px;height:14%;margin-top:4%"><b></b><b></b><b></b><b></b></div>',
+  side: '<div style="display:flex;gap:4px;height:100%"><div style="display:flex;flex-direction:column;gap:3px;width:16%"><b></b><b></b><b></b><b></b></div><div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:3px"><i></i><i></i><i></i><i></i></div></div>',
+  minimal: '<div style="height:52%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff">12:30</div><div style="display:flex;gap:3px;height:20%"><i></i><i></i><i></i></div><div style="display:flex;gap:3px;height:16%;margin-top:4%"><b></b><b></b><b></b><b></b></div>'
+};
+function homesCopy(){ return JSON.parse(JSON.stringify(getHomes(prefs))); }
+function saveHomes(h){ prefs.homes = h; upd(); }
+function cardName(id){ var c = CARD_CATALOG.filter(function (x) { return x[0] === id; })[0]; return c ? c[1] : id; }
+function renderHome(){
+  var s = section('تصميم الواجهة');
+  var g = el('div', 'themes');
+  LAYOUTS.forEach(function (L) {
+    var b = el('button', 'tile' + (prefs.layout === L[0] ? ' on' : ''));
+    b.style.cssText = 'height:120px;background:#0e1c38;flex-direction:column;align-items:stretch;justify-content:space-between;padding:10px';
+    b.innerHTML = '<div class="prev" style="flex:1;min-height:0">' + LAYOUT_PREV[L[0]] + '</div><span style="text-align:center;font-size:16px;margin-top:6px">' + L[1] + '</span>';
+    b.onclick = function () { prefs.layout = L[0]; pageIdx = 0; upd(); };
+    g.appendChild(b);
+  });
+  s.appendChild(g);
+  s.appendChild(el('span', 'note', 'كل تصميم يحفظ ترتيب بطاقاته. اسحب الرئيسية يميناً أو يساراً للتنقل بين الصفحات.'));
+
+  var homes = homesCopy(), pages = homes[prefs.layout];
+  if (pageIdx >= pages.length) pageIdx = 0;
+  var cards = pages[pageIdx];
+  s = section('الصفحات والبطاقات');
+  if (prefs.layout !== 'minimal') {
+    var pr = el('div', 'opts');
+    pages.forEach(function (p, i) { var b = el('button', 'opt sm' + (i === pageIdx ? ' on' : ''), 'صفحة ' + (i + 1)); b.onclick = function () { pageIdx = i; render(); }; pr.appendChild(b); });
+    if (pages.length < 4) { var ad = el('button', 'opt sm', '+ صفحة'); ad.onclick = function () { pages.push([{ id: 'clock', size: 'm' }]); pageIdx = pages.length - 1; saveHomes(homes); }; pr.appendChild(ad); }
+    if (pages.length > 1) { var dl = el('button', 'opt sm', 'حذف هذه الصفحة'); dl.onclick = function () { pages.splice(pageIdx, 1); pageIdx = 0; saveHomes(homes); }; pr.appendChild(dl); }
+    s.appendChild(pr);
+  } else s.appendChild(el('span', 'note', 'التصميم البسيط: ساعة كبيرة وحتى 3 بطاقات صغيرة.'));
+
+  var cap = prefs.layout === 'classic' ? 4 : prefs.layout === 'minimal' ? 3 : 12;
+  var used = prefs.layout === 'classic' || prefs.layout === 'minimal' ? cards.length : cards.reduce(function (a, c) { return a + ({ s: 2, m: 3, l: 4 }[c.size] || 3); }, 0);
+  cards.forEach(function (c, i) {
+    var row = el('div', 'line');
+    row.appendChild(el('span', '', cardName(c.id)));
+    var sz = el('div', 'opts'); sz.style.marginRight = 'auto';
+    if (prefs.layout !== 'minimal') [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']].forEach(function (z) {
+      var b = el('button', 'opt sm' + (c.size === z[0] ? ' on' : ''), z[1]); b.onclick = function () { c.size = z[0]; saveHomes(homes); }; sz.appendChild(b);
+    });
+    var up = el('button', 'opt sm', '▲'); up.setAttribute('aria-label', 'تقديم'); up.disabled = i === 0; up.onclick = function () { cards.splice(i - 1, 0, cards.splice(i, 1)[0]); saveHomes(homes); };
+    var dn = el('button', 'opt sm', '▼'); dn.setAttribute('aria-label', 'تأخير'); dn.disabled = i === cards.length - 1; dn.onclick = function () { cards.splice(i + 1, 0, cards.splice(i, 1)[0]); saveHomes(homes); };
+    var rm = el('button', 'opt sm', '×'); rm.setAttribute('aria-label', 'حذف البطاقة'); rm.onclick = function () { cards.splice(i, 1); saveHomes(homes); };
+    sz.appendChild(up); sz.appendChild(dn); sz.appendChild(rm);
+    row.appendChild(sz); s.appendChild(row);
+  });
+  s.appendChild(el('span', 'note', used >= cap ? 'الصفحة ممتلئة. صغّر بطاقة أو أضف صفحة جديدة.' : 'إضافة بطاقة:'));
+  if (used < cap) {
+    var addr = el('div', 'opts');
+    CARD_CATALOG.forEach(function (c) {
+      if (cards.some(function (x) { return x.id === c[0]; })) return;
+      var b = el('button', 'opt sm', '+ ' + c[1]); b.onclick = function () { cards.push({ id: c[0], size: prefs.layout === 'classic' ? 'm' : 's' }); saveHomes(homes); };
+      addr.appendChild(b);
+    });
+    s.appendChild(addr);
+  }
+  var rs = el('button', 'opt sm', 'استعادة الترتيب الافتراضي لهذا التصميم');
+  rs.onclick = function () { var h = homesCopy(); h[prefs.layout] = defaultHomes(prefs)[prefs.layout]; saveHomes(h); };
+  s.appendChild(rs);
+
+  s = section('القائمة السفلية', 'حتى 8 أزرار. زر الإعدادات ثابت دائماً.');
+  var dock = (prefs.dock || []).slice();
+  if (dock.indexOf('settings') < 0) dock.push('settings');
+  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', settings: 'الإعدادات' };
+  dock.forEach(function (id, i) {
+    var row = el('div', 'line');
+    row.appendChild(el('span', '', id.indexOf('app:') === 0 ? appLabel(id.slice(4)) : (DN[id] || id)));
+    var o = el('div', 'opts'); o.style.marginRight = 'auto';
+    var up = el('button', 'opt sm', '▲'); up.disabled = i === 0; up.onclick = function () { dock.splice(i - 1, 0, dock.splice(i, 1)[0]); prefs.dock = dock; upd(); };
+    var dn = el('button', 'opt sm', '▼'); dn.disabled = i === dock.length - 1; dn.onclick = function () { dock.splice(i + 1, 0, dock.splice(i, 1)[0]); prefs.dock = dock; upd(); };
+    o.appendChild(up); o.appendChild(dn);
+    if (id !== 'settings') { var rm = el('button', 'opt sm', '×'); rm.onclick = function () { dock.splice(i, 1); prefs.dock = dock; upd(); }; o.appendChild(rm); }
+    row.appendChild(o); s.appendChild(row);
+  });
+  if (dock.length < 8) {
+    s.appendChild(el('span', 'note', 'إضافة زر:'));
+    var ad2 = el('div', 'opts');
+    Object.keys(DN).forEach(function (k) {
+      if (dock.indexOf(k) >= 0) return;
+      var b = el('button', 'opt sm', '+ ' + DN[k]); b.onclick = function () { dock.splice(dock.length - 1, 0, k); prefs.dock = dock; upd(); }; ad2.appendChild(b);
+    });
+    var ap = el('a', 'opt sm', '+ تطبيق من الشاشة'); ap.href = 'apps.html?pick=dock'; ap.style.display = 'flex'; ap.style.alignItems = 'center'; ad2.appendChild(ap);
+    s.appendChild(ad2);
+  }
+  toggle(s, 'إظهار أسماء الأزرار', 'dockLabels');
+
+  s = section('أيقونات الحالة بجوار الساعة', 'تعرض الحالة الحقيقية، والضغط عليها يفتح إعدادها في الشاشة.');
+  var si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
+  var so = el('div', 'opts');
+  [['bt', 'البلوتوث'], ['wifi', 'الواي فاي'], ['gps', 'GPS']].forEach(function (x) {
+    var b = el('button', 'opt sm' + (si[x[0]] ? ' on' : ''), x[1]); b.onclick = function () { si[x[0]] = !si[x[0]]; prefs.statusIcons = si; upd(); }; so.appendChild(b);
+  });
+  s.appendChild(so);
+}
+
+/* ===== تبويب الاستراحة ===== */
+function renderRest(){
+  var s = section('نمط شاشة الاستراحة');
+  opts(s, [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['night', 'ليلي خافت'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']], prefs.restStyle, function (k) { prefs.restStyle = k; upd(); });
+  var pv = el('a', 'opt sm', 'معاينة'); pv.href = 'rest.html'; pv.style.display = 'flex'; pv.style.alignItems = 'center'; pv.style.alignSelf = 'flex-start'; s.appendChild(pv);
+
+  s = section('ما يظهر');
+  var sh = Object.assign({}, DEFAULT_PREFS.restShow, prefs.restShow || {});
+  var o = el('div', 'opts');
+  [['date', 'التاريخ'], ['dua', 'الدعاء'], ['wird', 'ورد اليوم'], ['remind', 'التذكيرات'], ['prayer', 'الصلاة القادمة']].forEach(function (x) {
+    var b = el('button', 'opt sm' + (sh[x[0]] ? ' on' : ''), x[1]); b.onclick = function () { sh[x[0]] = !sh[x[0]]; prefs.restShow = sh; upd(); }; o.appendChild(b);
+  });
+  s.appendChild(o);
+  s.appendChild(el('span', 'note', 'تبديل الدعاء كل:'));
+  opts(s, [[10, '10 ثوانٍ'], [15, '15 ثانية'], [20, '20 ثانية'], [30, '30 ثانية'], [60, 'دقيقة']], prefs.duaSec, function (k) { prefs.duaSec = k; upd(); }, true);
+
+  s = section('متى تعمل');
+  opts(s, [['manual', 'يدوياً فقط'], ['stopped', 'عند توقف السيارة'], ['idle', 'عند عدم لمس الشاشة'], ['night', 'ليلاً عند عدم اللمس']], prefs.restAuto, function (k) { prefs.restAuto = k; upd(); }, true);
+  if (prefs.restAuto !== 'manual') {
+    s.appendChild(el('span', 'note', prefs.restAuto === 'stopped' ? 'بعد توقف السيارة (GPS) لمدة:' : 'بعد عدم اللمس لمدة:'));
+    opts(s, [[2, 'دقيقتان'], [5, '5 دقائق'], [10, '10 دقائق'], [15, '15 دقيقة']], prefs.restAutoMin, function (k) { prefs.restAutoMin = k; upd(); }, true);
+  }
+  s.appendChild(el('span', 'note', 'تلميح: الضغط مرتين على الساعة في الرئيسية يفتح الاستراحة مباشرة.'));
+
+  s = section('مدة بقائها');
+  opts(s, [[0, 'حتى أخرج منها'], [5, '5 دقائق'], [15, '15 دقيقة'], [30, '30 دقيقة']], prefs.restReturn, function (k) { prefs.restReturn = k; upd(); }, true);
+
+  s = section('الأدعية', 'اضغط على الدعاء لإخفائه أو إظهاره، وأضف أدعيتك.');
+  var hidden = (prefs.hiddenDuas || []).slice();
+  var dl = el('div', 'opts');
+  BASE_DUAS.forEach(function (d) {
+    var on = hidden.indexOf(d) < 0;
+    var b = el('button', 'opt sm' + (on ? ' on' : ''), d.length > 34 ? d.slice(0, 34) + '…' : d);
+    b.onclick = function () { var i = hidden.indexOf(d); if (i >= 0) hidden.splice(i, 1); else hidden.push(d); prefs.hiddenDuas = hidden; upd(); };
+    dl.appendChild(b);
+  });
+  s.appendChild(dl);
+  (prefs.customDuas || []).forEach(function (d, i) {
+    var row = el('div', 'line'); row.appendChild(el('span', '', d));
+    var x = el('button', 'opt sm', 'حذف'); x.style.marginRight = 'auto'; x.onclick = function () { prefs.customDuas.splice(i, 1); upd(); }; row.appendChild(x);
+    s.appendChild(row);
+  });
+  var line = el('div', 'line');
+  var inp = el('input', 'txt'); inp.placeholder = 'أضف دعاءً'; inp.style.flex = '1'; inp.maxLength = 160;
+  var add = el('button', 'opt sm', 'إضافة'); add.onclick = function () { var v = inp.value.trim(); if (!v) return; prefs.customDuas = (prefs.customDuas || []).concat([v]); upd(); };
+  line.appendChild(inp); line.appendChild(add); s.appendChild(line);
+}
+
 function render(){
   var t = document.getElementById('tabs'); t.innerHTML = '';
   TABS.forEach(function (x) {
@@ -304,7 +482,7 @@ function render(){
   });
   var body = document.getElementById('body'), y = body.scrollTop;
   body.innerHTML = '';
-  if (tab === 'prayer') renderPrayer(); else if (tab === 'apps') renderApps(); else if (tab === 'system') renderSystem(); else renderLook();
+  if (tab === 'prayer') renderPrayer(); else if (tab === 'apps') renderApps(); else if (tab === 'system') renderSystem(); else if (tab === 'home') renderHome(); else if (tab === 'restT') renderRest(); else renderLook();
   body.scrollTop = y;
 }
 document.getElementById('logoFile').onchange = function (e) {

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>موقف السيارة</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>.qr{width:340px;height:340px;border-radius:22px;background:#fff;display:flex;align-items:center;justify-content:center;align-self:center}.qr svg{width:300px;height:300px}</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">موقف السيارة</span>
+    </div>
+    <div class="pcols" style="grid-template-columns:1.2fr 1fr">
+      <div class="pcard">
+        <span class="ph">مكان السيارة</span>
+        <div id="info" style="font-size:20px;line-height:1.8"></div>
+        <div class="prow"><button class="pbtn" id="save">حفظ موقعي الآن</button><span class="pnote" id="msg"></span></div>
+        <div class="pnote" style="margin-top:auto">يُحفظ تلقائياً آخر مكان توقفت فيه السيارة. امسح الباركود بجوالك لتفتح الموقع في الخرائط وتعود للسيارة بسهولة (مفيد في المطارات والمواقف الكبيرة).</div>
+      </div>
+      <div class="pcard" style="align-items:center;justify-content:center">
+        <div class="qr" id="qr"></div>
+        <div class="pnote latin" id="link" style="direction:ltr"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="lib/qrcode.js"></script>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(id){ return document.getElementById(id); }
+function spot(){
+  var manual = lsGet('carlauncher.park', null), auto = natJSON('park');
+  if (manual && (!auto || !auto.at || manual.at >= auto.at)) return Object.assign({ src: 'يدوي' }, manual);
+  if (auto && auto.lat) return Object.assign({ src: 'تلقائي' }, auto);
+  return null;
+}
+function render(){
+  var s = spot();
+  if (!s) { $('info').innerHTML = '<span class="pnote">لا يوجد موقع محفوظ بعد. يحتاج إشارة GPS.</span>'; $('qr').innerHTML = ''; return; }
+  var t = natJSON('trip'), dist = t && typeof t.lat === 'number' ? Math.round(distKm(t.lat, t.lng, s.lat, s.lng) * 1000) : null;
+  $('info').innerHTML = 'الوقت: <b>' + fmt({ weekday: 'long', hour: 'numeric', minute: '2-digit' }, 'ar-u-nu-latn', new Date(s.at)) + '</b><br>' +
+    'الطريقة: ' + s.src + '<br>' + (dist !== null ? 'المسافة من موقعك الحالي: ' + (dist < 1000 ? dist + ' م' : (dist / 1000).toFixed(1) + ' كم') : '');
+  var url = 'https://maps.google.com/?q=' + s.lat.toFixed(6) + ',' + s.lng.toFixed(6);
+  var q = qrcode(0, 'M'); q.addData(url); q.make();
+  $('qr').innerHTML = q.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+  $('link').textContent = url;
+}
+$('save').onclick = function () {
+  var t = natJSON('trip');
+  if (!t || typeof t.lat !== 'number') { $('msg').textContent = 'لا توجد إشارة GPS الآن'; return; }
+  lsSet('carlauncher.park', { lat: t.lat, lng: t.lng, at: Date.now() }); $('msg').textContent = 'حُفظ ✓'; render();
+};
+render(); setInterval(render, 10000);
+fitStage();
+</script>
+</body>
+</html>
