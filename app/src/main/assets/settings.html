@@ -130,6 +130,15 @@ function appLabel(pkg){
 
 /* ===== تبويب المظهر ===== */
 function renderLook(){
+  var sk = section('الثيم', 'شكل البطاقات والألوان والزخارف. اختيار الثيم يضبط خلفيته المناسبة تلقائياً، ويمكنك تغيير الخلفية بعدها.');
+  var sg = el('div', 'themes'); sg.style.gridTemplateColumns = 'repeat(3,minmax(0,1fr))';
+  [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg']].forEach(function (x) {
+    var b = el('button', 'tile' + ((prefs.skin || 'classic') === x[0] ? ' on' : ''), SKINS[x[0]].label);
+    b.style.backgroundImage = "url('" + x[1] + "')"; b.style.height = '110px'; b.style.fontSize = '19px';
+    b.onclick = function () { prefs.skin = x[0]; prefs.theme = SKINS[x[0]].theme; upd(); };
+    sg.appendChild(b);
+  });
+  sk.appendChild(sg);
   var s0 = section('الوقت والأرقام');
   opts(s0, [[false, '12 ساعة (ص/م)'], [true, '24 ساعة']], prefs.h24, function (k) { prefs.h24 = k; upd(); });
   opts(s0, [['en', 'أرقام 0123'], ['ar', 'أرقام ٠١٢٣']], prefs.digits, function (k) { prefs.digits = k; savePrefs(prefs); location.reload(); });

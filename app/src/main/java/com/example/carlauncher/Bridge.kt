@@ -40,6 +40,8 @@ class Bridge(private val act: MainActivity) {
     private val ctx: Context get() = act.applicationContext
     private val iconCache = HashMap<String, String>()
     private var server: UploadServer? = null
+    private var artKey = ""
+    private var artUrl = ""
 
     // ===== التطبيقات =====
     @JavascriptInterface
@@ -98,6 +100,28 @@ class Bridge(private val act: MainActivity) {
                 o.put("title", md?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "")
                 o.put("artist", md?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM) ?: "")
                 o.put("pkg", c.packageName)
+                // مدة المقطع وموضع التشغيل (لشريط التقدم)
+                val dur = md?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+                val st = c.playbackState
+                if (dur > 0 && st != null && st.position >= 0) {
+                    o.put("duration", dur)
+                    o.put("position", st.position)
+                    o.put("at", System.currentTimeMillis() - (android.os.SystemClock.elapsedRealtime() - st.lastPositionUpdateTime))
+                }
+                // صورة الألبوم (تُحفظ مؤقتاً حتى لا تُرسل كل ثانية إلا عند تغيّر المقطع)
+                val key = c.packageName + "|" + (md?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "")
+                if (key != artKey || artUrl.isEmpty()) {
+                    artKey = key
+                    artUrl = try {
+                        val bmp = md?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: md?.getBitmap(MediaMetadata.METADATA_KEY_ART) ?: md?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
+                        if (bmp != null) {
+                            val sc = Bitmap.createScaledBitmap(bmp, 200, 200 * bmp.height / maxOf(1, bmp.width), true)
+                            val out = ByteArrayOutputStream(); sc.compress(Bitmap.CompressFormat.JPEG, 80, out)
+                            "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+                        } else ""
+                    } catch (e: Exception) { "" }
+                }
+                if (artUrl.isNotEmpty()) o.put("art", artUrl)
                 o.put("app", try { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(c.packageName, 0)).toString() } catch (e: Exception) { "" })
             }
         } catch (e: SecurityException) {

@@ -34,7 +34,7 @@ var DEFAULT_PREFS = {
   speedOn: false, speedLimit: 120, customSound: true,
   bootAction: 'none', pin: '', nightBright: false, nightPct: 30, reminders: true,
   /* العرض */
-  h24: false, digits: 'en', clockFont: '', duaFont: 'amiri',
+  h24: false, digits: 'en', clockFont: '', duaFont: 'amiri', skin: 'classic',
   /* الواجهة: التصميم، الصفحات والبطاقات لكل تصميم، القائمة السفلية */
   layout: 'classic', homes: null,
   dock: ['maps', 'music', 'apps', 'rest', 'azkar', 'trip', 'settings'], dockLabels: true,
@@ -50,7 +50,9 @@ var DEFAULT_PREFS = {
 function loadPrefs(){
   try {
     var raw = localStorage.getItem(PREFS_KEY);
-    return Object.assign({}, DEFAULT_PREFS, raw ? JSON.parse(raw) : {});
+    var p = Object.assign({}, DEFAULT_PREFS, raw ? JSON.parse(raw) : {});
+    ['font', 'clockFont', 'duaFont'].forEach(function (k) { if (p[k] === 'hacen') p[k] = k === 'duaFont' ? 'amiri' : 'tajawal'; });
+    return p;
   } catch (e) { return Object.assign({}, DEFAULT_PREFS); }
 }
 function savePrefs(p){
@@ -70,7 +72,38 @@ var THEMES = {
   desert:   { label: 'الصحراوي', bg: 'bg/home_desert.jpg', rest: 'bg/rest_desert.jpg' },
   day:      { label: 'النهاري', bg: 'bg/home_day.jpg',     rest: 'bg/rest_day.jpg' },
   violet:   { label: 'البنفسجي', bg: 'bg/home_violet.jpg', rest: 'bg/rest_violet.jpg' },
-  glow:     { label: 'الذهبي', bg: 'bg/home_glow.jpg',     rest: 'bg/rest_glow.jpg' }
+  glow:     { label: 'الذهبي', bg: 'bg/home_glow.jpg',     rest: 'bg/rest_glow.jpg' },
+  gold_auto:  { label: 'ذهبي تلقائي (حسب الوقت)', auto: 'gold', bg: 'skins/gold/bg_night.jpg', rest: 'skins/gold/bg_night.jpg' },
+  gold_night: { label: 'ذهبي ليلي', bg: 'skins/gold/bg_night.jpg', rest: 'skins/gold/bg_night.jpg' },
+  gold_fajr:  { label: 'ذهبي فجر', bg: 'skins/gold/bg_fajr.jpg', rest: 'skins/gold/bg_fajr.jpg' },
+  gold_day:   { label: 'ذهبي نهار', bg: 'skins/gold/bg_day.jpg', rest: 'skins/gold/bg_day.jpg' },
+  gold_dusk:  { label: 'ذهبي مغرب', bg: 'skins/gold/bg_dusk.jpg', rest: 'skins/gold/bg_dusk.jpg' },
+  red_auto:   { label: 'فضي أحمر تلقائي', auto: 'red', bg: 'skins/red/bg_night.jpg', rest: 'skins/red/bg_night.jpg' },
+  red_night:  { label: 'طريق ليلي', bg: 'skins/red/bg_night.jpg', rest: 'skins/red/bg_night.jpg' },
+  red_sunset: { label: 'طريق الغروب', bg: 'skins/red/bg_sunset.jpg', rest: 'skins/red/bg_sunset.jpg' },
+  red_day:    { label: 'طريق نهاري', bg: 'skins/red/bg_day.jpg', rest: 'skins/red/bg_day.jpg' },
+  red_carbon: { label: 'كربون', bg: 'skins/red/bg_carbon.jpg', rest: 'skins/red/bg_carbon.jpg' },
+  red_silver: { label: 'ألمنيوم', bg: 'skins/red/bg_silver.jpg', rest: 'skins/red/bg_silver.jpg' }
+};
+/* الخلفية حسب وقت اليوم (فجر، نهار، مغرب، ليل) */
+function dayPeriod(d){
+  d = d || new Date();
+  var t = prayerTimes(d), now = riyadhMinutes(d);
+  if (now >= t.fajr && now < t.sunrise + 45) return 'fajr';
+  if (now >= t.sunrise + 45 && now < t.maghrib - 50) return 'day';
+  if (now >= t.maghrib - 50 && now < t.maghrib + 40) return 'dusk';
+  return 'night';
+}
+function autoBg(kind){
+  var p = dayPeriod();
+  if (kind === 'gold') return 'skins/gold/bg_' + p + '.jpg';
+  return 'skins/red/bg_' + (p === 'dusk' ? 'sunset' : p === 'night' ? 'night' : 'day') + '.jpg';
+}
+/* الثيمات: شكل البطاقات والألوان والزخارف */
+var SKINS = {
+  classic: { label: 'الافتراضي', theme: 'mountain' },
+  gold:    { label: 'ليلي ذهبي', theme: 'gold_auto' },
+  red:     { label: 'فضي أحمر', theme: 'red_auto' }
 };
 
 /* صور المستخدم (من الجوال أو من الجهاز). الاسم: home_123.jpg / rest_123.jpg / logo_123.png */
@@ -92,17 +125,24 @@ function themeBg(key, which){
     key = 'mountain';
   }
   var t = THEMES[key] || THEMES.mountain;
+  if (t.auto) return autoBg(t.auto);
   return which === 'rest' ? t.rest : t.bg;
 }
 
 /* الخطوط: للواجهة، وللساعة والأرقام الكبيرة، وللأدعية */
 var FONTS = {
   thmanyah: { label: 'ثمانية سانس', css: "'Thmanyah'" },
-  hacen:    { label: 'هاسن تونس', css: "'HacenTunisia'" },
+  tajawal:  { label: 'تجوال', css: "'Tajawal'" },
+  cairo:    { label: 'القاهرة', css: "'Cairo'" },
+  plex:     { label: 'بلكس عربي', css: "'PlexArabic'" },
+  reemkufi: { label: 'ريم كوفي', css: "'ReemKufi'" },
+  messiri:  { label: 'المسيري', css: "'ElMessiri'" },
+  lalezar:  { label: 'لاله زار', css: "'Lalezar'" },
+  ruqaa:    { label: 'رقعة عارف', css: "'ArefRuqaa'" },
   mohammad: { label: 'محمد بولد آرت', css: "'MohammadBoldArt'" },
   elgharib: { label: 'حياكم الله', css: "'ElgharibHayyakum'" },
   komission:{ label: 'كوميشن', css: "'KOMission'" },
-  amiri:    { label: 'نسخ (للأدعية)', css: "'Amiri','Noto Naskh Arabic',serif" },
+  amiri:    { label: 'أميري (نسخ)', css: "'Amiri','Noto Naskh Arabic',serif" },
   system:   { label: 'خط الجهاز', css: "'Noto Sans Arabic',Tahoma,'Segoe UI',Arial" }
 };
 function fontCss(key, fallback){ var f = FONTS[key] || FONTS[fallback] || FONTS.thmanyah; return f.css + ", 'Thmanyah', 'Noto Sans Arabic', Tahoma, sans-serif"; }
@@ -140,6 +180,8 @@ function applyPrefs(bgKey, p){
     stage.style.setProperty('--font-dua', fontCss(p.duaFont || 'amiri', 'amiri'));
   }
   document.body.classList.toggle('solid', !!p.solid);
+  document.body.classList.remove('skin-gold', 'skin-red');
+  if (p.skin === 'gold' || p.skin === 'red') document.body.classList.add('skin-' + p.skin);
   renderBrand(p);
 }
 
@@ -234,7 +276,7 @@ function nextPrayer(d){
   var next = list.find(function (p) { return p.min > nowMin; });
   if (!next) next = prayerMinutes(new Date(d.getTime() + 86400000))[0];
   var diff = next.min > nowMin ? next.min - nowMin : next.min + 1440 - nowMin;
-  return { name: next.name, time: hhmm(next.min), timeFmt: fmtMin(next.min), diff: diff };
+  return { key: next.key, name: next.name, time: hhmm(next.min), timeFmt: fmtMin(next.min), diff: diff };
 }
 /* إرسال مواعيد اليوم والغد للخدمة لتنبّه حتى والخرائط مفتوحة */
 function pushPrayerSchedule(){

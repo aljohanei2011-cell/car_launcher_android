@@ -3,7 +3,16 @@
 @font-face{font-family:'Thmanyah';font-weight:500;src:url(fonts/thmanyah-sans-Medium.woff2) format('woff2')}
 @font-face{font-family:'Thmanyah';font-weight:700;src:url(fonts/thmanyah-sans-Bold.woff2) format('woff2')}
 @font-face{font-family:'Thmanyah';font-weight:900;src:url(fonts/thmanyah-sans-Black.woff2) format('woff2')}
-@font-face{font-family:'HacenTunisia';src:url(fonts/hacen-tunisia.ttf) format('truetype')}
+@font-face{font-family:'Tajawal';font-weight:400;src:url(fonts/tajawal-regular.ttf) format('truetype')}
+@font-face{font-family:'Tajawal';font-weight:700;src:url(fonts/tajawal-bold.ttf) format('truetype')}
+@font-face{font-family:'Cairo';font-weight:200 1000;src:url(fonts/cairo-var.ttf) format('truetype')}
+@font-face{font-family:'PlexArabic';font-weight:400;src:url(fonts/plexar-regular.ttf) format('truetype')}
+@font-face{font-family:'PlexArabic';font-weight:700;src:url(fonts/plexar-bold.ttf) format('truetype')}
+@font-face{font-family:'Amiri';src:url(fonts/amiri-regular.ttf) format('truetype')}
+@font-face{font-family:'ReemKufi';font-weight:400 700;src:url(fonts/reemkufi-var.ttf) format('truetype')}
+@font-face{font-family:'ElMessiri';font-weight:400 700;src:url(fonts/elmessiri-var.ttf) format('truetype')}
+@font-face{font-family:'ArefRuqaa';src:url(fonts/arefruqaa-regular.ttf) format('truetype')}
+@font-face{font-family:'Lalezar';src:url(fonts/lalezar-regular.ttf) format('truetype')}
 @font-face{font-family:'MohammadBoldArt';src:url(fonts/mohammad-bold-art.ttf) format('truetype');unicode-range:U+0000-0039,U+003B-FFFF}
 @font-face{font-family:'ElgharibHayyakum';src:url(fonts/elgharib-hayyakum.ttf) format('truetype')}
 @font-face{font-family:'KOMission';src:url(fonts/komission-black.otf) format('opentype')}
@@ -41,3 +50,47 @@ body.solid .glass{-webkit-backdrop-filter:none;backdrop-filter:none}
 /* خط الساعة والأرقام الكبيرة، وخط الأدعية */
 .font-clock,.k-huge,.k-big,#minClock,.clock,.clockTop,#clock{font-family:var(--font-clock)}
 .font-dua,.dua,.boot .t,.text{font-family:var(--font-dua)!important}
+
+/* ===================== ثيم «ليلي ذهبي» ===================== */
+body.skin-gold{--accent:#E6B85C;--accent2:#F5D58A;--txt2:#B6C0CD}
+body.skin-gold .glass{background:linear-gradient(165deg,rgba(18,32,52,.80),rgba(7,20,38,.74));border:1px solid rgba(230,184,92,.38);box-shadow:inset 0 1px 0 rgba(245,213,138,.14),0 12px 32px rgba(0,0,0,.45)}
+body.skin-gold.solid .glass{background:#101E31}
+body.skin-gold .accent,body.skin-gold .k-lbl,body.skin-gold .label{color:#E6B85C!important}
+body.skin-gold .sub,body.skin-gold .k-sub{color:#B6C0CD}
+body.skin-gold .k-li.on{background:rgba(230,184,92,.18);color:#F5D58A}
+body.skin-gold .mbtn{background:rgba(7,20,38,.6);border-color:rgba(245,213,138,.45)}
+body.skin-gold .mbtn.big{background:rgba(7,20,38,.6);border:2px solid #E6B85C;box-shadow:0 0 18px rgba(230,184,92,.35)}
+body.skin-gold .dk svg,body.skin-gold .st svg{filter:grayscale(1) sepia(1) saturate(2.6) hue-rotate(-8deg) brightness(1.15)}
+body.skin-gold .dk:first-child{border-color:#E6B85C;background:linear-gradient(165deg,rgba(80,62,24,.75),rgba(30,26,18,.8));box-shadow:0 0 20px rgba(230,184,92,.25)}
+body.skin-gold .opt.on,body.skin-gold .tab.on{background:linear-gradient(165deg,#b98a35,#7a5a1f);border-color:#F5D58A}
+body.skin-gold .banner,body.skin-gold .chip{background:rgba(20,22,30,.75);border-color:#E6B85C;color:#F5D58A}
+body.skin-gold #stage::before,body.skin-gold #stage::after{content:'';position:absolute;width:170px;height:170px;background:url(skins/gold/ornament.png) center/contain no-repeat;opacity:.4;pointer-events:none;z-index:0}
+body.skin-gold #stage::before{top:-24px;left:-24px;transform:scaleX(-1)}
+body.skin-gold #stage::after{bottom:-24px;right:-24px;transform:scaleY(-1)}
+body.skin-gold .wrap,body.skin-red .wrap{z-index:2}
+
+/* ===================== ثيم «فضي أحمر» ===================== */
+body.skin-red{--accent:#C8102E;--accent2:#F02A48}
+body.skin-red .glass{background:linear-gradient(170deg,rgba(30,34,40,.86),rgba(14,16,20,.84));border:1px solid rgba(160,168,176,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 30px rgba(0,0,0,.55)}
+body.skin-red.solid .glass{background:#161A1F}
+body.skin-red .card.glass{border-top:2px solid rgba(200,16,46,.75)}
+body.skin-red .accent,body.skin-red .k-lbl,body.skin-red .label{color:#E8ECEF!important;letter-spacing:.3px}
+body.skin-red .k-lbl::before{content:'';display:inline-block;width:4px;height:.9em;background:#C8102E;border-radius:2px;margin-left:.45em;vertical-align:-.1em;box-shadow:0 0 8px #F02A48}
+body.skin-red .sub,body.skin-red .k-sub{color:#B7BEC5}
+body.skin-red .k-li.on{background:rgba(200,16,46,.22);color:#fff}
+body.skin-red .mbtn{background:rgba(255,255,255,.06);border-color:rgba(191,197,203,.5)}
+body.skin-red .mbtn.big{background:#C8102E;border-color:#F02A48;box-shadow:0 0 18px rgba(240,42,72,.45)}
+body.skin-red .dk svg,body.skin-red .st svg{filter:grayscale(1) brightness(1.7)}
+body.skin-red .dk:first-child{border-color:#C8102E;box-shadow:inset 0 -3px 0 #F02A48,0 0 18px rgba(240,42,72,.25)}
+body.skin-red .opt.on,body.skin-red .tab.on{background:#C8102E;border-color:#F02A48}
+body.skin-red .banner,body.skin-red .chip{background:rgba(20,20,22,.8);border-color:#C8102E;color:#fff}
+body.skin-red .chip button{background:#C8102E;color:#fff}
+body.skin-red #stage::before,body.skin-red #stage::after{content:'';position:absolute;width:130px;height:130px;background:url(skins/red/corner.png) center/contain no-repeat;opacity:.45;pointer-events:none;z-index:0}
+body.skin-red #stage::before{top:-4px;right:-4px;transform:scaleX(-1)}
+body.skin-red #stage::after{bottom:-4px;left:-4px;transform:scaleY(-1)}
+
+/* صورة أعلى البطاقة (الصلاة/الموسيقى) في الثيمات */
+.k-img{display:none;border-radius:.9em;background-size:cover;background-position:center;flex:1;min-height:0;margin-bottom:.6em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+body.skin-gold .L-classic .k-img,body.skin-red .L-classic .k-img,body.skin-gold .L-side .k-img,body.skin-red .L-side .k-img{display:block}
+.k-art{display:none;width:5.2em;height:5.2em;border-radius:.8em;background-size:cover;background-position:center;flex:none}
+body.skin-gold .k-art,body.skin-red .k-art{display:block}

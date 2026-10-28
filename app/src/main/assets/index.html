@@ -220,8 +220,21 @@ card('clock', 'الساعة', function () {
     '<div class="k-huge">' + clockStr(d) + '<span style="font-size:.25em;font-weight:500;margin-left:.2em">' + ampm(d) + '</span></div>' +
     '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div></div>';
 });
+function skinImg(kind, key){
+  if (prefs.skin === 'gold') return kind === 'prayer' ? 'skins/gold/prayer_' + (key || 'isha') + '.jpg' : 'skins/gold/music.jpg';
+  if (prefs.skin === 'red') return kind === 'prayer' ? 'skins/red/prayer.jpg' : kind === 'trip' ? 'skins/red/trip.jpg' : 'skins/red/music.jpg';
+  return '';
+}
+function pad2(x){ return (x < 10 ? '0' : '') + x; }
 card('prayer', 'الصلاة القادمة', function () {
-  var np = nextPrayer(new Date());
+  var d = new Date(), np = nextPrayer(d);
+  if (prefs.skin === 'gold' || prefs.skin === 'red') {
+    var left = Math.max(0, np.diff * 60 - d.getSeconds());
+    return '<a href="prayer.html" style="display:contents"><div class="k-img" style="background-image:url(' + skinImg('prayer', np.key) + ')"></div>' +
+      '<div style="text-align:center"><div class="k-sub">الصلاة القادمة</div><div class="k-mid" style="font-size:2.2em;color:var(--accent2)">صلاة ' + np.name + '</div>' +
+      '<div class="k-big" style="font-size:2.6em;margin:.15em 0">' + pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60) + '</div>' +
+      '<div class="k-sub">' + np.timeFmt + ' · ' + esc(cityLabel()) + '</div></div></a>';
+  }
   return '<a href="prayer.html" style="display:contents"><div class="k-row"><span class="k-lbl">الصلاة القادمة</span><span class="k-sub" style="font-size:.95em">' + esc(cityLabel()) + '</span></div>' +
     '<div><div class="k-mid" style="font-size:2.3em">' + np.name + '</div><div class="k-row" style="align-items:baseline"><span class="k-sub">' + fmtDiff(np.diff) + '</span>' +
     '<span class="k-big">' + np.timeFmt + '</span></div></div></a>';
@@ -243,8 +256,17 @@ card('media', 'الموسيقى', function () {
   var m = natJSON('media');
   if (!m || m.access === false) return '<span class="k-lbl">الموسيقى</span><div class="k-sub" style="white-space:normal">فعّل «الوصول إلى الإشعارات» مرة واحدة لعرض ما يُشغَّل.</div><button class="k-btn" style="align-self:flex-start" onclick="nat(\'openNotificationAccess\')">تفعيل</button>';
   if (!m.title) return '<span class="k-lbl">الموسيقى</span><div class="k-sub">لا يوجد تشغيل الآن</div><button class="k-btn" style="align-self:flex-start" onclick="openRole(\'music\')">فتح تطبيق الموسيقى</button>';
+  var art = m.art || skinImg('music');
+  var prog = '';
+  if (m.duration > 0) {
+    var pos = Math.min(m.duration, (m.position || 0) + (m.playing ? Date.now() - (m.at || Date.now()) : 0)), pct = Math.round(pos / m.duration * 100);
+    var t = function (ms) { var s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + pad2(s % 60); };
+    prog = '<div><div style="height:.35em;border-radius:.2em;background:rgba(255,255,255,.18);overflow:hidden;direction:ltr"><div style="width:' + pct + '%;height:100%;background:var(--accent,#5AB0FF)"></div></div>' +
+      '<div class="k-row k-sub" style="font-size:.85em;direction:ltr;margin-top:.2em"><span>' + t(pos) + '</span><span>' + t(m.duration) + '</span></div></div>';
+  }
   return '<div class="k-row"><span class="k-lbl">يُشغَّل الآن</span><span class="k-sub" style="font-size:.95em">' + esc(m.app) + '</span></div>' +
-    '<div style="min-width:0"><div class="k-mid">' + esc(m.title) + '</div><div class="k-sub">' + esc(m.artist) + '</div></div>' +
+    '<div style="display:flex;gap:.9em;align-items:center;min-width:0">' + (art ? '<div class="k-art" style="background-image:url(' + art + ');' + (m.art ? 'display:block' : '') + '"></div>' : '') +
+    '<div style="min-width:0;flex:1"><div class="k-mid" style="white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3">' + esc(m.title) + '</div><div class="k-sub">' + esc(m.artist) + '</div></div></div>' + prog +
     '<div style="display:flex;justify-content:center;align-items:center;gap:1em;direction:ltr">' +
     '<button class="mbtn" aria-label="السابق" onclick="nat(\'mediaCmd\',\'prev\');later()">' + MI.prev + '</button>' +
     '<button class="mbtn big" aria-label="تشغيل أو إيقاف" onclick="nat(\'mediaCmd\',\'' + (m.playing ? 'pause' : 'play') + '\');later()">' + (m.playing ? MI.pause : MI.play) + '</button>' +
@@ -259,10 +281,20 @@ card('speed', 'عداد السرعة', function () {
   var ticks = '';
   for (var k = 0; k <= max; k += 20) { var dg = -120 + 240 * k / max; ticks += '<text x="' + pt(dg, 62).split(' ')[0] + '" y="' + (+pt(dg, 62).split(' ')[1] + 4) + '" fill="#9FB0CC" font-size="9" text-anchor="middle">' + k + '</text>'; }
   var limDeg = -120 + 240 * Math.min(lim, max) / max;
+  if (prefs.skin === 'red') {
+    var pc = Math.min(v, max) / max, C = 2 * Math.PI * 70;
+    return '<div class="k-row"><span class="k-lbl">السرعة</span><span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span></div>' +
+      '<div style="position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center"><div style="position:relative;height:100%;aspect-ratio:1;max-width:100%">' +
+      '<img src="skins/red/ring.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain">' +
+      '<svg viewBox="0 0 200 200" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="6"/>' +
+      '<circle cx="100" cy="100" r="70" fill="none" stroke="' + (over ? '#F02A48' : '#C8102E') + '" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + (C * pc).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(135 100 100)" style="filter:drop-shadow(0 0 4px #F02A48)"/>' +
+      '<text x="100" y="108" text-anchor="middle" fill="#fff" font-size="44" font-weight="700">' + v + '</text><text x="100" y="132" text-anchor="middle" fill="#B7BEC5" font-size="12">كم/س</text></svg></div></div>';
+  }
+  var main = prefs.skin === 'gold' ? (over ? '#FF6B5A' : 'url(#gg)') : (over ? '#FF6B5A' : '#5AB0FF');
   return '<div class="k-row"><span class="k-lbl">السرعة</span><span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span></div>' +
-    '<svg class="gauge" viewBox="0 0 200 150" aria-hidden="true">' + arc(-120, 120, 'rgba(255,255,255,.15)', 10) + arc(-120, a, over ? '#FF6B5A' : '#5AB0FF', 10) +
+    '<svg class="gauge" viewBox="0 0 200 150" aria-hidden="true"><defs><linearGradient id="gg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a6420"/><stop offset=".6" stop-color="#E6B85C"/><stop offset="1" stop-color="#F5D58A"/></linearGradient></defs>' + arc(-120, 120, 'rgba(255,255,255,.15)', 10) + arc(-120, a, main, 10) +
     (prefs.speedOn ? '<path d="M' + pt(limDeg, 70) + ' L' + pt(limDeg, 90) + '" stroke="#E8C061" stroke-width="3"/>' : '') + ticks +
-    '<g transform="rotate(' + a + ' 100 105)"><path d="M100 30 L104 105 L96 105Z" fill="' + (over ? '#FF6B5A' : '#fff') + '"/></g><circle cx="100" cy="105" r="7" fill="#fff"/>' +
+    '<g transform="rotate(' + a + ' 100 105)"><path d="M100 30 L104 105 L96 105Z" fill="' + (over ? '#FF6B5A' : prefs.skin === 'gold' ? '#F5D58A' : '#fff') + '"/></g><circle cx="100" cy="105" r="7" fill="#fff"/>' +
     '<text x="100" y="140" text-anchor="middle" fill="' + (over ? '#FF6B5A' : '#fff') + '" font-size="26" font-weight="700">' + v + '</text></svg>';
 });
 card('trip', 'الرحلة', function () {
@@ -395,6 +427,8 @@ function updateDots(){
 document.getElementById('pages').addEventListener('scroll', function () { clearTimeout(this._t); this._t = setTimeout(updateDots, 80); });
 
 function renderCards(){
+  // لا نعيد رسم البطاقات أثناء اللمس حتى لا تضيع الضغطة
+  if (Date.now() - touchAt < 700) return;
   cardEls.forEach(function (c) {
     var h = '';
     try { h = CARDS[c.id].render(); } catch (e) { h = '<span class="k-lbl">' + CARDS[c.id].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
@@ -441,8 +475,8 @@ function bootAction(){
 }
 function applyBrightness(){ if (prefs.nightBright) nat('applyNight', isNight(), +prefs.nightPct); else nat('applyNight', false, 100); }
 
-var lastTouch = Date.now(), stoppedSince = 0, movedSinceStop = false;
-document.addEventListener('pointerdown', function () { lastTouch = Date.now(); }, true);
+var lastTouch = Date.now(), touchAt = 0, stoppedSince = 0, movedSinceStop = false;
+document.addEventListener('pointerdown', function () { lastTouch = touchAt = Date.now(); }, true);
 function autoRest(){
   var mode = prefs.restAuto, min = (+prefs.restAutoMin || 5) * 60000, now = Date.now();
   if (mode === 'manual') return;
@@ -473,7 +507,7 @@ window.onPageResume = function () { prefs = loadPrefs(); _prefsCache = null; app
 
 processInbox();
 buildPages(); renderDock(); renderStatus(); tick(); renderBanner(); bootAction(); applyBrightness(); weatherRefreshIfStale();
-setInterval(tick, 2000);
+setInterval(tick, 1000);
 setInterval(renderStatus, 5000);
 setInterval(function () { processInbox(); updatePlaceReminders(); autoRest(); }, 5000);
 setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
