@@ -40,7 +40,7 @@
 .L-classic .card.s{flex:.7}.L-classic .card.m{flex:1}.L-classic .card.l{flex:1.45}
 .L-grid .cards,.L-side .cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));grid-auto-rows:0;gap:16px;overflow:hidden}
 .L-grid .card.s,.L-side .card.s{grid-column:span 2}.L-grid .card.m,.L-side .card.m{grid-column:span 3}.L-grid .card.l,.L-side .card.l{grid-column:span 4}
-.L-minimal .cards{display:flex;gap:16px;height:150px;margin-top:auto}
+.L-minimal .cards{display:flex;gap:16px;height:190px;margin-top:auto}
 .L-minimal .card{flex:1}
 .minClock{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:1}
 .L-minimal .minClock{display:flex}
@@ -77,12 +77,18 @@
 /* ===== القائمة (Dock) ===== */
 #dock{display:flex;gap:14px;box-sizing:border-box}
 .L-classic #dock,.L-grid #dock,.L-minimal #dock{height:150px;padding:20px 40px 30px}
-.L-side #dock{flex-direction:column;width:118px;padding:0 0 18px;flex:none;order:-1}
+.L-side #dock{flex-direction:column;width:118px;padding:0 0 18px;flex:none;order:-1;overflow-y:auto;scrollbar-width:none;gap:10px}
+.L-side #dock::-webkit-scrollbar{display:none}
+.L-side #dock{gap:8px}
+.L-side .dk{flex:0 0 auto;min-height:56px;max-height:96px;height:calc((100% - (var(--n,7) - 1) * 8px) / var(--n,7))}
+.L-side #dock.tight .dk span{font-size:12px}
 .dk{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:20px;font-weight:500;border:none;color:#fff;min-width:0;min-height:0;padding:4px}
 .dk svg,.dk img{width:48px;height:48px;border-radius:12px}
 .dk span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.L-side .dk{gap:4px;font-size:14px}
-.L-side .dk svg,.L-side .dk img{width:38px;height:38px}
+#dock.many .dk{font-size:17px;gap:8px}
+#dock.many .dk svg,#dock.many .dk img{width:40px;height:40px}
+.L-side .dk{gap:3px;font-size:13px;padding:2px 4px}
+.L-side .dk svg,.L-side .dk img{width:32px;height:32px}
 .nolabels .dk span{display:none}
 
 .boot{position:absolute;inset:0;z-index:20;background:rgba(5,10,25,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center}
@@ -187,6 +193,9 @@ function renderDock(){
     d.appendChild(b);
   });
   document.getElementById('wrap').classList.toggle('nolabels', !prefs.dockLabels);
+  d.classList.toggle('many', d.children.length > 7);
+  d.style.setProperty('--n', d.children.length);
+  d.classList.toggle('tight', d.children.length > 7);
 }
 
 /* ================= أيقونات الحالة ================= */
@@ -415,7 +424,7 @@ function buildPages(){
   pages.forEach(function (cards, pi) {
     var pg = document.createElement('div'); pg.className = 'page';
     if (prefs.layout === 'minimal') {
-      pg.innerHTML = '<div class="minClock" ondblclick="location.href=\'rest.html\'"><div class="sub" id="minDate" style="font-size:24px"></div><div id="minClock" style="font-size:190px;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums"></div><div class="sub" id="minPrayer" style="font-size:26px"></div></div>';
+      pg.innerHTML = '<div class="minClock" ondblclick="location.href=\'rest.html\'"><div class="sub" id="minDate" style="font-size:24px"></div><div id="minClock" class="font-clock" style="font-size:150px;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums"></div><div class="sub" id="minPrayer" style="font-size:26px"></div></div>';
       cards = cards.slice(0, 3);
     }
     var wrap = document.createElement('div'); wrap.className = 'cards';
@@ -439,6 +448,17 @@ function updateDots(){
 document.getElementById('pages').addEventListener('scroll', function () { clearTimeout(this._t); this._t = setTimeout(updateDots, 80); });
 
 var forceCards = false;
+/* تصغير خط البطاقة حتى يتسع محتواها بالكامل (بدون قص) في أي تصميم وحجم */
+function overflows(el){ return el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 2 || [].some.call(el.querySelectorAll('.k-huge,.k-big'), function (x) { return x.scrollWidth > x.clientWidth + 2; }); }
+function fitCard(c){
+  var el = c.el;
+  if (!c.baseFs || c.fitN > 40) { el.style.fontSize = ''; c.baseFs = parseFloat(getComputedStyle(el).fontSize); c.fs = c.baseFs; c.fitN = 0; }
+  c.fitN++;
+  el.style.fontSize = c.fs + 'px';
+  var guard = 0;
+  while (overflows(el) && c.fs > 7 && guard++ < 14) { c.fs = Math.max(7, c.fs * 0.9); el.style.fontSize = c.fs + 'px'; }
+}
+window.addEventListener('resize', function () { cardEls.forEach(function (c) { c.baseFs = 0; fitCard(c); }); });
 function renderCards(){
   // لا نعيد رسم البطاقات أثناء اللمس حتى لا تضيع الضغطة
   if (Date.now() - touchAt < 700) return;
@@ -448,7 +468,7 @@ function renderCards(){
     c.at = now;
     var h = '';
     try { h = CARDS[c.id].render(); } catch (e) { h = '<span class="k-lbl">' + CARDS[c.id].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
-    if (h !== c.html) { c.el.innerHTML = h; c.html = h; }
+    if (h !== c.html) { c.el.innerHTML = h; c.html = h; fitCard(c); }
   });
 }
 
