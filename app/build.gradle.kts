@@ -5,8 +5,8 @@ plugins {
 
 android {
     namespace = "com.example.carlauncher"
-    // Android 11 (API 30) هدف البناء، والحد الأدنى Android 9 (API 28)
-    compileSdk = 30
+    // الحد الأدنى Android 9 (API 28)، والهدف الحالي Android 11 (API 30)
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.carlauncher"
