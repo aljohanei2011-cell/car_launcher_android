@@ -63,14 +63,14 @@ else {
   // نسخة احتياطية جاهزة للتحميل من الجوال
   nat('backupPrepare', webBackupJSON());
   var seen = nat('uploadCount') || 0;
-  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «التحديث والتطبيقات».', sound: 'وصل صوت التنبيه ✓', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', station: 'وصلت محطة الراديو ✓' };
+  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «تثبيت تطبيقات مرفوعة».', sound: 'وصل صوت التنبيه ✓', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', station: 'وصلت محطة الراديو ✓' };
   setInterval(function () {
     var ev = natJSON('uploadLast') || {}, c = ev.count || 0;
     if (c > seen && (ev.type === 'note' || ev.type === 'reminder' || ev.type === 'station')) processInbox();
     if (c > seen && ev.type && ev.type !== 'image') {
       seen = c;
       var ok0 = document.getElementById('ok'); ok0.style.display = 'block'; ok0.textContent = LABEL[ev.type] || 'تم ✓';
-      if (ev.type === 'apk') { ok0.innerHTML = LABEL.apk + ' <a href="update.html" style="text-decoration:underline">فتح الصفحة</a>'; }
+      if (ev.type === 'apk') { ok0.innerHTML = LABEL.apk + ' <a href="update.html?apks=1" style="text-decoration:underline">فتح الصفحة</a>'; }
       if (ev.type === 'restore') setTimeout(function () { location.reload(); }, 1200);
       return;
     }

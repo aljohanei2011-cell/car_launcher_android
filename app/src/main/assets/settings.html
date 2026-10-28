@@ -352,7 +352,7 @@ function renderSystem(){
   }); };
   var r3 = el('button', 'opt', 'مسح كل البيانات');
   r3.style.borderColor = '#a04040';
-  r3.onclick = function () { confirmBox('مسح كل شيء: الإعدادات، الملاحظات، التذكيرات، الصيانة، الوقود، سجل الرحلات، الصور، الأصوات، التطبيقات المرفوعة، ورمز التحديث؟ لا يمكن التراجع. يُنصح بأخذ نسخة احتياطية أولاً.', function () {
+  r3.onclick = function () { confirmBox('مسح كل شيء: الإعدادات، الملاحظات، التذكيرات، الصيانة، الوقود، سجل الرحلات، الصور، الأصوات، والتطبيقات المرفوعة؟ لا يمكن التراجع. يُنصح بأخذ نسخة احتياطية أولاً.', function () {
     try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.removeItem(k); }); sessionStorage.clear(); } catch (e) {}
     nat('resetNative', true); location.href = 'index.html';
   }); };
