@@ -34,8 +34,19 @@ jobs:
             exit 1
           fi
           mkdir -p signing
-          echo "$KEYSTORE_B64" | base64 -d > signing/release.jks
-          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=carlauncher\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" > signing/signing.properties
+          # إزالة أي مسافات أو أسطر زائدة قد تدخل مع النسخ واللصق
+          CLEAN_B64=$(printf "%s" "$KEYSTORE_B64" | tr -d ' \r\n\t')
+          CLEAN_PASS=$(printf "%s" "$KEYSTORE_PASS" | tr -d ' \r\n\t')
+          echo "B64 length: ${#CLEAN_B64} (expected 3568), PASS length: ${#CLEAN_PASS} (expected 24)"
+          if ! printf "%s" "$CLEAN_B64" | base64 -d > signing/release.jks 2>/dev/null; then
+            echo "::error::قيمة KEYSTORE_B64 غير صحيحة. انسخ السطر الطويل كاملاً فقط بدون أي نص آخر."
+            exit 1
+          fi
+          if ! keytool -list -keystore signing/release.jks -storepass "$CLEAN_PASS" >/dev/null 2>&1; then
+            echo "::error::KEYSTORE_PASS لا يطابق المفتاح، أو KEYSTORE_B64 ناقص."
+            exit 1
+          fi
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=carlauncher\n" "$CLEAN_PASS" "$CLEAN_PASS" > signing/signing.properties
 
       # رقم الإصدار يزيد مع كل بناء حتى يعرف التطبيق أن هناك تحديثاً
       - name: Build signed APK
