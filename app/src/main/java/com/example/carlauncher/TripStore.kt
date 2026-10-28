@@ -66,6 +66,8 @@ object TripStore {
             }
             if (lastMove == 0L || now - lastMove > IDLE_REST) e.putLong("driveStart", now)
             e.putLong("lastMove", now)
+            // آخر نقطة تحركت فيها السيارة = مكان الوقوف
+            e.putString("parkLat", lat.toString()); e.putString("parkLng", lng.toString()); e.putLong("parkAt", now)
             e.putLong("movingSec", s.getLong("movingSec", 0L) + dtSec.toLong().coerceAtLeast(if (dtSec > 0) 1 else 0))
             if (speedKmh > s.getFloat("maxSpeed", 0f)) e.putFloat("maxSpeed", speedKmh.toFloat())
         }
@@ -141,6 +143,13 @@ object TripStore {
         o.put("acc", acc)
         o.put("odo", s.getFloat("odo", 0f).toDouble())
         return o
+    }
+
+    fun park(c: Context): String {
+        val s = sp(c)
+        val la = s.getString("parkLat", null)?.toDoubleOrNull() ?: return "{}"
+        val ln = s.getString("parkLng", null)?.toDoubleOrNull() ?: return "{}"
+        return JSONObject().put("lat", la).put("lng", ln).put("at", s.getLong("parkAt", 0L)).toString()
     }
 
     fun log(c: Context): String = sp(c).getString("log", "[]") ?: "[]"

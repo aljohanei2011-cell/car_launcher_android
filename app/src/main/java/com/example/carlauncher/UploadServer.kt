@@ -150,6 +150,17 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                     event("token", "")
                     ok(out, "")
                 }
+                // ملاحظة / تذكير / محطة راديو من الجوال (نص JSON صغير)
+                method == "POST" && (path == "/note" || path == "/reminder" || path == "/station") -> {
+                    if (len <= 0 || len > 64 * 1024) { send(out, 400, "text/plain", "bad".toByteArray()); return }
+                    val body = String(readN(inp, len.toInt()), Charsets.UTF_8)
+                    val j = try { JSONObject(body) } catch (e: Exception) { null }
+                    if (j == null) { send(out, 400, "text/plain", "bad json".toByteArray()); return }
+                    val type = path.removePrefix("/")
+                    Inbox.add(ctx, type, j)
+                    event(type, "")
+                    ok(out, "")
+                }
                 method == "GET" && path == "/backup" -> {
                     val f = Backup.file(ctx)
                     if (!f.exists()) { send(out, 404, "text/plain; charset=utf-8", "جهّز النسخة الاحتياطية من الشاشة أولاً".toByteArray()); return }

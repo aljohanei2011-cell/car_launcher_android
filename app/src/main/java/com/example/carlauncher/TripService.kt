@@ -241,6 +241,17 @@ class TripService : Service() {
                 alert("حان وقت صلاة $name", "حان الآن وقت صلاة $name", "prayer.html", custom = true)
             }
         }
+        // التذكيرات الشخصية المؤقتة بوقت
+        val rem = Prefs.reminders(this)
+        for (i in 0 until rem.length()) {
+            val r = rem.getJSONObject(i)
+            val at = r.optLong("at"); val title = r.optString("title")
+            val k = "rem_" + at + "_" + title.hashCode()
+            if (at > 0 && now >= at && now < at + 10 * 60_000L && !sp.getBoolean(k, false)) {
+                sp.edit().putBoolean(k, true).apply()
+                alert("تذكير", title, "index.html")
+            }
+        }
         Prefs.cleanupAlarmKeys(this, now)
     }
 
@@ -274,6 +285,8 @@ object Prefs {
     fun setConfig(c: Context, json: String) { try { JSONObject(json); sp(c).edit().putString("config", json).apply() } catch (e: Exception) {} }
     fun prayers(c: Context): JSONArray = try { JSONArray(sp(c).getString("prayers", "[]")!!) } catch (e: Exception) { JSONArray() }
     fun setPrayers(c: Context, json: String) { try { JSONArray(json); sp(c).edit().putString("prayers", json).apply() } catch (e: Exception) {} }
+    fun reminders(c: Context): JSONArray = try { JSONArray(sp(c).getString("reminders", "[]")!!) } catch (e: Exception) { JSONArray() }
+    fun setReminders(c: Context, json: String) { try { JSONArray(json); sp(c).edit().putString("reminders", json).apply() } catch (e: Exception) {} }
     /** حذف مفاتيح التنبيهات القديمة (أكثر من يومين) */
     fun cleanupAlarmKeys(c: Context, now: Long) {
         val s = sp(c); val e = s.edit(); var changed = false
@@ -281,6 +294,7 @@ object Prefs {
             val t = when {
                 k.startsWith("pre_") -> k.removePrefix("pre_").toLongOrNull()
                 k.startsWith("at_") -> k.removePrefix("at_").toLongOrNull()
+                k.startsWith("rem_") -> k.removePrefix("rem_").substringBefore('_').toLongOrNull()
                 else -> null
             }
             if (t != null && now - t > 2 * 86_400_000L) { e.remove(k); changed = true }

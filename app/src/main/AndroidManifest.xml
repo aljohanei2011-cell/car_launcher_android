@@ -6,9 +6,12 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- خدمة في المقدمة لمتابعة الرحلة والتنبيهات أثناء فتح الخرائط أو الموسيقى -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- الشبكة: استقبال الملفات من الجوال محلياً، والاتصال بـ GitHub فقط عند الضغط على «بحث عن تحديث» -->
+    <!-- الشبكة: استقبال الملفات من الجوال محلياً، وعند الطلب فقط: التحديث، الطقس، راديو الإنترنت -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- قراءة حالة البلوتوث فقط لأيقونة الشريط العلوي -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <!-- تثبيت التحديثات والتطبيقات المرفوعة من الجوال (أندرويد يطلب تأكيدك في كل مرة) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- خفض إضاءة الشاشة ليلاً (اختياري، يُمنح من الإعدادات) -->

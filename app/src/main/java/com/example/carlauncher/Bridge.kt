@@ -249,4 +249,36 @@ class Bridge(private val act: MainActivity) {
             }
         } catch (e: Exception) {}
     }
+
+    // ===== أيقونات الحالة =====
+    @JavascriptInterface fun status(): String = StatusInfo.read(ctx).toString()
+    @JavascriptInterface fun openSystem(which: String) {
+        val action = when (which) {
+            "bt" -> Settings.ACTION_BLUETOOTH_SETTINGS
+            "wifi" -> Settings.ACTION_WIFI_SETTINGS
+            "gps" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS
+            "sound" -> Settings.ACTION_SOUND_SETTINGS
+            "display" -> Settings.ACTION_DISPLAY_SETTINGS
+            else -> Settings.ACTION_SETTINGS
+        }
+        act.runOnUiThread { try { act.startActivity(Intent(action)) } catch (e: Exception) {} }
+    }
+
+    // ===== الطقس =====
+    @JavascriptInterface fun weather(): String = Weather.get(ctx)
+    @JavascriptInterface fun weatherRefresh(lat: Double, lng: Double) = Weather.refresh(ctx, lat, lng)
+
+    // ===== راديو الإنترنت =====
+    @JavascriptInterface fun radioPlay(url: String, name: String) = Radio.play(ctx, url, name)
+    @JavascriptInterface fun radioStop() = Radio.stop(ctx)
+    @JavascriptInterface fun radioState(): String = Radio.stateJson()
+
+    // ===== ما يصل من الجوال (ملاحظات، تذكيرات، محطات) =====
+    @JavascriptInterface fun inbox(): String = Inbox.take(ctx)
+
+    // ===== التذكيرات الشخصية في الخلفية =====
+    @JavascriptInterface fun setReminders(json: String) = Prefs.setReminders(ctx, json)
+
+    // ===== موقف السيارة =====
+    @JavascriptInterface fun park(): String = TripStore.park(ctx)
 }
