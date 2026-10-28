@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1280, initial-scale=1">
-<title>رفع من الجوال</title>
+<title>الإرسال من الجوال</title>
 <link rel="stylesheet" href="common.css">
 <style>
 .page{height:100%;box-sizing:border-box;padding:24px 40px;display:flex;flex-direction:column;gap:18px}
@@ -26,14 +26,14 @@
   <div class="wrap"><div class="page">
     <div class="top">
       <a class="icon-btn" href="settings.html" aria-label="رجوع"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
-      <h1 style="font-size:28px;margin:0">رفع صورة من الجوال</h1>
+      <h1 style="font-size:28px;margin:0">الإرسال من الجوال</h1>
     </div>
     <div class="body" id="body">
       <div class="qr" id="qr" aria-label="باركود الرفع"></div>
       <div class="steps">
         <div class="step"><span class="n">1</span><span>تأكد أن الشاشة متصلة بنقطة اتصال جوالك (أو بنفس شبكة الواي فاي).</span></div>
         <div class="step"><span class="n">2</span><span>امسح الباركود بكاميرا الجوال.</span></div>
-        <div class="step"><span class="n">3</span><span>اختر الصورة ومكانها: خلفية الرئيسية، أو الاستراحة، أو الشعار، ثم حرّكها وكبّرها داخل الإطار وأرسل.</span></div>
+        <div class="step"><span class="n">3</span><span>اختر ما تريد: صورة (خلفية أو شعار)، تطبيق APK، صوت التنبيه، رمز التحديث، أو النسخة الاحتياطية.</span></div>
         <div class="sub" style="font-size:17px">أو افتح في متصفح الجوال: <span class="addr" id="addr"></span></div>
         <div class="ok" id="ok"></div>
         <div class="sub" style="font-size:15px">النقل داخل السيارة فقط، بدون إنترنت. تتوقف الخدمة عند الخروج من هذه الصفحة أو بعد 15 دقيقة.</div>
@@ -50,6 +50,7 @@ document.getElementById('bg').src = themeBg('night', 'home');
 function showError(msg){
   document.getElementById('body').innerHTML = '<div class="err">' + msg + '</div>';
 }
+function startServer(){
 var info = natJSON('serverStart');
 if (!HAS_NATIVE) showError('هذه الميزة تعمل داخل التطبيق على الشاشة.');
 else if (!info || !info.ok) showError('تعذّر تشغيل خدمة الاستقبال. أعد فتح الصفحة، وإن تكرر أعد تشغيل الشاشة.');
@@ -59,9 +60,19 @@ else {
   var q = qrcode(0, 'M'); q.addData(url); q.make();
   document.getElementById('qr').innerHTML = q.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
   document.getElementById('addr').textContent = url;
+  // نسخة احتياطية جاهزة للتحميل من الجوال
+  nat('backupPrepare', webBackupJSON());
   var seen = nat('uploadCount') || 0;
+  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «التحديث والتطبيقات».', sound: 'وصل صوت التنبيه ✓', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…' };
   setInterval(function () {
-    var c = nat('uploadCount') || 0;
+    var ev = natJSON('uploadLast') || {}, c = ev.count || 0;
+    if (c > seen && ev.type && ev.type !== 'image') {
+      seen = c;
+      var ok0 = document.getElementById('ok'); ok0.style.display = 'block'; ok0.textContent = LABEL[ev.type] || 'تم ✓';
+      if (ev.type === 'apk') { ok0.innerHTML = LABEL.apk + ' <a href="update.html" style="text-decoration:underline">فتح الصفحة</a>'; }
+      if (ev.type === 'restore') setTimeout(function () { location.reload(); }, 1200);
+      return;
+    }
     if (c > seen) {
       seen = c; _imgs = null;
       var list = userImages(), last = list[0];
@@ -78,6 +89,8 @@ else {
     }
   }, 1000);
 }
+}
+requirePin(startServer);
 window.addEventListener('pagehide', function () { nat('serverStop'); });
 window.addEventListener('beforeunload', function () { nat('serverStop'); });
 fitStage();

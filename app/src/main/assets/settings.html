@@ -9,7 +9,7 @@
 .top{display:flex;align-items:center;gap:16px;height:60px;padding:22px 40px 0}
 .title{font-size:28px;font-weight:600;margin:0}
 .tabs{display:flex;gap:10px;margin-right:auto}
-.tab{height:52px;padding:0 24px;border-radius:26px;border:1px solid #2b4a80;background:rgba(19,37,74,.85);font-size:19px}
+.tab{height:52px;padding:0 18px;border-radius:26px;border:1px solid #2b4a80;background:rgba(19,37,74,.85);font-size:19px}
 .tab.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
 .body{flex:1;display:flex;flex-direction:column;gap:12px;padding:14px 40px 20px;box-sizing:border-box;min-height:0;overflow-y:auto}
 .section{padding:14px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
@@ -53,7 +53,7 @@
 <script>
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
-var TABS = [['look', 'المظهر'], ['prayer', 'الصلاة والتنبيهات'], ['apps', 'التطبيقات والسيارة']];
+var TABS = [['look', 'المظهر'], ['prayer', 'الصلاة والتنبيهات'], ['apps', 'التطبيقات والسيارة'], ['system', 'النظام والتحديث']];
 var tab = 'look';
 try { tab = sessionStorage.getItem('settings.tab') || 'look'; } catch (e) {}
 
@@ -201,6 +201,22 @@ function renderPrayer(){
   s = section('الصوت');
   toggle(s, 'صوت التنبيه', 'sound');
   toggle(s, 'خفض صوت الموسيقى مؤقتاً عند التنبيه', 'duck', 'يعمل حتى والخرائط أو الموسيقى مفتوحة.');
+  var hs = nat('hasSound');
+  toggle(s, 'استخدام صوتي المرفوع عند دخول الوقت (مثل الأذان)', 'customSound', hs ? 'يوجد صوت مرفوع ✓' : 'لا يوجد صوت مرفوع بعد. أرسله من الجوال (تبويب «صوت التنبيه»).');
+  var r0 = el('div', 'opts');
+  var up = el('a', 'opt sm', hs ? 'تغيير الصوت من الجوال' : 'إرسال صوت من الجوال'); up.href = 'upload.html'; up.style.display = 'flex'; up.style.alignItems = 'center'; r0.appendChild(up);
+  if (hs) {
+    var tb = el('button', 'opt sm', 'تجربة'); tb.onclick = function () { nat('testSound'); }; r0.appendChild(tb);
+    var db = el('button', 'opt sm', 'حذف الصوت'); db.onclick = function () { nat('deleteSound'); render(); }; r0.appendChild(db);
+  }
+  s.appendChild(r0);
+
+  s = section('تنبيه السرعة');
+  toggle(s, 'تنبيه عند تجاوز سرعة محددة', 'speedOn', 'يعمل من GPS في الخلفية، مرة كل دقيقة كحد أقصى.');
+  if (prefs.speedOn) opts(s, [[80, '80'], [100, '100'], [110, '110'], [120, '120'], [130, '130'], [140, '140']].map(function (x) { return [x[0], x[1] + ' كم/س']; }), prefs.speedLimit, function (k) { prefs.speedLimit = k; upd(); }, true);
+
+  s = section('تذكيرات');
+  toggle(s, 'تذكيرات اليوم (الجمعة، الصيام، الأيام البيض، رمضان والعيدين)', 'reminders', 'تظهر في الشريط العلوي للرئيسية وفي شاشة الاستراحة.');
 
   s = section('تنبيه الاستراحة');
   toggle(s, 'تنبيه بعد قيادة متواصلة', 'rest', 'يُصفَّر العداد إذا توقفت 15 دقيقة أو أكثر.');
@@ -233,10 +249,50 @@ function renderApps(){
 
   s = section('السيارة');
   var r = el('div', 'opts');
-  [['maintenance.html', 'الصيانة والتجديدات'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['upload.html', 'رفع صورة من الجوال']].forEach(function (x) {
+  [['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['upload.html', 'رفع صورة من الجوال']].forEach(function (x) {
     var a = el('a', 'opt', x[1]); a.href = x[0]; a.style.display = 'flex'; a.style.alignItems = 'center'; r.appendChild(a);
   });
   s.appendChild(r);
+}
+
+function renderSystem(){
+  var s;
+  s = section('عند تشغيل السيارة', 'يُنفَّذ مرة واحدة كلما اشتغلت الشاشة.');
+  opts(s, [['none', 'لا شيء'], ['dua', 'دعاء الركوب'], ['maps', 'فتح الخرائط'], ['music', 'استئناف الموسيقى'], ['dua_music', 'الدعاء ثم الموسيقى']], prefs.bootAction, function (k) { prefs.bootAction = k; upd(); }, true);
+
+  s = section('الإضاءة الليلية');
+  toggle(s, 'خفض إضاءة الشاشة من المغرب إلى الشروق', 'nightBright');
+  if (prefs.nightBright) {
+    if (HAS_NATIVE && !nat('canWriteSettings')) {
+      var l2 = el('div', 'line'); l2.appendChild(el('span', 'note', 'يحتاج إذن «تعديل إعدادات النظام» مرة واحدة.'));
+      var g = el('button', 'opt sm', 'منح الإذن'); g.style.marginRight = 'auto'; g.onclick = function () { nat('openWriteSettings'); }; l2.appendChild(g); s.appendChild(l2);
+    }
+    opts(s, [[15, '15%'], [30, '30%'], [45, '45%'], [60, '60%']], prefs.nightPct, function (k) { prefs.nightPct = k; upd(); }, true);
+  }
+
+  s = section('الرقم السري', 'يحمي الإعدادات والإرسال من الجوال وتثبيت التطبيقات. الرئيسية والتطبيقات تبقى مفتوحة.');
+  if (prefs.pin) {
+    var rp = el('button', 'opt sm', 'إزالة الرقم السري'); rp.onclick = function () { prefs.pin = ''; upd(); };
+    s.appendChild(rp);
+  } else {
+    var lp = el('div', 'line');
+    var pi = el('input', 'txt'); pi.type = 'password'; pi.inputMode = 'numeric'; pi.maxLength = 8; pi.placeholder = '4 إلى 8 أرقام'; pi.style.width = '220px'; pi.style.direction = 'ltr';
+    var sp = el('button', 'opt sm', 'حفظ');
+    sp.onclick = function () { if (/^[0-9]{4,8}$/.test(pi.value)) { prefs.pin = pinHash(pi.value); try { sessionStorage.setItem('carlauncher.unlocked', '1'); } catch (e) {} upd(); } };
+    lp.appendChild(pi); lp.appendChild(sp); s.appendChild(lp);
+  }
+
+  s = section('التحديث والنسخ الاحتياطي');
+  var ver = natJSON('version');
+  var lv = el('div', 'line'); lv.appendChild(el('span', '', 'الإصدار الحالي:')); lv.appendChild(el('span', 'v', ver ? String(ver.code) : '—'));
+  var ub = el('a', 'opt', 'تحديث التطبيق'); ub.href = 'update.html'; ub.style.display = 'flex'; ub.style.alignItems = 'center'; ub.style.marginRight = 'auto'; lv.appendChild(ub);
+  s.appendChild(lv);
+  var rb = el('div', 'opts');
+  [['update.html', 'تثبيت تطبيقات مرفوعة'], ['upload.html', 'نسخة احتياطية / استعادة (من الجوال)']].forEach(function (x) {
+    var a = el('a', 'opt sm', x[1]); a.href = x[0]; a.style.display = 'flex'; a.style.alignItems = 'center'; rb.appendChild(a);
+  });
+  s.appendChild(rb);
+
 }
 
 function render(){
@@ -248,7 +304,7 @@ function render(){
   });
   var body = document.getElementById('body'), y = body.scrollTop;
   body.innerHTML = '';
-  if (tab === 'prayer') renderPrayer(); else if (tab === 'apps') renderApps(); else renderLook();
+  if (tab === 'prayer') renderPrayer(); else if (tab === 'apps') renderApps(); else if (tab === 'system') renderSystem(); else renderLook();
   body.scrollTop = y;
 }
 document.getElementById('logoFile').onchange = function (e) {
@@ -259,7 +315,7 @@ document.getElementById('logoFile').onchange = function (e) {
   });
 };
 window.onPageResume = function () { _imgs = null; render(); };
-render();
+requirePin(render);
 fitStage();
 </script>
 </body>

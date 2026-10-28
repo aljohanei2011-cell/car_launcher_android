@@ -30,7 +30,9 @@ var DEFAULT_PREFS = {
   midCard: 'media', mapsApp: '', musicApp: '',
   adhan: true, preMin: 10, sound: true, duck: true,
   rest: true, restMin: 120, travel: true, travelKm: 80,
-  odoOffset: null
+  odoOffset: null,
+  speedOn: false, speedLimit: 120, customSound: true,
+  bootAction: 'none', pin: '', nightBright: false, nightPct: 30, reminders: true
 };
 function loadPrefs(){
   try {
@@ -45,7 +47,8 @@ function savePrefs(p){
 /* إرسال إعدادات التنبيهات للخدمة التي تعمل في الخلفية */
 function pushConfig(p){
   nat('setConfig', JSON.stringify({ adhan: p.adhan, preMin: +p.preMin, sound: p.sound, duck: p.duck,
-    rest: p.rest, restMin: +p.restMin, travel: p.travel, travelKm: +p.travelKm }));
+    rest: p.rest, restMin: +p.restMin, travel: p.travel, travelKm: +p.travelKm,
+    speedOn: p.speedOn, speedLimit: +p.speedLimit, customSound: p.customSound }));
 }
 
 var THEMES = {
@@ -335,10 +338,93 @@ function maintStatus(it){
   return out;
 }
 
+/* ===== تذكيرات من التقويم الهجري ===== */
+function hijriParts(d){
+  try {
+    var parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', timeZone: 'Asia/Riyadh' }).formatToParts(d);
+    var o = {}; parts.forEach(function (x) { o[x.type] = parseInt(x.value, 10); });
+    return o.day && o.month ? { d: o.day, m: o.month } : null;
+  } catch (e) { return null; }
+}
+function daysUntilHijri(month, day, from){
+  for (var i = 0; i < 400; i++) {
+    var h = hijriParts(new Date(from.getTime() + i * 86400000));
+    if (!h) return null;
+    if (h.m === month && h.d === day) return i;
+  }
+  return null;
+}
+/* تذكيرات اليوم: الجمعة، صيام الإثنين والخميس، الأيام البيض، العد التنازلي لرمضان والعيدين */
+function hijriReminders(d){
+  d = d || new Date();
+  var out = [], wd = new Date(d.getTime() + TZ * 3600000).getUTCDay(), h = hijriParts(d);
+  var tomorrow = new Date(d.getTime() + 86400000), ht = hijriParts(tomorrow);
+  if (wd === 5) out.push('يوم الجمعة: سورة الكهف والإكثار من الصلاة على النبي ﷺ');
+  if (wd === 0 || wd === 3) out.push('غداً ' + (wd === 0 ? 'الإثنين' : 'الخميس') + ': يُستحب صيامه');
+  if (ht && ht.d >= 13 && ht.d <= 15 && ht.m !== 9) out.push('الأيام البيض (13 و14 و15): يُستحب صيامها');
+  if (h) {
+    var r = h.m === 9 ? null : daysUntilHijri(9, 1, d);
+    if (h.m === 9) out.push('رمضان مبارك — اليوم ' + h.d + ' من رمضان');
+    else if (r !== null && r <= 30) out.push('باقي ' + r + ' يوم على رمضان');
+    var f = daysUntilHijri(10, 1, d); if (f !== null && f > 0 && f <= 10) out.push('باقي ' + f + ' أيام على عيد الفطر');
+    var a = daysUntilHijri(12, 10, d); if (a !== null && a > 0 && a <= 10) out.push('باقي ' + a + ' أيام على عيد الأضحى');
+    if (h.m === 12 && h.d === 9) out.push('اليوم يوم عرفة: يُستحب صيامه لغير الحاج');
+    if (h.m === 12 && h.d >= 1 && h.d <= 8) out.push('العشر من ذي الحجة: أيام فاضلة');
+  }
+  return out;
+}
+
+/* ===== القفل برقم سري لصفحات الإعدادات ===== */
+function pinHash(p){ var h = 5381; for (var i = 0; i < p.length; i++) h = ((h << 5) + h + p.charCodeAt(i)) | 0; return 'h' + (h >>> 0).toString(36); }
+function pinUnlocked(){ try { return sessionStorage.getItem('carlauncher.unlocked') === '1'; } catch (e) { return false; } }
+function requirePin(onOk){
+  var p = loadPrefs();
+  if (!p.pin || pinUnlocked()) { onOk(); return; }
+  var st = document.getElementById('stage') || document.body;
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:absolute;inset:0;z-index:50;background:rgba(5,10,25,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff';
+  ov.innerHTML = '<div style="font-size:26px;font-weight:700">أدخل الرقم السري</div><div id="pinDots" style="font-size:40px;letter-spacing:14px;height:48px;direction:ltr">&nbsp;</div><div id="pinPad" style="display:grid;grid-template-columns:repeat(3,96px);gap:12px;direction:ltr"></div><a href="index.html" style="font-size:18px;color:#9FB0CC;margin-top:6px">رجوع للرئيسية</a>';
+  st.appendChild(ov);
+  var val = '', pad = ov.querySelector('#pinPad'), dots = ov.querySelector('#pinDots');
+  ['1','2','3','4','5','6','7','8','9','⌫','0','✓'].forEach(function (k) {
+    var b = document.createElement('button');
+    b.textContent = k;
+    b.style.cssText = 'height:76px;border-radius:20px;background:#13254a;border:1px solid #2b4a80;font-size:30px;color:#fff;font-family:inherit';
+    b.onclick = function () {
+      if (k === '⌫') val = val.slice(0, -1);
+      else if (k === '✓') {
+        if (pinHash(val) === p.pin) { try { sessionStorage.setItem('carlauncher.unlocked', '1'); } catch (e) {} ov.remove(); onOk(); return; }
+        dots.textContent = 'خطأ'; val = ''; setTimeout(function () { dots.innerHTML = '&nbsp;'; }, 900); return;
+      } else if (val.length < 8) val += k;
+      dots.textContent = val ? val.replace(/./g, '•') : '\u00a0';
+    };
+    pad.appendChild(b);
+  });
+}
+
+/* ===== النسخة الاحتياطية: كل مفاتيح الواجهة ===== */
+function webBackupJSON(){
+  var o = {};
+  try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k.indexOf('carlauncher.') === 0) o[k] = localStorage.getItem(k); } } catch (e) {}
+  return JSON.stringify(o);
+}
+function applyPendingRestore(){
+  var r = nat('pendingRestore');
+  if (!r) return false;
+  try {
+    var o = JSON.parse(r);
+    Object.keys(localStorage).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.removeItem(k); });
+    Object.keys(o).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.setItem(k, o[k]); });
+    _imgs = null;
+    return true;
+  } catch (e) { return false; }
+}
+
 /* ===== عند الرجوع للتطبيق ===== */
 window.onResumeNative = function () { _imgs = null; if (window.onPageResume) window.onPageResume(); };
 
 /* عند تحميل أي صفحة: إرسال الإعدادات والمواقيت للخدمة */
 (function () {
+  try { if (applyPendingRestore()) { location.reload(); return; } } catch (e) {}
   try { pushConfig(loadPrefs()); setCity(loadPrefs().city); pushPrayerSchedule(); } catch (e) {}
 })();

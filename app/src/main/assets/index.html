@@ -17,6 +17,8 @@
 .mbtn.main{width:76px;height:76px;border-radius:38px;background:#2F7BFF;border-color:#6FA8FF}
 .ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .banner{position:absolute;top:24px;left:50%;transform:translateX(-50%);height:52px;padding:0 22px;border-radius:26px;background:rgba(80,50,10,.85);border:1.5px solid #E8C061;display:none;align-items:center;gap:10px;font-size:19px;color:#FFE6A8;z-index:5}
+.boot{position:absolute;inset:0;z-index:20;background:rgba(5,10,25,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center}
+.boot .t{font-family:'Amiri','Noto Naskh Arabic',serif;font-size:46px;line-height:1.7;max-width:1000px}
 .mini{font-size:15px;padding:8px 16px;border-radius:14px;background:#13254a;border:1px solid #2b4a80;color:#fff}
 </style>
 </head>
@@ -25,6 +27,11 @@
   <img id="bg" src="bg/home_mountain.jpg" alt="">
   <div class="shade"></div>
   <a class="banner" id="banner" href="maintenance.html"></a>
+  <div class="boot" id="boot" onclick="this.style.display='none'">
+    <div style="color:#F2C879;font-size:22px">دعاء الركوب</div>
+    <div class="t">سبحان الذي سخّر لنا هذا وما كنا له مقرنين، وإنا إلى ربنا لمنقلبون</div>
+    <div class="sub" style="font-size:18px">اضغط للإغلاق</div>
+  </div>
   <div class="wrap">
     <div class="row">
       <div class="logo" id="brand" aria-label="اسم السيارة"></div>
@@ -146,12 +153,37 @@ function renderMid(){
   if (k === 'trip') renderTripMini(); else if (k === 'qibla') renderQiblaMini(); else if (k === 'weather') renderWeather(); else renderMedia();
 }
 
+/* الشريط العلوي: يتناوب بين تذكير الصيانة وتذكيرات اليوم */
+var bannerItems = [], bannerIdx = 0;
 function renderBanner(){
-  var b = document.getElementById('banner'), due = [];
+  var due = [];
   loadMaint().forEach(function (it) { var s = maintStatus(it); if (s.due) due.push(it.name); });
-  if (due.length) { b.textContent = 'تذكير الصيانة: ' + due.join('، '); b.style.display = 'flex'; }
-  else b.style.display = 'none';
+  bannerItems = [];
+  if (due.length) bannerItems.push({ t: 'تذكير الصيانة: ' + due.join('، '), href: 'maintenance.html' });
+  if (prefs.reminders) hijriReminders().forEach(function (r) { bannerItems.push({ t: r, href: 'azkar.html' }); });
+  showBanner();
 }
+function showBanner(){
+  var b = document.getElementById('banner');
+  if (!bannerItems.length) { b.style.display = 'none'; return; }
+  var it = bannerItems[bannerIdx % bannerItems.length];
+  b.textContent = it.t; b.href = it.href; b.style.display = 'flex';
+}
+setInterval(function () { bannerIdx++; showBanner(); }, 8000);
+
+/* عند تشغيل السيارة: مرة واحدة لكل تشغيل للشاشة */
+function bootAction(){
+  var id = nat('bootId'); if (id === null) return;
+  var last = null; try { last = localStorage.getItem('carlauncher.lastBoot'); } catch (e) {}
+  if (String(last) === String(id)) return;
+  try { localStorage.setItem('carlauncher.lastBoot', String(id)); } catch (e) {}
+  var a = prefs.bootAction;
+  if (a === 'dua') { var o = document.getElementById('boot'); o.style.display = 'flex'; setTimeout(function () { o.style.display = 'none'; }, 10000); }
+  else if (a === 'maps') setTimeout(function () { openRole('maps'); }, 1500);
+  else if (a === 'music') setTimeout(function () { nat('mediaKey', 'play'); }, 4000);
+  else if (a === 'dua_music') { var o2 = document.getElementById('boot'); o2.style.display = 'flex'; setTimeout(function () { o2.style.display = 'none'; nat('mediaKey', 'play'); }, 8000); }
+}
+function applyBrightness(){ if (prefs.nightBright) nat('applyNight', isNight(), +prefs.nightPct); else nat('applyNight', false, 100); }
 
 function tick(){
   var d = new Date();
@@ -167,10 +199,10 @@ function tick(){
   document.getElementById('untilText').textContent = 'بعد ' + Math.floor(np.diff / 60) + ' س ' + (np.diff % 60) + ' د';
   renderMid();
 }
-window.onPageResume = function () { prefs = loadPrefs(); applyPrefs('home', prefs); tick(); renderBanner(); };
-tick(); renderBanner();
+window.onPageResume = function () { prefs = loadPrefs(); applyPrefs('home', prefs); tick(); renderBanner(); bootAction(); applyBrightness(); };
+tick(); renderBanner(); bootAction(); applyBrightness();
 setInterval(tick, 2000);
-setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); renderBanner(); }, 60000);
+setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); renderBanner(); applyBrightness(); }, 60000);
 fitStage();
 </script>
 </body>

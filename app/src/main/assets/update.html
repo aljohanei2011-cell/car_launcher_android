@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>التحديث والتطبيقات</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.page{height:100%;box-sizing:border-box;padding:22px 34px;display:flex;flex-direction:column;gap:14px;background:#0a0f1f}
+.top{display:flex;align-items:center;gap:12px;height:52px}
+.cols{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.15fr;gap:16px}
+.card{border-radius:22px;background:#111a33;border:1px solid #222c4d;padding:20px 22px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.h{font-size:21px;font-weight:700;color:#8FD3C4}
+.btn{height:58px;border-radius:16px;background:#1F5FD1;border:1px solid #6FA8FF;font-size:20px;font-weight:700;padding:0 22px}
+.btn.g{background:#1b2748;border-color:#2b3658;font-weight:500;font-size:17px;height:48px}
+.btn:disabled{opacity:.4}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:18px}
+.big{font-size:44px;font-weight:700;direction:ltr}
+.bar{height:12px;border-radius:6px;background:#252e4d;overflow:hidden}
+.bar div{height:100%;width:0;background:#5AD1A0;transition:width .3s}
+.msg{font-size:17px;line-height:1.6;color:#C3D1E8}
+.msg.err{color:#FFB59A}
+.msg.ok{color:#9BE8C6}
+.list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.apk{display:flex;align-items:center;gap:14px;border-radius:16px;background:#0f172d;border:1px solid #1d2747;padding:12px 14px}
+.apk img{width:56px;height:56px;border-radius:12px;flex:none}
+.apk .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.apk .n{font-size:19px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.apk .s{font-size:14px;color:#9FB0CC}
+.apk .w{font-size:14px;color:#FFD48A}
+.notes{font-size:15px;color:#9FB0CC;max-height:90px;overflow-y:auto;white-space:pre-wrap}
+.inp{height:48px;border-radius:14px;border:1px solid #2b3658;background:#0b1328;color:#fff;font:inherit;font-size:16px;padding:0 14px;box-sizing:border-box;flex:1;direction:ltr}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="top">
+      <a class="icon-btn" href="settings.html" aria-label="رجوع" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
+      <span style="font-size:26px;font-weight:700">التحديث والتطبيقات</span>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <span class="h">تحديث رفيق الطريق</span>
+        <div class="row"><span class="sub">الإصدار الحالي</span><span class="big" id="cur">—</span></div>
+        <div id="tokenBox"></div>
+        <button class="btn" id="check">بحث عن تحديث</button>
+        <div class="bar" id="bar" style="display:none"><div id="barIn"></div></div>
+        <div class="msg" id="umsg"></div>
+        <div class="notes" id="notes"></div>
+        <span class="note sub" style="font-size:14px;margin-top:auto">يحتاج اتصالاً بالإنترنت وقت التحديث فقط (نقطة اتصال الجوال). أندرويد يطلب تأكيد التثبيت، ثم يعود التطبيق تلقائياً.</span>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><span class="h">تطبيقات مرفوعة من الجوال</span><a class="btn g" href="upload.html" style="display:flex;align-items:center">+ رفع من الجوال</a></div>
+        <div class="msg" id="perm"></div>
+        <div class="list" id="apks"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(id){ return document.getElementById(id); }
+function mb(b){ return (b / 1048576).toFixed(1) + ' م.ب'; }
+
+var ver = natJSON('version');
+$('cur').textContent = ver ? ver.code : '—';
+
+function renderToken(){
+  var box = $('tokenBox'); box.innerHTML = '';
+  if (!HAS_NATIVE) { box.innerHTML = '<div class="msg">يعمل داخل التطبيق على الشاشة.</div>'; return; }
+  if (nat('hasToken')) {
+    box.innerHTML = '<div class="row"><span class="msg ok">رمز GitHub محفوظ ✓</span><button class="btn g" id="rmTok">حذف الرمز</button></div>';
+    $('rmTok').onclick = function () { nat('clearToken'); renderToken(); };
+  } else {
+    box.innerHTML = '<div class="msg">لأن المستودع خاص، يحتاج التحديث رمز قراءة من GitHub مرة واحدة. أسهل طريقة: أرسله من الجوال (تبويب «رمز التحديث» بعد مسح الباركود).</div>' +
+      '<div class="row"><a class="btn g" href="upload.html" style="display:flex;align-items:center">إرسال الرمز من الجوال</a></div>' +
+      '<div class="row"><input class="inp" id="tok" placeholder="أو الصقه هنا github_pat_…"><button class="btn g" id="saveTok">حفظ</button></div>';
+    $('saveTok').onclick = function () {
+      if (nat('setToken', $('tok').value)) renderToken();
+      else { $('umsg').className = 'msg err'; $('umsg').textContent = 'الرمز غير صحيح.'; }
+    };
+  }
+}
+renderToken();
+
+var polling = null;
+function poll(){
+  var s = natJSON('updateState') || { phase: 'idle' };
+  var m = $('umsg'), btn = $('check'), bar = $('bar');
+  bar.style.display = (s.phase === 'downloading' || s.phase === 'installing') ? 'block' : 'none';
+  $('barIn').style.width = (s.progress || 0) + '%';
+  btn.disabled = s.phase === 'checking' || s.phase === 'downloading' || s.phase === 'installing';
+  $('notes').textContent = s.notes && (s.phase === 'available') ? 'ما الجديد: ' + s.notes : '';
+  m.className = 'msg';
+  if (s.phase === 'checking') m.textContent = 'جارٍ البحث…';
+  else if (s.phase === 'none') { m.className = 'msg ok'; m.textContent = 'لديك آخر إصدار (' + s.current + ').'; btn.textContent = 'بحث عن تحديث'; }
+  else if (s.phase === 'available') { m.textContent = 'يوجد إصدار جديد: ' + s.latest + ' (' + mb(s.size || 0) + ')'; btn.textContent = 'تحميل وتثبيت'; }
+  else if (s.phase === 'downloading') m.textContent = 'جارٍ التحميل… ' + (s.progress || 0) + '%';
+  else if (s.phase === 'installing') {
+    var st = nat('installStatus') || '';
+    if (st.indexOf('fail:') === 0) { m.className = 'msg err'; m.textContent = st.slice(5); btn.disabled = false; btn.textContent = 'إعادة المحاولة'; }
+    else m.textContent = st === 'need_user' ? 'اضغط «تثبيت» في نافذة أندرويد.' : 'جارٍ التثبيت…';
+  }
+  else if (s.phase === 'error') { m.className = 'msg err'; m.textContent = s.error; btn.textContent = 'إعادة المحاولة'; }
+  else m.textContent = '';
+}
+$('check').onclick = function () {
+  if (!HAS_NATIVE) return;
+  if (!nat('canInstall')) { askInstallPermission(); return; }
+  var s = natJSON('updateState') || {};
+  nat('clearInstallStatus');
+  if (s.phase === 'available' || (s.phase === 'error' && s.latest > s.current)) nat('updateDownload'); else nat('updateCheck');
+  poll();
+};
+function askInstallPermission(){
+  $('perm').className = 'msg err';
+  $('perm').innerHTML = 'يجب السماح لرفيق الطريق بتثبيت التطبيقات مرة واحدة. <button class="btn g" id="grant">فتح الإعداد</button>';
+  $('grant').onclick = function () { nat('openInstallSettings'); };
+}
+
+var installing = '';
+function renderApks(){
+  var L = $('apks'); L.innerHTML = '';
+  if (!HAS_NATIVE) { L.innerHTML = '<div class="msg">يعمل داخل التطبيق على الشاشة.</div>'; return; }
+  var list = natJSON('apks') || [];
+  if (!list.length) { L.innerHTML = '<div class="msg">لا توجد ملفات. اضغط «+ رفع من الجوال» واختر تبويب «تطبيق APK».</div>'; return; }
+  list.forEach(function (a) {
+    var r = document.createElement('div'); r.className = 'apk';
+    var im = document.createElement('img'); im.alt = ''; if (a.icon) im.src = a.icon; r.appendChild(im);
+    var t = document.createElement('div'); t.className = 't';
+    var n = document.createElement('span'); n.className = 'n'; n.textContent = a.label || a.name; t.appendChild(n);
+    var s = document.createElement('span'); s.className = 's';
+    s.textContent = a.valid ? ('الإصدار ' + a.version + ' · ' + mb(a.size) + (a.installed ? ' · المثبت: ' + a.installedVersion : ' · غير مثبت')) : 'ملف غير صالح';
+    t.appendChild(s);
+    var warn = [];
+    if (a.valid && a.compatible === false) warn.push('يتطلب إصدار أندرويد أحدث من هذه الشاشة');
+    if (a.installed && a.code < a.installedCode) warn.push('أقدم من المثبت');
+    if (a.installed && a.sameSigner === false) warn.push('توقيع مختلف عن المثبت: قد يكون معدّلاً، ولن يُثبَّت فوقه');
+    if (warn.length) { var w = document.createElement('span'); w.className = 'w'; w.textContent = '⚠ ' + warn.join(' · '); t.appendChild(w); }
+    r.appendChild(t);
+    var ib = document.createElement('button'); ib.className = 'btn g'; ib.textContent = a.installed ? 'تحديث' : 'تثبيت';
+    ib.disabled = !a.valid;
+    ib.onclick = function () {
+      if (!nat('canInstall')) { askInstallPermission(); return; }
+      nat('clearInstallStatus'); installing = a.name; nat('installApk', a.name); $('perm').className = 'msg'; $('perm').textContent = 'جارٍ تجهيز التثبيت…';
+    };
+    var db = document.createElement('button'); db.className = 'btn g'; db.textContent = 'حذف';
+    db.onclick = function () { nat('deleteApk', a.name); renderApks(); };
+    r.appendChild(ib); r.appendChild(db);
+    L.appendChild(r);
+  });
+}
+function pollInstall(){
+  if (!installing) return;
+  var st = nat('installStatus') || '', p = $('perm');
+  if (st === 'ok') { p.className = 'msg ok'; p.textContent = 'تم التثبيت ✓'; installing = ''; renderApks(); }
+  else if (st.indexOf('fail:') === 0) { p.className = 'msg err'; p.textContent = st.slice(5); installing = ''; }
+  else if (st === 'need_user') { p.className = 'msg'; p.textContent = 'اضغط «تثبيت» في نافذة أندرويد.'; }
+}
+window.onPageResume = function () { renderToken(); renderApks(); poll(); pollInstall(); if (nat('canInstall')) $('perm').textContent = ''; };
+
+requirePin(function () {
+  renderApks(); poll();
+  setInterval(function () { poll(); pollInstall(); }, 700);
+  if (HAS_NATIVE && !nat('canInstall')) askInstallPermission();
+});
+fitStage();
+</script>
+</body>
+</html>

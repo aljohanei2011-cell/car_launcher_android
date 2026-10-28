@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>رفع صورة إلى شاشة السيارة</title>
+<title>الإرسال إلى شاشة السيارة</title>
 <style>
 :root{--bg:#0b1020;--card:#151d36;--line:#2a3660;--acc:#2F7BFF;--txt:#fff;--sub:#9FB0CC}
 *{box-sizing:border-box}
@@ -25,10 +25,31 @@ input[type=range]{width:100%;margin:6px 0 14px}
 .msg.err{display:block;background:#3a1a12;border:1px solid #E89061}
 .row{display:flex;gap:8px;margin-bottom:12px}
 .row button{flex:1;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:14px}
+.modes{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:4px}
+.modes button{flex:none;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:14px}
+.modes button.on{background:#fff;color:#0b1020;font-weight:700}
+section{display:none}
+section.on{display:block}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:14px;line-height:1.7;color:#C3D1E8;margin-bottom:12px}
+.box ol{margin:6px 0;padding-right:20px}
+.box a{color:#9FD0FF}
+textarea{width:100%;height:90px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:14px monospace;padding:10px;direction:ltr}
+.prog{height:10px;border-radius:5px;background:#252e4d;overflow:hidden;margin:10px 0;display:none}
+.prog div{height:100%;width:0;background:#5AD1A0}
+a.send{display:flex;align-items:center;justify-content:center;text-decoration:none}
 </style>
 </head>
 <body>
-<h1>إرسال صورة إلى شاشة السيارة</h1>
+<h1>الإرسال إلى شاشة السيارة</h1>
+<div class="modes" id="modes">
+  <button data-m="img" class="on">صورة</button>
+  <button data-m="apk">تطبيق APK</button>
+  <button data-m="snd">صوت التنبيه</button>
+  <button data-m="tok">رمز التحديث</button>
+  <button data-m="bak">نسخة احتياطية</button>
+</div>
+
+<section id="m-img" class="on">
 <div class="seg" id="slots">
   <button data-s="home" class="on">خلفية الرئيسية</button>
   <button data-s="rest">خلفية الاستراحة</button>
@@ -41,6 +62,47 @@ input[type=range]{width:100%;margin:6px 0 14px}
 <input type="range" id="zoom" min="10" max="400" value="100" aria-label="التكبير">
 <button class="send" id="send" disabled>إرسال إلى الشاشة</button>
 <div class="msg" id="msg"></div>
+</section>
+
+<section id="m-apk">
+  <div class="box">اختر ملف APK من جوالك. يُحفظ في مجلد خاص على الشاشة، ثم تثبّته من «الإعدادات ▸ التحديث والتطبيقات» بعد مراجعة اسمه وإصداره.<br>يدعم ملفات ‎.apk‎ العادية فقط (وليس ‎.apks‎ أو ‎.xapk‎).</div>
+  <label class="pick">اختر ملف APK<input id="apkFile" type="file" accept=".apk,application/vnd.android.package-archive" hidden></label>
+  <div class="prog" id="apkProg"><div></div></div>
+  <div class="msg" id="apkMsg"></div>
+</section>
+
+<section id="m-snd">
+  <div class="box">صوت يُشغَّل عند دخول وقت الصلاة بدلاً من النغمة القصيرة (مثل أذان تختاره). الصيغ: mp3 أو m4a أو ogg. يُستبدل الصوت السابق.</div>
+  <label class="pick">اختر ملفاً صوتياً<input id="sndFile" type="file" accept="audio/*" hidden></label>
+  <div class="prog" id="sndProg"><div></div></div>
+  <div class="msg" id="sndMsg"></div>
+</section>
+
+<section id="m-tok">
+  <div class="box">
+    التحديث من الشاشة يحتاج رمز قراءة فقط لمستودعك الخاص. أنشئه مرة واحدة:
+    <ol>
+      <li>افتح <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">صفحة إنشاء رمز في GitHub</a> (يحتاج إنترنت في الجوال).</li>
+      <li>الاسم: rafiq، والمدة: أطول مدة متاحة.</li>
+      <li>Repository access ▸ Only select repositories ▸ ‎car_launcher_android‎.</li>
+      <li>Permissions ▸ Contents ▸ Read-only. لا شيء غيره.</li>
+      <li>Generate token، انسخه والصقه هنا.</li>
+    </ol>
+    الرمز يُحفظ داخل الشاشة فقط، ويستطيع القراءة فقط.
+  </div>
+  <textarea id="tok" placeholder="github_pat_..."></textarea>
+  <button class="send" id="tokSend" style="margin-top:10px">حفظ الرمز في الشاشة</button>
+  <div class="msg" id="tokMsg"></div>
+</section>
+
+<section id="m-bak">
+  <div class="box">النسخة الاحتياطية تحفظ: الإعدادات، الصيانة، سجل الرحلات، الصور، وصوت التنبيه. احفظها في جوالك واستعدها بعد ضبط المصنع أو عند تغيير الشاشة.</div>
+  <a class="send" id="bakDl" download>تحميل النسخة الاحتياطية</a>
+  <div style="height:16px"></div>
+  <label class="pick">استعادة من ملف نسخة احتياطية<input id="bakFile" type="file" accept=".json,application/json" hidden></label>
+  <div class="prog" id="bakProg"><div></div></div>
+  <div class="msg" id="bakMsg"></div>
+</section>
 
 <script>
 var token = new URLSearchParams(location.search).get('t') || '';
@@ -140,6 +202,49 @@ document.getElementById('send').onclick = function () {
       .catch(function () { msg.className = 'msg err'; msg.textContent = 'تعذّر الإرسال. تأكد أن صفحة «رفع من الجوال» ما زالت مفتوحة على الشاشة، ثم امسح الباركود من جديد.'; })
       .then(function () { btn.disabled = false; btn.textContent = 'إرسال إلى الشاشة'; });
   }, type, 0.9);
+};
+/* ===== التبويبات ===== */
+document.getElementById('modes').onclick = function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); });
+  [].forEach.call(document.querySelectorAll('section'), function (sec) { sec.classList.toggle('on', sec.id === 'm-' + b.getAttribute('data-m')); });
+  if (b.getAttribute('data-m') === 'img') setup();
+};
+
+/* إرسال ملف مع شريط تقدم */
+function sendFile(url, file, progId, msgId, okText){
+  var prog = document.getElementById(progId), bar = prog.firstElementChild, msg = document.getElementById(msgId);
+  prog.style.display = 'block'; bar.style.width = '0'; msg.className = 'msg';
+  var x = new XMLHttpRequest();
+  x.open('POST', url);
+  x.upload.onprogress = function (e) { if (e.lengthComputable) bar.style.width = Math.round(e.loaded / e.total * 100) + '%'; };
+  x.onload = function () {
+    if (x.status === 200) { msg.className = 'msg ok'; msg.textContent = okText; bar.style.width = '100%'; }
+    else { msg.className = 'msg err'; msg.textContent = x.status === 413 ? 'الملف كبير جداً.' : 'رفضت الشاشة الملف. تأكد من نوعه.'; }
+  };
+  x.onerror = function () { msg.className = 'msg err'; msg.textContent = 'انقطع الاتصال. تأكد أن صفحة الإرسال ما زالت مفتوحة على الشاشة.'; };
+  x.send(file);
+}
+document.getElementById('apkFile').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  sendFile('/apk?t=' + token + '&name=' + encodeURIComponent(f.name), f, 'apkProg', 'apkMsg', 'وصل التطبيق ✓ ثبّته من الشاشة.');
+};
+document.getElementById('sndFile').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  var ext = (f.name.split('.').pop() || 'mp3').toLowerCase();
+  sendFile('/sound?t=' + token + '&ext=' + encodeURIComponent(ext), f, 'sndProg', 'sndMsg', 'وصل صوت التنبيه ✓');
+};
+document.getElementById('bakFile').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  sendFile('/restore?t=' + token, f, 'bakProg', 'bakMsg', 'استُعيدت النسخة ✓ تحقق من الشاشة.');
+};
+document.getElementById('bakDl').href = '/backup?t=' + token;
+document.getElementById('tokSend').onclick = function () {
+  var v = document.getElementById('tok').value.trim(), m = document.getElementById('tokMsg');
+  fetch('/token?t=' + token, { method: 'POST', body: v }).then(function (r) {
+    if (r.ok) { m.className = 'msg ok'; m.textContent = 'حُفظ الرمز ✓ اضغط «بحث عن تحديث» في الشاشة.'; document.getElementById('tok').value = ''; }
+    else { m.className = 'msg err'; m.textContent = 'الرمز غير صحيح. انسخه كاملاً.'; }
+  }).catch(function () { m.className = 'msg err'; m.textContent = 'انقطع الاتصال بالشاشة.'; });
 };
 window.addEventListener('resize', function () { var o = outSize(); frame.style.height = (frame.clientWidth * o.h / o.w) + 'px'; });
 setup();

@@ -31,6 +31,7 @@
     <div class="clock" id="clock"></div>
     <div class="dates"><span id="hijri"></span><span aria-hidden="true" style="opacity:.5">|</span><span id="greg"></span></div>
     <div class="dua" id="dua"></div>
+    <div id="remind" style="text-align:center;font-size:19px;color:#F2C879;margin-top:8px;min-height:26px"></div>
     <div class="wird" id="wird"><span class="wl">ورد اليوم</span><span id="wirdText"></span><span class="ws" id="wirdSrc"></span></div>
     <div class="next">
       <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10M5 10V6M4 6h2M19 21V10M19 10V6M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M12 9v3M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>
@@ -99,6 +100,7 @@ function setWird(){
   document.getElementById('wirdSrc').textContent = '(' + w[1] + ')';
 }
 tick(); setDua(); setWird();
+if (prefs.reminders) document.getElementById('remind').textContent = hijriReminders().join(' · ');
 setInterval(tick, 15000);
 setInterval(function(){ duaIndex = (duaIndex + 1) % DUAS.length; setDua(); }, 12000);
 fitStage();
