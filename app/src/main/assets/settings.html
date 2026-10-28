@@ -359,6 +359,21 @@ function renderSystem(){
   rr.appendChild(r1); rr.appendChild(r2); rr.appendChild(r3); s.appendChild(rr);
   var bk = el('a', 'opt sm', 'أخذ نسخة احتياطية أولاً (من الجوال)'); bk.href = 'upload.html'; bk.style.display = 'flex'; bk.style.alignItems = 'center'; bk.style.alignSelf = 'flex-start'; s.appendChild(bk);
 
+  s = section('الذاكرة (RAM)', 'يغلق تطبيقاتك التي تعمل في الخلفية فقط، ولا يقترب من تطبيقات النظام والراديو والتطبيق الذي يشغّل الموسيقى الآن.');
+  var mm = memText();
+  var lm = el('div', 'line');
+  lm.appendChild(el('span', '', 'المستخدم:'));
+  lm.appendChild(el('span', 'v', mm ? mm.used + ' من ' + mm.total + ' ج.ب (' + mm.pct + '%)' : 'داخل التطبيق فقط'));
+  var fr = el('button', 'opt sm on', 'تحرير الذاكرة الآن'); fr.style.marginRight = 'auto';
+  fr.onclick = function () {
+    nat('freeRam'); fr.textContent = 'جارٍ التحرير…';
+    setTimeout(function () { var r = natJSON('ramResult') || {}; fr.textContent = 'تم تحرير ' + Math.round((r.freed || 0) / 1048576) + ' م.ب'; setTimeout(render, 2500); }, 2500);
+  };
+  lm.appendChild(fr); s.appendChild(lm);
+  toggle(s, 'تحرير تلقائي عند فتح شاشة الاستراحة', 'ramOnRest');
+  toggle(s, 'تحرير تلقائي بعد تشغيل السيارة', 'ramOnBoot');
+  s.appendChild(el('span', 'note', 'إضافة بطاقة «الذاكرة» للرئيسية من تبويب الواجهة.'));
+
   s = section('القيادة والإنترنت');
   toggle(s, 'وضع القيادة الآمن', 'safeMode', 'أثناء الحركة تُقفل الإعدادات والكتابة والإرسال من الجوال، وتبقى الرئيسية والتطبيقات تعمل.');
   toggle(s, 'الطقس من الإنترنت', 'weatherOn', 'يُحدَّث كل 30 دقيقة عند توفر إنترنت (نقطة اتصال الجوال)، ويُحفظ آخر قراءة.');

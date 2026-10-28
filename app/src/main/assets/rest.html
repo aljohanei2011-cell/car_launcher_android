@@ -241,6 +241,10 @@ setInterval(function () {
 
 applyStyle(); tick();
 setInterval(tick, 1000);
+/* الشاشة تبقى تعمل في الاستراحة، وتحرير الذاكرة اختياري عند الدخول */
+nat('keepOn', true);
+window.addEventListener('pagehide', function () { nat('keepOn', false); });
+if (prefs.ramOnRest) setTimeout(function () { nat('freeRam'); }, 1500);
 fitStage();
 </script>
 </body>

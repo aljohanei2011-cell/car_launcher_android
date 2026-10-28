@@ -387,6 +387,15 @@ card('parking', 'موقف السيارة', function () {
   return '<a href="parking.html" style="display:contents"><span class="k-lbl">موقف السيارة</span><div class="k-sub" style="white-space:normal">احفظ مكان وقوفك وأرسله لجوالك بالباركود</div><span class="k-btn" style="align-self:flex-start">فتح</span></a>';
 });
 
+card('ram', 'الذاكرة', function () {
+  var m = memText(), r = natJSON('ramResult') || {};
+  if (!m) return '<span class="k-lbl">الذاكرة</span><div class="k-sub">يعمل داخل التطبيق</div><div></div>';
+  var col = m.pct > 85 ? '#FF6B5A' : m.pct > 70 ? '#E8C061' : 'var(--accent,#5AD1A0)';
+  var res = r.busy ? 'جارٍ التحرير…' : (r.at && Date.now() - r.at < 60000 ? 'تم تحرير ' + Math.round((r.freed || 0) / 1048576) + ' م.ب' : 'المتاح ' + m.avail + ' ج.ب');
+  return '<div class="k-row"><span class="k-lbl">الذاكرة</span><span class="k-sub" style="font-size:.95em">' + m.used + ' / ' + m.total + ' ج.ب</span></div>' +
+    '<div><div class="k-big" style="color:' + col + '">' + m.pct + '%</div><div style="height:.5em;border-radius:.25em;background:rgba(255,255,255,.15);overflow:hidden;margin-top:.4em;direction:ltr"><div style="width:' + m.pct + '%;height:100%;background:' + col + '"></div></div></div>' +
+    '<div class="k-row"><span class="k-sub">' + res + '</span><button class="k-btn" onclick="nat(\'freeRam\');later();setTimeout(tick,2500)">تحرير</button></div>';
+});
 function openRadioApp(){ if (prefs.radioApp && nat('launch', prefs.radioApp)) return; location.href = 'apps.html?pick=radio'; }
 function playStation(id){ var s = loadStations().filter(function (x) { return x.id === id; })[0]; if (s) { nat('radioPlay', s.url, s.name); later(); } }
 function later(){ setTimeout(tick, 500); setTimeout(tick, 1500); }
@@ -467,6 +476,7 @@ function bootAction(){
   var last = null; try { last = localStorage.getItem('carlauncher.lastBoot'); } catch (e) {}
   if (String(last) === String(id)) return;
   try { localStorage.setItem('carlauncher.lastBoot', String(id)); } catch (e) {}
+  if (prefs.ramOnBoot) setTimeout(function () { nat('freeRam'); }, 20000);
   var a = prefs.bootAction;
   if (a === 'dua') { var o = document.getElementById('boot'); o.style.display = 'flex'; setTimeout(function () { o.style.display = 'none'; }, 10000); }
   else if (a === 'maps') setTimeout(function () { openRole('maps'); }, 1500);

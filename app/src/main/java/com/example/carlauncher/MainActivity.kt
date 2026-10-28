@@ -61,6 +61,13 @@ class MainActivity : AppCompatActivity() {
             addJavascriptInterface(Bridge(this@MainActivity), "Native")
             webViewClient = object : WebViewClient() {
                 // منع أي تنقل إلى الإنترنت من داخل التطبيق
+                // إذا توقف محرك الصفحات (نقص ذاكرة مثلاً) نعيد بناء الواجهة بدل أن يُغلق التطبيق
+                override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                    try { (view?.parent as? android.view.ViewGroup)?.removeView(view); view?.destroy() } catch (e: Exception) {}
+                    runOnUiThread { recreate() }
+                    return true
+                }
+
                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                     return url == null || !url.startsWith(base)
                 }
@@ -90,6 +97,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        // أولوية عالية لمحرك الصفحات حتى لا يُغلقه النظام عند ضغط الذاكرة
+        try { webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false) } catch (e: Exception) {}
+        webView.keepScreenOn = false
         setContentView(webView)
         webView.loadUrl(base + pageFrom(intent, "index.html"))
 
@@ -117,6 +127,16 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == locationRequestCode && hasLocationPermission()) TripService.start(this)
     }
+
+    /** إبقاء الشاشة تعمل (شاشة الاستراحة) حتى لا يقاطعها توفير الشاشة في الجهاز */
+    fun keepScreenOn(on: Boolean) {
+        runOnUiThread {
+            if (on) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    fun clearWebCache() { runOnUiThread { try { webView.clearCache(false) } catch (e: Exception) {} } }
 
     fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==

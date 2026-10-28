@@ -343,4 +343,46 @@ class Bridge(private val act: MainActivity) {
             Backup.file(ctx).delete()
         }
     }
+
+    // ===== الذاكرة (RAM) =====
+    @JavascriptInterface
+    fun memInfo(): String {
+        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi)
+        return JSONObject().put("total", mi.totalMem).put("avail", mi.availMem).put("low", mi.lowMemory).toString()
+    }
+
+    @Volatile private var ramResult = "{}"
+    @JavascriptInterface fun ramResult(): String = ramResult
+
+    /**
+     * يغلق تطبيقات المستخدم التي تعمل في الخلفية فقط (لا يقترب من تطبيقات النظام والراديو والكان باص،
+     * ولا من تطبيق الموسيقى الذي يعمل الآن)، ثم يفرّغ ذاكرة الواجهة المؤقتة.
+     */
+    @JavascriptInterface
+    fun freeRam() {
+        ramResult = JSONObject().put("busy", true).toString()
+        val keep = HashSet<String>()
+        keep.add(ctx.packageName)
+        try { controller()?.packageName?.let { keep.add(it) } } catch (e: Exception) {}
+        kotlin.concurrent.thread {
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val before = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
+            var count = 0
+            try {
+                for (ai in ctx.packageManager.getInstalledApplications(0)) {
+                    val sys = (ai.flags and (android.content.pm.ApplicationInfo.FLAG_SYSTEM or android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+                    if (sys || ai.packageName in keep) continue
+                    try { am.killBackgroundProcesses(ai.packageName); count++ } catch (e: Exception) {}
+                }
+            } catch (e: Exception) {}
+            act.clearWebCache()
+            System.gc()
+            Thread.sleep(1500)
+            val after = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
+            ramResult = JSONObject().put("busy", false).put("freed", maxOf(0L, after - before)).put("apps", count).put("at", System.currentTimeMillis()).toString()
+        }
+    }
+
+    @JavascriptInterface fun keepOn(on: Boolean) = act.keepScreenOn(on)
 }

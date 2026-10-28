@@ -45,7 +45,7 @@ var DEFAULT_PREFS = {
   restStyle: 'classic', restShow: { dua: true, wird: true, remind: true, prayer: true, date: true },
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
-  safeMode: true, weatherOn: true
+  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false
 };
 function loadPrefs(){
   try {
@@ -560,12 +560,23 @@ function localizeDigits(root){
 }
 (function () {
   if (typeof MutationObserver === 'undefined') return;
-  var pending = false;
-  var mo = new MutationObserver(function () {
-    if (pending) return; pending = true;
-    setTimeout(function () { pending = false; localizeDigits(document.body); }, 0);
+  // التحويل يتم داخل المراقب نفسه (قبل رسم الشاشة) وللعناصر المتغيرة فقط، فلا تظهر رعشة بين الأرقام
+  function conv(n){
+    if (n.nodeType === 3) {
+      var pe = n.parentNode;
+      if (pe && pe.closest && pe.closest('input,textarea,script,style,.latin')) return;
+      if (/[0-9]/.test(n.nodeValue)) n.nodeValue = toArDigits(n.nodeValue);
+    } else if (n.nodeType === 1) localizeDigits(n);
+  }
+  var mo = new MutationObserver(function (list) {
+    if (loadPrefsCached().digits !== 'ar') return;
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      if (m.type === 'characterData') conv(m.target);
+      else for (var k = 0; k < m.addedNodes.length; k++) conv(m.addedNodes[k]);
+    }
   });
-  function start(){ if (document.body) { mo.observe(document.body, { childList: true, subtree: true, characterData: true }); localizeDigits(document.body); } }
+  function start(){ if (document.body) { localizeDigits(document.body); mo.observe(document.body, { childList: true, subtree: true, characterData: true }); } }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 
@@ -796,7 +807,7 @@ var CARD_CATALOG = [
   ['clock', 'الساعة'], ['prayer', 'الصلاة القادمة'], ['times', 'مواقيت اليوم'], ['media', 'الموسيقى'],
   ['speed', 'عداد السرعة'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس'],
   ['apps', 'تطبيقاتي المفضلة'], ['notes', 'الملاحظات'], ['reminders', 'تذكيراتي'], ['sysrem', 'تذكيرات اليوم'],
-  ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة']
+  ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)']
 ];
 var LAYOUTS = [['classic', 'كلاسيكي'], ['grid', 'شبكة'], ['side', 'جانبي'], ['minimal', 'بسيط']];
 function defaultHomes(p){
@@ -813,4 +824,12 @@ function getHomes(p){
   var d = defaultHomes(p), h = p.homes || {}, out = {};
   Object.keys(d).forEach(function (k) { out[k] = (h[k] && h[k].length) ? h[k] : d[k]; });
   return out;
+}
+
+/* ===== الذاكرة ===== */
+function gb(b){ return (b / 1073741824).toFixed(1); }
+function memText(){
+  var m = natJSON('memInfo'); if (!m || !m.total) return null;
+  var used = m.total - m.avail;
+  return { pct: Math.round(used / m.total * 100), used: gb(used), total: gb(m.total), avail: gb(m.avail), low: m.low };
 }
