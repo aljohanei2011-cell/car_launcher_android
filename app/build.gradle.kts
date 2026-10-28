@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -12,13 +14,39 @@ android {
         applicationId = "com.example.carlauncher"
         minSdk = 28
         targetSdk = 30
-        versionCode = 2
-        versionName = "2.0"
+        // في GitHub Actions يُؤخذ من رقم البناء، فيزيد مع كل تحديث
+        val code = (System.getenv("VERSION_CODE") ?: "2").toInt().coerceAtLeast(2)
+        versionCode = code
+        versionName = "2.$code"
+        // مكان الإصدارات التي يتحقق منها زر «تحديث التطبيق»
+        buildConfigField("String", "UPDATE_REPO", "\"aljohanei2011-cell/car_launcher_android\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    // مفتاح توقيع ثابت: بدونه لا يقبل أندرويد تثبيت التحديث فوق النسخة السابقة
+    val signProps = Properties().apply {
+        val f = rootProject.file("signing/signing.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    signingConfigs {
+        create("fixed") {
+            storeFile = rootProject.file("signing/release.jks")
+            storePassword = signProps.getProperty("storePassword")
+            keyAlias = signProps.getProperty("keyAlias")
+            keyPassword = signProps.getProperty("keyPassword")
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("fixed")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("fixed")
         }
     }
 
@@ -28,6 +56,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+    }
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 

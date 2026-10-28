@@ -25,6 +25,18 @@ import java.io.ByteArrayOutputStream
  */
 class Bridge(private val act: MainActivity) {
 
+    companion object {
+        fun drawableToDataUrl(d: Drawable, size: Int): String {
+            val bmp = if (d is BitmapDrawable && d.bitmap != null) Bitmap.createScaledBitmap(d.bitmap, size, size, true)
+            else Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also {
+                val c = Canvas(it); d.setBounds(0, 0, size, size); d.draw(c)
+            }
+            val o = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, o)
+            return "data:image/png;base64," + Base64.encodeToString(o.toByteArray(), Base64.NO_WRAP)
+        }
+    }
+
     private val ctx: Context get() = act.applicationContext
     private val iconCache = HashMap<String, String>()
     private var server: UploadServer? = null
@@ -49,20 +61,10 @@ class Bridge(private val act: MainActivity) {
         iconCache[pkg]?.let { return it }
         return try {
             val d = ctx.packageManager.getApplicationIcon(pkg)
-            val url = "data:image/png;base64," + Base64.encodeToString(toPng(d, 96), Base64.NO_WRAP)
+            val url = drawableToDataUrl(d, 96)
             iconCache[pkg] = url
             url
         } catch (e: Exception) { "" }
-    }
-
-    private fun toPng(d: Drawable, size: Int): ByteArray {
-        val bmp = if (d is BitmapDrawable && d.bitmap != null) Bitmap.createScaledBitmap(d.bitmap, size, size, true)
-        else Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also {
-            val c = Canvas(it); d.setBounds(0, 0, size, size); d.draw(c)
-        }
-        val o = ByteArrayOutputStream()
-        bmp.compress(Bitmap.CompressFormat.PNG, 100, o)
-        return o.toByteArray()
     }
 
     @JavascriptInterface
@@ -146,6 +148,10 @@ class Bridge(private val act: MainActivity) {
 
     @JavascriptInterface fun serverStop() { server?.stop(); server = null }
     @JavascriptInterface fun uploadCount(): Int = server?.uploads ?: 0
+    @JavascriptInterface fun uploadLast(): String {
+        val s = server ?: return "{}"
+        return JSONObject().put("count", s.uploads).put("type", s.lastType).put("name", s.lastName).toString()
+    }
 
     // ===== الشاشة =====
     @JavascriptInterface
@@ -162,4 +168,85 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun setConfig(json: String) = Prefs.setConfig(ctx, json)
     @JavascriptInterface fun setPrayers(json: String) = Prefs.setPrayers(ctx, json)
     @JavascriptInterface fun hasLocation(): Boolean = act.hasLocationPermission()
+
+    // ===== الإصدار والتحديث =====
+    @JavascriptInterface
+    fun version(): String = JSONObject().put("code", BuildConfig.VERSION_CODE).put("name", BuildConfig.VERSION_NAME).toString()
+    @JavascriptInterface fun hasToken(): Boolean = Updater.hasToken(ctx)
+    @JavascriptInterface fun setToken(t: String): Boolean {
+        if (!t.trim().matches(Regex("^[A-Za-z0-9_]{20,255}$"))) return false
+        Updater.setToken(ctx, t); return true
+    }
+    @JavascriptInterface fun clearToken() = Updater.clearToken(ctx)
+    @JavascriptInterface fun updateCheck() = Updater.check(ctx)
+    @JavascriptInterface fun updateDownload() = Updater.download(ctx)
+    @JavascriptInterface fun updateState(): String = Updater.state()
+
+    // ===== تثبيت التطبيقات المرفوعة =====
+    @JavascriptInterface fun apks(): String = Apks.list(ctx)
+    @JavascriptInterface fun installApk(name: String): Boolean {
+        val f = Apks.file(ctx, name) ?: return false
+        Installer.install(ctx, f); return true
+    }
+    @JavascriptInterface fun deleteApk(name: String) { Apks.file(ctx, name)?.delete() }
+    @JavascriptInterface fun installStatus(): String = Installer.status
+    @JavascriptInterface fun clearInstallStatus() { Installer.status = "" }
+    @JavascriptInterface fun canInstall(): Boolean = ctx.packageManager.canRequestPackageInstalls()
+    @JavascriptInterface fun openInstallSettings() {
+        act.runOnUiThread {
+            try {
+                act.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, android.net.Uri.parse("package:" + ctx.packageName)))
+            } catch (e: Exception) {}
+        }
+    }
+
+    // ===== النسخ الاحتياطي =====
+    @JavascriptInterface fun backupPrepare(webJson: String): Boolean = Backup.prepare(ctx, webJson)
+    @JavascriptInterface fun pendingRestore(): String = Backup.takePendingWeb(ctx)
+
+    // ===== صوت التنبيه =====
+    @JavascriptInterface fun hasSound(): Boolean = Sounds.current(ctx) != null
+    @JavascriptInterface fun deleteSound() { Sounds.dir(ctx).listFiles()?.forEach { it.delete() } }
+    @JavascriptInterface fun testSound() = TripService.testSound(ctx)
+
+    // ===== التشغيل =====
+    /** رقم ثابت لكل تشغيل للشاشة: لتنفيذ «عند التشغيل» مرة واحدة فقط */
+    @JavascriptInterface fun bootId(): Long = (System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()) / 120_000L
+    @JavascriptInterface fun mediaKey(cmd: String) {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val code = when (cmd) { "play" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY; "pause" -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE; else -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE }
+        am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code))
+        am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code))
+    }
+
+    // ===== الإضاءة الليلية =====
+    @JavascriptInterface fun canWriteSettings(): Boolean = Settings.System.canWrite(ctx)
+    @JavascriptInterface fun openWriteSettings() {
+        act.runOnUiThread {
+            try { act.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:" + ctx.packageName))) } catch (e: Exception) {}
+        }
+    }
+    /** ليلاً: نحفظ إضاءة النهار ثم نخفضها. نهاراً: نعيدها كما كانت */
+    @JavascriptInterface
+    fun applyNight(night: Boolean, nightPct: Int) {
+        if (!Settings.System.canWrite(ctx)) return
+        val sp = Prefs.sp(ctx)
+        val cr = ctx.contentResolver
+        val was = sp.getBoolean("isNightBright", false)
+        try {
+            if (night && !was) {
+                sp.edit().putInt("dayBright", Settings.System.getInt(cr, Settings.System.SCREEN_BRIGHTNESS, 200))
+                    .putInt("dayMode", Settings.System.getInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, 0))
+                    .putBoolean("isNightBright", true).apply()
+                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS, (nightPct.coerceIn(5, 100) * 255 / 100))
+            } else if (night && was) {
+                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS, (nightPct.coerceIn(5, 100) * 255 / 100))
+            } else if (!night && was) {
+                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS, sp.getInt("dayBright", 200))
+                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, sp.getInt("dayMode", 0))
+                sp.edit().putBoolean("isNightBright", false).apply()
+            }
+        } catch (e: Exception) {}
+    }
 }

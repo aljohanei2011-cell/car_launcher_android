@@ -39,6 +39,12 @@ class TripService : Service() {
         private const val ID_FG = 1
         private const val ID_ALERT = 2
 
+        @Volatile private var instance: TripService? = null
+        fun testSound(ctx: Context) {
+            val i = instance
+            if (i != null) i.main.post { i.playAlertSound(true, true) }
+        }
+
         fun start(ctx: Context) {
             val fine = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
             val coarse = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -49,12 +55,15 @@ class TripService : Service() {
         }
     }
 
-    private val main = Handler(Looper.getMainLooper())
+    val main = Handler(Looper.getMainLooper())
+    private var player: android.media.MediaPlayer? = null
+    private var overCount = 0
+    private var lastSpeedAlert = 0L
     private var lm: LocationManager? = null
     private var listening = false
 
     private val listener = object : LocationListener {
-        override fun onLocationChanged(loc: Location) { TripStore.onFix(this@TripService, loc); checkTripAlerts() }
+        override fun onLocationChanged(loc: Location) { TripStore.onFix(this@TripService, loc); checkSpeed(loc); checkTripAlerts() }
         @Deprecated("") override fun onStatusChanged(p: String?, s: Int, b: Bundle?) {}
         override fun onProviderEnabled(p: String) {}
         override fun onProviderDisabled(p: String) {}
@@ -74,6 +83,7 @@ class TripService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createChannels()
         startForeground(ID_FG, buildFgNotification())
         main.postDelayed(ticker, 5_000)
@@ -85,6 +95,8 @@ class TripService : Service() {
     }
 
     override fun onDestroy() {
+        instance = null
+        try { player?.release() } catch (e: Exception) {}
         main.removeCallbacks(ticker)
         try { lm?.removeUpdates(listener) } catch (e: Exception) {}
         listening = false
@@ -127,7 +139,7 @@ class TripService : Service() {
             .build()
 
     /** تنبيه: إشعار منبثق + صوت قصير + خفض صوت الموسيقى مؤقتاً */
-    private fun alert(title: String, text: String, page: String?) {
+    private fun alert(title: String, text: String, page: String?, custom: Boolean = false) {
         val cfg = Prefs.config(this)
         val n = Notification.Builder(this, CH_ALERT)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
@@ -139,7 +151,48 @@ class TripService : Service() {
             .setCategory(Notification.CATEGORY_REMINDER)
             .build()
         getSystemService(NotificationManager::class.java).notify(ID_ALERT, n)
-        if (cfg.optBoolean("sound", true)) playChime(cfg.optBoolean("duck", true))
+        if (cfg.optBoolean("sound", true)) playAlertSound(cfg.optBoolean("duck", true), custom && cfg.optBoolean("customSound", true))
+    }
+
+    /** الصوت المرفوع من الجوال (مثل الأذان) عند دخول الوقت، وإلا نغمة قصيرة */
+    fun playAlertSound(duck: Boolean, custom: Boolean) {
+        val f = if (custom) Sounds.current(this) else null
+        if (f == null) { playChime(duck); return }
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
+        val req = AudioFocusRequest.Builder(if (duck) AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK else AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(attrs).build()
+        try {
+            player?.release()
+            am.requestAudioFocus(req)
+            val mp = android.media.MediaPlayer()
+            mp.setAudioAttributes(attrs)
+            mp.setDataSource(f.absolutePath)
+            mp.setOnCompletionListener { am.abandonAudioFocusRequest(req); it.release(); if (player === it) player = null }
+            mp.prepare(); mp.start()
+            player = mp
+            // حد أقصى 6 دقائق
+            main.postDelayed({ if (player === mp) { try { mp.stop(); mp.release() } catch (e: Exception) {}; player = null; am.abandonAudioFocusRequest(req) } }, 6 * 60_000L)
+        } catch (e: Exception) {
+            am.abandonAudioFocusRequest(req)
+            playChime(duck)
+        }
+    }
+
+    /** تنبيه السرعة: بعد 3 قراءات متتالية فوق الحد، ومرة كل دقيقة كحد أقصى */
+    private fun checkSpeed(loc: Location) {
+        val cfg = Prefs.config(this)
+        if (!cfg.optBoolean("speedOn", false) || !loc.hasSpeed()) return
+        val limit = cfg.optInt("speedLimit", 120)
+        val kmh = loc.speed * 3.6
+        if (kmh > limit) overCount++ else overCount = 0
+        val now = System.currentTimeMillis()
+        if (overCount >= 3 && now - lastSpeedAlert > 60_000) {
+            lastSpeedAlert = now
+            alert("تجاوزت السرعة", "سرعتك " + Math.round(kmh) + " كم/س والحد " + limit + " كم/س", null)
+        }
     }
 
     private fun playChime(duck: Boolean) {
@@ -185,7 +238,7 @@ class TripService : Service() {
             val k2 = "at_$at"
             if (now >= at && now < at + 5 * 60_000L && !sp.getBoolean(k2, false)) {
                 sp.edit().putBoolean(k2, true).apply()
-                alert("حان وقت صلاة $name", "حان الآن وقت صلاة $name", "prayer.html")
+                alert("حان وقت صلاة $name", "حان الآن وقت صلاة $name", "prayer.html", custom = true)
             }
         }
         Prefs.cleanupAlarmKeys(this, now)

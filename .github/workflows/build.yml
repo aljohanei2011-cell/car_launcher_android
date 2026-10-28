@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -20,10 +23,28 @@ jobs:
         with:
           gradle-version: "8.14.3"
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      # رقم الإصدار يزيد مع كل بناء حتى يعرف التطبيق أن هناك تحديثاً
+      - name: Build signed APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk "out/rafiq-v${{ github.run_number }}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: car-launcher-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: car-launcher-apk
+          path: out/*.apk
+
+      # إصدار على GitHub: التطبيق يتحقق منه ويحمّل التحديث من الشاشة مباشرة
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MSG="$(git log -1 --pretty=%s)"
+          gh release create "v${{ github.run_number }}" out/*.apk \
+            --title "رفيق الطريق — الإصدار ${{ github.run_number }}" \
+            --notes "$MSG" --latest

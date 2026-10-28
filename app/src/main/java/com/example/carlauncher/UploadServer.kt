@@ -50,6 +50,9 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
         b.joinToString("") { "%02x".format(it) }
     }
     @Volatile var uploads = 0; private set
+    @Volatile var lastType = ""; private set
+    @Volatile var lastName = ""; private set
+    private fun event(type: String, name: String) { lastType = type; lastName = name; uploads++ }
     @Volatile private var running = false
     private var server: ServerSocket? = null
     private val startedAt = System.currentTimeMillis()
@@ -82,7 +85,7 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
 
     private fun handle(sock: Socket) {
         sock.use { c ->
-            c.soTimeout = 30_000
+            c.soTimeout = 60_000
             val inp = BufferedInputStream(c.getInputStream())
             val out = c.getOutputStream()
             val line = readLine(inp) ?: return
@@ -90,12 +93,12 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
             if (parts.size < 2) return
             val method = parts[0]
             val target = parts[1]
-            var len = 0
+            var len = 0L
             while (true) {
                 val h = readLine(inp) ?: break
                 if (h.isEmpty()) break
                 val i = h.indexOf(':')
-                if (i > 0 && h.substring(0, i).trim().equals("content-length", true)) len = h.substring(i + 1).trim().toIntOrNull() ?: 0
+                if (i > 0 && h.substring(0, i).trim().equals("content-length", true)) len = h.substring(i + 1).trim().toLongOrNull() ?: 0L
             }
             val path = target.substringBefore('?')
             val q = parseQuery(target.substringAfter('?', ""))
@@ -112,16 +115,76 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                 }
                 method == "POST" && path == "/upload" -> {
                     if (len <= 0 || len > MAX_BYTES) { send(out, 413, "text/plain", "too large".toByteArray()); return }
-                    val body = readN(inp, len)
+                    val body = readN(inp, len.toInt())
                     val slot = q["slot"] ?: "home"
                     val name = Images.saveBytes(ctx, slot, body)
                     if (name == null) { send(out, 400, "text/plain", "bad image".toByteArray()); return }
-                    uploads++
-                    send(out, 200, "application/json", JSONObject().put("ok", true).put("name", name).toString().toByteArray())
+                    event("image", name)
+                    ok(out, name)
+                }
+                // ملف تطبيق APK يُحفظ في مجلد خاص، ويُثبَّت من الشاشة بعد مراجعته
+                method == "POST" && path == "/apk" -> {
+                    if (len <= 0 || len > 400L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
+                    val raw = (q["name"] ?: "app").substringBeforeLast('.').replace(Regex("[^A-Za-z0-9._\\-]"), "_").take(60).ifEmpty { "app" }
+                    val f = File(Apks.dir(ctx), raw + "_" + System.currentTimeMillis() + ".apk")
+                    if (!streamToFile(inp, len, f) || !Apks.looksLikeApk(f)) { f.delete(); send(out, 400, "text/plain", "not an apk".toByteArray()); return }
+                    event("apk", f.name)
+                    ok(out, f.name)
+                }
+                // صوت تنبيه الصلاة (mp3/ogg/m4a)
+                method == "POST" && path == "/sound" -> {
+                    if (len <= 0 || len > 25L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
+                    val ext = (q["ext"] ?: "mp3").lowercase().takeIf { it in setOf("mp3", "ogg", "m4a", "aac", "wav", "opus") } ?: "mp3"
+                    Sounds.dir(ctx).listFiles()?.forEach { it.delete() }
+                    val f = File(Sounds.dir(ctx), "alert.$ext")
+                    if (!streamToFile(inp, len, f)) { f.delete(); send(out, 400, "text/plain", "bad".toByteArray()); return }
+                    event("sound", f.name)
+                    ok(out, f.name)
+                }
+                // رمز GitHub للتحديث: يُلصق في الجوال بدلاً من كتابته على الشاشة
+                method == "POST" && path == "/token" -> {
+                    if (len <= 0 || len > 4096) { send(out, 400, "text/plain", "bad".toByteArray()); return }
+                    val t = String(readN(inp, len.toInt()), Charsets.UTF_8).trim()
+                    if (!t.matches(Regex("^[A-Za-z0-9_]{20,255}$"))) { send(out, 400, "text/plain", "bad token".toByteArray()); return }
+                    Updater.setToken(ctx, t)
+                    event("token", "")
+                    ok(out, "")
+                }
+                method == "GET" && path == "/backup" -> {
+                    val f = Backup.file(ctx)
+                    if (!f.exists()) { send(out, 404, "text/plain; charset=utf-8", "جهّز النسخة الاحتياطية من الشاشة أولاً".toByteArray()); return }
+                    val head = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${f.length()}\r\n" +
+                        "Content-Disposition: attachment; filename=\"rafiq-backup-${java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())}.json\"\r\nConnection: close\r\n\r\n"
+                    out.write(head.toByteArray()); f.inputStream().use { it.copyTo(out) }; out.flush()
+                    event("backup", f.name)
+                }
+                method == "POST" && path == "/restore" -> {
+                    if (len <= 0 || len > 120L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
+                    val tmp = File(ctx.cacheDir, "restore.json")
+                    if (!streamToFile(inp, len, tmp) || !Backup.restore(ctx, tmp)) { tmp.delete(); send(out, 400, "text/plain", "bad backup".toByteArray()); return }
+                    tmp.delete()
+                    event("restore", "")
+                    ok(out, "")
                 }
                 else -> send(out, 404, "text/plain", "not found".toByteArray())
             }
         }
+    }
+
+    private fun ok(out: OutputStream, name: String) =
+        send(out, 200, "application/json", JSONObject().put("ok", true).put("name", name).toString().toByteArray())
+
+    private fun streamToFile(inp: InputStream, len: Long, f: File): Boolean {
+        var left = len
+        val buf = ByteArray(64 * 1024)
+        f.outputStream().use { o ->
+            while (left > 0) {
+                val r = inp.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+                if (r < 0) break
+                o.write(buf, 0, r); left -= r
+            }
+        }
+        return left == 0L
     }
 
     private fun parseQuery(q: String): Map<String, String> =

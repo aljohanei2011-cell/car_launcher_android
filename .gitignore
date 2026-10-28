@@ -10,3 +10,4 @@ captures/
 .cxx/
 *.keystore
 *.jks
+!signing/release.jks
