@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>حول التطبيق</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center}
+.icon{width:150px;height:150px;border-radius:36px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.name{font-size:46px;font-weight:700}
+.dev{font-size:26px;color:#F2C879}
+.ver{font-size:18px;color:#9FB0CC}
+.info{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.chipi{padding:10px 18px;border-radius:16px;background:#111a33;border:1px solid #222c4d;font-size:16px;color:#C3D1E8}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="settings.html" aria-label="رجوع" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
+      <span class="ptitle">حول التطبيق</span>
+    </div>
+    <div class="hero">
+      <img class="icon" src="icon.png" alt="أيقونة رفيق الطريق">
+      <div class="name">رفيق الطريق</div>
+      <div class="dev">تطوير: عاصم الجهني</div>
+      <div class="ver" id="ver"></div>
+      <div class="info">
+        <span class="chipi">واجهة سيارة عربية تعمل بدون إنترنت</span>
+        <span class="chipi">مواقيت الصلاة بطريقة أم القرى</span>
+        <span class="chipi">Android 9 – 16</span>
+        <span class="chipi" id="screen"></span>
+      </div>
+      <div class="pnote" style="margin-top:14px">الخطوط والخلفيات المضمّنة لأصحابها، وتُستخدم وفق تراخيصها.</div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+var v = natJSON('version');
+document.getElementById('ver').textContent = 'الإصدار ' + (v ? v.code : '—');
+var s = natJSON('screen');
+document.getElementById('screen').textContent = 'الشاشة ' + (s ? s.w + '×' + s.h : window.screen.width + '×' + window.screen.height);
+fitStage();
+</script>
+</body>
+</html>

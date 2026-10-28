@@ -75,7 +75,7 @@ function renderToken(){
     box.innerHTML = '<div class="row"><span class="msg ok">رمز GitHub محفوظ ✓</span><button class="btn g" id="rmTok">حذف الرمز</button></div>';
     $('rmTok').onclick = function () { nat('clearToken'); renderToken(); };
   } else {
-    box.innerHTML = '<div class="msg">لأن المستودع خاص، يحتاج التحديث رمز قراءة من GitHub مرة واحدة. أسهل طريقة: أرسله من الجوال (تبويب «رمز التحديث» بعد مسح الباركود).</div>' +
+    box.innerHTML = '<div class="msg">التحديث يعمل مباشرة ما دام المستودع عاماً. الرمز مطلوب فقط إذا كان المستودع خاصاً، وأسهل طريقة لإرساله من الجوال (تبويب «رمز التحديث»).</div>' +
       '<div class="row"><a class="btn g" href="upload.html" style="display:flex;align-items:center">إرسال الرمز من الجوال</a></div>' +
       '<div class="row"><input class="inp" id="tok" placeholder="أو الصقه هنا github_pat_…"><button class="btn g" id="saveTok">حفظ</button></div>';
     $('saveTok').onclick = function () {

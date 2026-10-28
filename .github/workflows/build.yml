@@ -23,6 +23,20 @@ jobs:
         with:
           gradle-version: "8.14.3"
 
+      # مفتاح التوقيع من أسرار المستودع (لا يُحفظ في الكود حتى يكون المستودع عاماً بأمان)
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASS" ]; then
+            echo "::error::أضف السرّين KEYSTORE_B64 و KEYSTORE_PASS في Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          mkdir -p signing
+          echo "$KEYSTORE_B64" | base64 -d > signing/release.jks
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=carlauncher\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" > signing/signing.properties
+
       # رقم الإصدار يزيد مع كل بناء حتى يعرف التطبيق أن هناك تحديثاً
       - name: Build signed APK
         env:

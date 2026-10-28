@@ -313,6 +313,13 @@ var UI_KEYS = ['layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps'
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
 function renderSystem(){
   var s;
+  s = section('');
+  var ab = el('a', 'line'); ab.href = 'about.html';
+  ab.appendChild(el('span', '', 'حول التطبيق'));
+  var vv = natJSON('version'); ab.appendChild(el('span', 'v', 'تطوير: عاصم الجهني' + (vv ? ' · الإصدار ' + vv.code : '')));
+  var go = el('span', 'opt sm', 'فتح'); go.style.marginRight = 'auto'; go.style.display = 'flex'; go.style.alignItems = 'center'; ab.appendChild(go);
+  s.appendChild(ab);
+
   s = section('الواجهة الافتراضية', 'حتى يفتح رفيق الطريق عند الضغط على زر الرئيسية وعند تشغيل الشاشة.');
   var isDef = nat('isDefaultHome');
   var ld = el('div', 'line');

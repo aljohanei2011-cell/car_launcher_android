@@ -140,7 +140,8 @@ object Updater {
     fun setToken(c: Context, t: String) { sp(c).edit().putString("gh_token", t.trim()).apply() }
     fun clearToken(c: Context) { sp(c).edit().remove("gh_token").apply() }
     fun hasToken(c: Context) = !sp(c).getString("gh_token", null).isNullOrEmpty()
-    private fun token(c: Context) = sp(c).getString("gh_token", "") ?: ""
+    /** المستودع العام لا يحتاج رمزاً؛ الرمز اختياري للمستودع الخاص */
+    private fun token(c: Context): String? = sp(c).getString("gh_token", null)?.takeIf { it.isNotEmpty() }
 
     @Volatile private var state = JSONObject().put("phase", "idle")
     @Volatile private var assetId = 0L
@@ -165,12 +166,11 @@ object Updater {
     private fun httpError(code: Int): String = when (code) {
         401 -> "رمز GitHub غير صالح أو انتهت صلاحيته. أرسل رمزاً جديداً من الجوال."
         403 -> "GitHub رفض الطلب (صلاحية الرمز أو تجاوز عدد المحاولات). جرّب لاحقاً."
-        404 -> "لا يوجد إصدار منشور، أو الرمز لا يملك صلاحية قراءة هذا المستودع."
+        404 -> "لم يُعثر على الإصدارات. إذا كان المستودع خاصاً أرسل رمز قراءة من الجوال، أو اجعل المستودع عاماً."
         else -> "خطأ من GitHub ($code)"
     }
 
     fun check(c: Context) {
-        if (!hasToken(c)) { set("phase" to "error", "error" to "لم يُضبط رمز GitHub بعد."); return }
         set("phase" to "checking", "error" to null)
         thread {
             try {
