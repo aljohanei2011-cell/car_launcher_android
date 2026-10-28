@@ -18,7 +18,8 @@
 - شاشة الاستراحة مع أدعية متغيرة و«ورد اليوم»
 
 ## التحميل والتحديث
-- آخر إصدار: صفحة [Releases](../../releases/latest).
+- تحميل مباشر لآخر إصدار: https://github.com/aljohanei2011-cell/car_launcher_android/releases/latest/download/rafiq.apk
+- صفحة الإصدارات: [Releases](../../releases/latest).
 - داخل التطبيق: الإعدادات ▸ النظام ▸ تحديث التطبيق.
 
 ## البناء
