@@ -77,7 +77,8 @@ function render(){
   var restEvery = +prefs.restMin || 120, stops = Math.floor(mins / restEvery), total = mins + stops * 15;
   var dep = new Date(Date.now() + depMin * 60000), arr = new Date(dep.getTime() + total * 60000);
   var h = '<span class="ph">من ' + o.label + ' إلى ' + to.label + '</span>' +
-    '<div class="big3"><div><span class="pnote">المسافة التقريبية</span><b>' + Math.round(road) + ' كم</b></div><div><span class="pnote">المدة مع الاستراحات</span><b>' + hm(total) + '</b></div><div><span class="pnote">الوصول المتوقع</span><b>' + clock(arr) + '</b></div></div>';
+    '<div class="big3"><div><span class="pnote">المسافة التقريبية</span><b>' + Math.round(road) + ' كم</b></div><div><span class="pnote">المدة مع الاستراحات</span><b>' + hm(total) + '</b></div><div><span class="pnote">الوصول المتوقع</span><b>' + clock(arr) + '</b></div></div>' +
+    '<div class="pnote" style="font-size:18px">تكلفة الوقود التقريبية: <b style="color:#fff">' + sar(fuelCost(road)) + '</b> ذهاباً (' + sar(fuelCost(road * 2)) + ' ذهاباً وعودة) · ' + Math.round(road / kmPerLiter().v) + ' لتر تقريباً</div>';
   // الصلوات خلال الرحلة (حسب مواقيت مدينتك، تقريبية)
   var pr = [];
   for (var day = 0; day < 2; day++) {

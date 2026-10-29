@@ -205,6 +205,9 @@ class Bridge(private val act: MainActivity) {
     }
     @JavascriptInterface fun clearToken() = Updater.clearToken(ctx)
     @JavascriptInterface fun updateCheck() = Updater.check(ctx)
+    @JavascriptInterface fun updateCheckBeta() = Updater.check(ctx, true)
+    @JavascriptInterface fun updChannel(): String = Updater.channel(ctx)
+    @JavascriptInterface fun setUpdChannel(ch: String) = Updater.setChannel(ctx, ch)
     @JavascriptInterface fun updateDownload() = Updater.download(ctx)
     @JavascriptInterface fun updateState(): String = Updater.state()
 
@@ -339,6 +342,8 @@ class Bridge(private val act: MainActivity) {
         return false
     }
 
+
+    @JavascriptInterface fun askLocation() = act.askLocation()
 
     // ===== الأوامر الصوتية =====
     @JavascriptInterface fun voiceCaps(): String = Voice.caps(ctx)

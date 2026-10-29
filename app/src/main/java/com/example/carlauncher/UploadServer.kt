@@ -187,7 +187,7 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                 method == "POST" && path == "/restore" -> {
                     if (len <= 0 || len > 120L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
                     val tmp = File(ctx.cacheDir, "restore.json")
-                    if (!streamToFile(inp, len, tmp) || !Backup.restore(ctx, tmp)) { tmp.delete(); send(out, 400, "text/plain", "bad backup".toByteArray()); return }
+                    if (!streamToFile(inp, len, tmp) || !Backup.restore(ctx, tmp, q["scope"] == "ui")) { tmp.delete(); send(out, 400, "text/plain", "bad backup".toByteArray()); return }
                     tmp.delete()
                     event("restore", "")
                     ok(out, "")

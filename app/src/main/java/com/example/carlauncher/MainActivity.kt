@@ -154,6 +154,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun askLocation() { runOnUiThread { ActivityCompat.requestPermissions(this, locationPermissions, locationRequestCode) } }
+
     fun clearWebCache() { runOnUiThread { try { webView.clearCache(false) } catch (e: Exception) {} } }
 
     fun hasLocationPermission(): Boolean =

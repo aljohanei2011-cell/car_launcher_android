@@ -35,6 +35,12 @@
 .prev i{display:block;background:#2b4a80;border-radius:4px;flex:1}
 .prev b{display:block;background:#4b6ea8;border-radius:3px;flex:1;height:100%}
 .opt:disabled{opacity:.35}
+.srch{height:56px;width:100%;border-radius:18px;border:1.5px solid #2b4a80;background:#0e1c38;color:#fff;font:inherit;font-size:21px;padding:0 18px;box-sizing:border-box}
+.sres{display:flex;flex-direction:column;gap:8px}
+.sres button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;padding:12px 18px;border-radius:16px;border:1px solid #23406f;background:rgba(19,37,74,.85);color:#fff;font:inherit}
+.sres b{font-size:19px}.sres span{font-size:15px;color:#9FB0CC}
+.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--accent,#2F7BFF)}100%{box-shadow:0 0 0 0 transparent}}
 </style>
 </head>
 <body data-nodrive="1">
@@ -47,6 +53,7 @@
       <a class="icon-btn" href="index.html" aria-label="العودة للرئيسية"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
       <h1 class="title">الإعدادات</h1>
       <div class="tabs" id="tabs"></div>
+      <button class="icon-btn" id="srchBtn" aria-label="بحث في الإعدادات" onclick="openSearch()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
     </div>
     <div class="body" id="body"></div>
     <input type="file" id="logoFile" accept="image/*" style="display:none">
@@ -67,7 +74,7 @@ function section(title, note){
   var s = el('div', 'glass section');
   if (title) s.appendChild(el('span', 'label', title));
   if (note) s.appendChild(el('span', 'note', note));
-  document.getElementById('body').appendChild(s);
+  (window._secTarget || document.getElementById('body')).appendChild(s);
   return s;
 }
 function opts(parent, list, cur, onPick, small){
@@ -404,6 +411,18 @@ function renderApps(){
   var b = el('button', 'opt sm', 'فتح الإعداد'); b.style.marginRight = 'auto'; b.onclick = function () { nat('openNotificationAccess'); };
   l.appendChild(b); s.appendChild(l);
 
+  s = section('تكلفة الوقود', 'تُحسب للرحلة والسفر وملخص الأسبوع.');
+  var kp = kmPerLiter();
+  var fl = el('div', 'line'); fl.appendChild(el('span', '', 'سعر اللتر (ريال):'));
+  var fi = el('input', 'txt'); fi.type = 'number'; fi.step = '0.01'; fi.style.width = '160px'; fi.value = prefs.fuelPrice || 2.33; fi.onchange = function () { var v = parseFloat(fi.value); if (v > 0 && v < 20) { prefs.fuelPrice = v; savePrefs(prefs); } }; fl.appendChild(fi);
+  opts(fl, [[2.18, '91 (2.18)'], [2.33, '95 (2.33)'], [1.66, 'ديزل (1.66)']], prefs.fuelPrice, function (k) { prefs.fuelPrice = k; upd(); }, true);
+  s.appendChild(fl);
+  s.appendChild(el('span', 'note', 'الأسعار المقترحة قد تتغير، عدّلها حسب سعر المحطة.'));
+  var kl = el('div', 'line'); kl.appendChild(el('span', '', 'استهلاك السيارة (كم/لتر):'));
+  if (kp.src === 'log') kl.appendChild(el('span', 'v', kp.v.toFixed(1) + ' (من سجل الوقود)'));
+  else { var ki = el('input', 'txt'); ki.type = 'number'; ki.step = '0.1'; ki.style.width = '160px'; ki.placeholder = '12'; ki.value = prefs.kmpl || ''; ki.onchange = function () { var v = parseFloat(ki.value); prefs.kmpl = v > 3 && v < 40 ? v : null; savePrefs(prefs); }; kl.appendChild(ki); kl.appendChild(el('span', 'note', 'أو سجّل تعبئتين كاملتين في سجل الوقود ليُحسب تلقائياً')); }
+  s.appendChild(kl);
+
   s = section('السيارة');
   var r = el('div', 'opts');
   [['travel.html', 'مخطط رحلة السفر'], ['obd.html', 'بيانات السيارة OBD'], ['expenses.html', 'مصاريف السيارة'], ['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['notes.html', 'الملاحظات'], ['reminders.html', 'التذكيرات'], ['radio.html', 'الراديو'], ['parking.html', 'موقف السيارة'], ['upload.html', 'الإرسال من الجوال']].forEach(function (x) {
@@ -430,6 +449,22 @@ function confirmBox(text, onYes){
 }
 var UI_KEYS = ['clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'autoProfile', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
+/* ===== نقل الإعدادات بين الشاشات (عن طريق الجوال) ===== */
+function showTransfer(){
+  var ov = el('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:70;background:rgba(5,10,25,.92);display:flex;align-items:center;justify-content:center';
+  var box = el('div', 'glass section'); box.style.cssText = 'width:860px;padding:28px 32px;gap:14px;background:rgba(10,25,55,.97)';
+  box.appendChild(el('span', 'label', 'نقل الإعدادات من هذه الشاشة إلى شاشة أخرى'));
+  [['1', 'في هذه الشاشة: افتح «الإرسال من الجوال» وامسح الباركود بجوالك.'], ['2', 'في الجوال: تبويب «نسخة احتياطية» ▸ «تنزيل نسخة من الشاشة».'], ['3', 'في الشاشة الثانية: افتح «الإرسال من الجوال» وامسح باركودها.'], ['4', 'في الجوال: «استعادة» ▸ اختر «الواجهة والمظهر فقط» أو «كل شيء» ▸ اختر الملف.']].forEach(function (x) {
+    var l = el('div', 'line'); var n = el('b', '', x[0]); n.style.cssText = 'width:36px;height:36px;border-radius:18px;background:#2F7BFF;display:flex;align-items:center;justify-content:center;flex:none'; l.appendChild(n); l.appendChild(el('span', '', x[1])); box.appendChild(l);
+  });
+  box.appendChild(el('span', 'note', '«الواجهة والمظهر فقط» ينقل الثيم والتصميم والبطاقات والقائمة والخطوط والساعة والتخطيطات، ويُبقي ملاحظات وتذكيرات ومصاريف وسجل الشاشة الثانية كما هي. تفعيل الأوامر الصوتية لا يُنقل.'));
+  var r = el('div', 'opts');
+  var go1 = el('a', 'opt on', 'فتح الإرسال من الجوال'); go1.href = 'upload.html'; go1.style.cssText = 'display:flex;align-items:center';
+  var c = el('button', 'opt', 'إغلاق'); c.onclick = function () { ov.remove(); };
+  r.appendChild(go1); r.appendChild(c); box.appendChild(r); ov.appendChild(box);
+  ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+  document.getElementById('stage').appendChild(ov);
+}
 /* ===== الأوامر الصوتية: فحص الشاشة ثم التفعيل ===== */
 function voiceChecks(c){
   var rows = [
@@ -483,7 +518,17 @@ function renderVoice(){
 }
 
 function renderSystem(){
-  var s;
+  var s = section('أدوات الشاشة');
+  var tl = el('div', 'opts');
+  [['check.html', 'فحص شامل للشاشة'], ['features.html', 'المزايا (تشغيل وإطفاء)'], ['wizard.html', 'معالج الإعداد'], ['transfer', 'نقل الإعدادات لشاشة أخرى']].forEach(function (x) {
+    var a = el('a', 'opt', x[1]); a.href = x[0] === 'transfer' ? 'javascript:void(0)' : x[0]; a.style.cssText = 'display:flex;align-items:center';
+    if (x[0] === 'transfer') a.onclick = showTransfer;
+    tl.appendChild(a);
+  });
+  s.appendChild(tl);
+  var gt = el('div', 'toggle'); gt.appendChild(el('span', '', 'وضع الضيف (لمن يقود سيارتك)'));
+  var gsw = el('button', 'sw' + (prefs.guest ? ' on' : '')); gsw.onclick = function () { setGuest(!prefs.guest); prefs = loadPrefs(); render(); }; gt.appendChild(gsw); s.appendChild(gt);
+  s.appendChild(el('span', 'note', 'يخفي الملاحظات والتذكيرات والمصاريف والوثائق وأسماء المتصلين والرسائل، ويقفل الإعدادات. إنهاؤه يطلب الرقم السري إن كان مفعّلاً. تجده أيضاً في اللوحة السريعة.'));
   renderVoice();
   s = section('');
   var ab = el('a', 'line'); ab.href = 'about.html';
@@ -717,7 +762,7 @@ function renderHome(){
   s = section('القائمة السفلية', 'حتى 8 أزرار. زر الإعدادات ثابت دائماً.');
   var dock = (prefs.dock || []).slice();
   if (dock.indexOf('settings') < 0) dock.push('settings');
-  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', kids: 'الركاب', voice: 'أمر صوتي', settings: 'الإعدادات' };
+  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', kids: 'الركاب', voice: 'أمر صوتي', guest: 'وضع الضيف', settings: 'الإعدادات' };
   dock.forEach(function (id, i) {
     var row = el('div', 'line');
     row.appendChild(el('span', '', id.indexOf('app:') === 0 ? appLabel(id.slice(4)) : (DN[id] || id)));
@@ -797,11 +842,77 @@ function renderRest(){
   line.appendChild(inp); line.appendChild(add); s.appendChild(line);
 }
 
+/* سجل التبويبات: زر الرجوع يعيدك للتبويب السابق وبنفس مكان التمرير */
+function tabHist(){ try { return JSON.parse(sessionStorage.getItem('settings.hist') || '[]'); } catch (e) { return []; } }
+function saveScroll(){ try { sessionStorage.setItem('settings.scroll.' + tab, String(document.getElementById('body').scrollTop)); } catch (e) {} }
+function setTab(t, push){
+  if (window._searching) { closeSearch(true); push = false; } else saveScroll();
+  if (push) { var h = tabHist(); h.push(tab); try { sessionStorage.setItem('settings.hist', JSON.stringify(h.slice(-20))); } catch (e) {} }
+  tab = t; try { sessionStorage.setItem('settings.tab', tab); } catch (e) {}
+  var y = 0; try { y = +(sessionStorage.getItem('settings.scroll.' + tab) || 0); } catch (e) {}
+  render(); document.getElementById('body').scrollTop = push ? 0 : y;
+}
+window.onPageBack = function () {
+  if (document.getElementById('srchRes')) { closeSearch(); return true; }
+  var h = tabHist(); if (!h.length) return false;
+  var t = h.pop(); try { sessionStorage.setItem('settings.hist', JSON.stringify(h)); } catch (e) {}
+  setTab(t, false); return true;
+};
+window.addEventListener('pagehide', saveScroll);
+/* ===== البحث في الإعدادات ===== */
+var TAB_FN = { look: 'renderLook', home: 'renderHome', restT: 'renderRest', prayer: 'renderPrayer', apps: 'renderApps', system: 'renderSystem' };
+function nrm(t){ return String(t || '').replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase(); }
+var _srchIdx = null;
+function buildIndex(){
+  var idx = [];
+  window._searching = true;
+  Object.keys(TAB_FN).forEach(function (t) {
+    var box = document.createElement('div'); window._secTarget = box;
+    try { window[TAB_FN[t]](); } catch (e) {}
+    window._secTarget = null;
+    [].forEach.call(box.children, function (sec, i) {
+      var title = (sec.querySelector('.label') || sec.querySelector('.toggle span') || sec.querySelector('span') || {}).textContent || '';
+      var lines = []; [].forEach.call(sec.querySelectorAll('.label,.note,.toggle span,.opt,.line span'), function (e) { var x = e.textContent.trim(); if (x && lines.indexOf(x) < 0) lines.push(x); });
+      idx.push({ tab: t, i: i, title: title.trim(), lines: lines });
+    });
+  });
+  return idx;
+}
+function openSearch(){
+  if (document.getElementById('srchRes')) { closeSearch(); return; }
+  saveScroll();
+  _srchIdx = buildIndex();
+  var body = document.getElementById('body'); body.innerHTML = '';
+  var w = el('div', 'glass section'); w.id = 'srchRes';
+  var inp = el('input', 'srch'); inp.placeholder = 'ابحث: ساعة، صوت، خط، ثيم، تنبيه، ذاكرة…';
+  var res = el('div', 'sres');
+  w.appendChild(inp); w.appendChild(res); body.appendChild(w);
+  inp.oninput = function () {
+    var q = nrm(inp.value.trim()); res.innerHTML = '';
+    if (q.length < 2) { res.appendChild(el('span', 'note', 'اكتب كلمتين على الأقل')); return; }
+    var n = 0;
+    _srchIdx.forEach(function (it) {
+      var hit = it.lines.filter(function (l) { return nrm(l).indexOf(q) >= 0; })[0] || (nrm(it.title).indexOf(q) >= 0 ? it.title : null);
+      if (!hit || n >= 30) return; n++;
+      var tabName = (TABS.filter(function (x) { return x[0] === it.tab; })[0] || [])[1];
+      var b = el('button'); b.appendChild(el('b', '', (it.title || hit).slice(0, 70))); b.appendChild(el('span', '', tabName + (hit !== it.title ? ' ▸ ' + hit.slice(0, 90) : '')));
+      b.onclick = function () { closeSearch(true); setTab(it.tab, true); var sec = document.getElementById('body').children[it.i]; if (sec) { sec.scrollIntoView({ block: 'start' }); sec.classList.add('flash'); } };
+      res.appendChild(b);
+    });
+    if (!n) res.appendChild(el('span', 'note', 'لا توجد نتيجة'));
+  };
+  setTimeout(function () { inp.focus(); }, 50);
+}
+function closeSearch(noRender){ window._searching = false; _srchIdx = null; if (!noRender) { render(); try { document.getElementById('body').scrollTop = +(sessionStorage.getItem('settings.scroll.' + tab) || 0); } catch (e) {} } }
+/* فتح الإعدادات من جديد (ليس رجوعاً من صفحة فرعية) يبدأ سجل تبويبات جديداً */
+(function () { var t = ''; try { var n = performance.getEntriesByType('navigation')[0]; t = n ? n.type : ''; } catch (e) {}
+  if (t !== 'back_forward' && t !== 'reload' && (!IN_FRAME || _frameStack().length <= 1)) { try { sessionStorage.removeItem('settings.hist'); } catch (e) {} } })();
 function render(){
+  if (window._searching) return;
   var t = document.getElementById('tabs'); t.innerHTML = '';
   TABS.forEach(function (x) {
     var b = el('button', 'tab' + (tab === x[0] ? ' on' : ''), x[1]);
-    b.onclick = function () { tab = x[0]; try { sessionStorage.setItem('settings.tab', tab); } catch (e) {} document.getElementById('body').scrollTop = 0; render(); };
+    b.onclick = function () { if (tab === x[0]) return; setTab(x[0], true); };
     t.appendChild(b);
   });
   var body = document.getElementById('body'), y = body.scrollTop;
@@ -817,7 +928,7 @@ document.getElementById('logoFile').onchange = function (e) {
   });
 };
 window.onPageResume = function () { _imgs = null; _ufonts = null; render(); };
-requirePin(render);
+requirePin(function () { render(); try { document.getElementById('body').scrollTop = +(sessionStorage.getItem('settings.scroll.' + tab) || 0); } catch (e) {} });
 fitStage();
 </script>
 </body>

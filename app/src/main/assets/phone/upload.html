@@ -141,7 +141,10 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <div class="box">النسخة الاحتياطية تحفظ: الإعدادات، الصيانة، سجل الرحلات، الصور، وصوت التنبيه. احفظها في جوالك واستعدها بعد ضبط المصنع أو عند تغيير الشاشة.</div>
   <a class="send" id="bakDl" download>تحميل النسخة الاحتياطية</a>
   <div style="height:16px"></div>
-  <label class="pick">استعادة من ملف نسخة احتياطية<input id="bakFile" type="file" accept=".json,application/json" hidden></label>
+  <div class="box" style="margin-top:4px">للنقل لشاشة أخرى: «الواجهة والمظهر فقط» ينقل الثيم والتصميم والبطاقات والقائمة والخطوط، ويُبقي ملاحظات وتذكيرات ومصاريف ومدينة الشاشة الأخرى كما هي.</div>
+  <label class="pick">استعادة الواجهة والمظهر فقط<input id="bakFileUi" type="file" accept=".json,application/json" hidden></label>
+  <div style="height:10px"></div>
+  <label class="pick">استعادة كل شيء<input id="bakFile" type="file" accept=".json,application/json" hidden></label>
   <div class="prog" id="bakProg"><div></div></div>
   <div class="msg" id="bakMsg"></div>
 </section>
@@ -279,6 +282,10 @@ document.getElementById('sndFile').onchange = function (e) {
 document.getElementById('fontFile').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;
   sendFile('/font?t=' + token + '&name=' + encodeURIComponent(f.name), f, 'fontProg', 'fontMsg', 'وصل الخط ✓ اختره من الإعدادات ▸ المظهر ▸ الخطوط.');
+};
+document.getElementById('bakFileUi').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  sendFile('/restore?scope=ui&t=' + token, f, 'bakProg', 'bakMsg', 'نُقلت الواجهة والمظهر ✓ تحقق من الشاشة.');
 };
 document.getElementById('bakFile').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;

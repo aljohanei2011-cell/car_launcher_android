@@ -30,11 +30,39 @@ if (IN_FRAME) (function () {
 /* رسائل من الرئيسية للصفحة المفتوحة فوقها: الرجوع، والعودة للتطبيق */
 window.addEventListener('message', function (e) {
   if (!IN_FRAME || !e.data) return;
-  if (e.data.rafiq === 'back') {
-    var st = _frameStack(); st.pop(); window.name = 'rafiq:' + JSON.stringify(st);
-    if (st.length) history.back(); else goHome();
-  } else if (e.data.rafiq === 'resume' && window.onResumeNative) window.onResumeNative();
+  if (e.data.rafiq === 'back') goBack(); else if (e.data.rafiq === 'resume' && window.onResumeNative) window.onResumeNative();
 });
+/* الرجوع خطوة واحدة (زر الرجوع في الصفحة وزر الجهاز بنفس السلوك).
+   الصفحة تقدر تعالجه بنفسها (مثل تبويبات الإعدادات) عبر window.onPageBack */
+function goBack(fallback){
+  try { if (window.onPageBack && window.onPageBack()) return; } catch (e) {}
+  if (IN_FRAME) {
+    var st = _frameStack();
+    if (st.length > 1) { st.pop(); window.name = 'rafiq:' + JSON.stringify(st); history.back(); return; }
+    if (fallback && !/index\.html/.test(fallback)) { location.href = fallback; return; }
+    goHome(); return;
+  }
+  if (history.length > 1 && document.referrer) { history.back(); return; }
+  location.href = fallback || 'index.html';
+}
+/* زر الرجوع يظهر تلقائياً بجانب زر الرئيسية في كل الصفحات، وأزرار «رجوع» القديمة تصير رجوعاً حقيقياً */
+var BACK_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+function addBackButtons(){
+  var page = location.pathname.split('/').pop();
+  if (page === 'index.html' || page === 'rest.html' || page === '') return;
+  [].forEach.call(document.querySelectorAll('a.icon-btn[aria-label="رجوع"]'), function (a) {
+    var fb = a.getAttribute('href'); a.classList.add('backBtn');
+    a.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); goBack(fb); }, true);
+  });
+  if (document.querySelector('.backBtn')) return;
+  var home = document.querySelector('a.icon-btn[href="index.html"]');
+  if (!home) return;
+  var b = document.createElement('button'); b.className = 'icon-btn backBtn'; b.setAttribute('aria-label', 'رجوع'); b.innerHTML = BACK_SVG;
+  b.style.width = home.style.width || ''; b.style.height = home.style.height || '';
+  b.onclick = function () { goBack(); };
+  home.parentNode.insertBefore(b, home);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBackButtons); else setTimeout(addBackButtons, 0);
 /* أي رابط للرئيسية من داخل نافذة الاستراحة يغلقها بدل تحميل رئيسية ثانية */
 document.addEventListener('click', function (e) {
   if (!IN_FRAME) return;
@@ -50,7 +78,7 @@ window.addEventListener('error', function (e) {
 });
 var _natCache = {}, NAT_READS = { memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
 /* قراءات سريعة التغير: لا تُحفظ ولا تلغي المحفوظ */
-var NAT_FRESH = { voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1 };
+var NAT_FRESH = { voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
   if (!NAT_READS[fn] && !NAT_FRESH[fn]) _natCache = {}; // أي أمر (تشغيل، إيقاف...) يلغي القراءات المحفوظة
@@ -101,6 +129,7 @@ var DEFAULT_PREFS = {
   clockStyle: 'digital', textScale: 1,
   driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true,
   khatma: null, quranApp: '', kidsApp: '', fridayOn: true, fridayMin: 45, azkarAuto: true, occasions: true, arrive: { on: false, phone: '', name: '', text: 'وصلت الحمد لله ✓', place: 'البيت', lat: null, lng: null }, obdAuto: false,
+  miqat: true, guest: false, fuelPrice: 2.33, kmpl: null,
   voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
   perf: 'auto', perfDetected: null, watchdog: true
 };
@@ -614,7 +643,7 @@ function requirePin(onOk){
   if (!p.pin || pinUnlocked()) { onOk(); return; }
   var st = document.getElementById('stage') || document.body;
   var ov = document.createElement('div');
-  ov.style.cssText = 'position:absolute;inset:0;z-index:50;background:rgba(5,10,25,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff';
+  ov.style.cssText = 'position:absolute;inset:0;z-index:95;background:rgba(5,10,25,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff';
   ov.innerHTML = '<div style="font-size:26px;font-weight:700">أدخل الرقم السري</div><div id="pinDots" style="font-size:40px;letter-spacing:14px;height:48px;direction:ltr">&nbsp;</div><div id="pinPad" style="display:grid;grid-template-columns:repeat(3,96px);gap:12px;direction:ltr"></div><a href="index.html" style="font-size:18px;color:#9FB0CC;margin-top:6px">رجوع للرئيسية</a>';
   st.appendChild(ov);
   var val = '', pad = ov.querySelector('#pinPad'), dots = ov.querySelector('#pinDots');
@@ -640,11 +669,24 @@ function webBackupJSON(){
   try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k.indexOf('carlauncher.') === 0) o[k] = localStorage.getItem(k); } } catch (e) {}
   return JSON.stringify(o);
 }
+/* ما يُنقل بين الشاشات في «الواجهة والمظهر فقط» */
+var UI_TRANSFER = ['layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'skin', 'theme', 'accent', 'restBg', 'autoNight', 'nightTheme', 'font', 'clockFont', 'duaFont',
+  'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace', 'clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt',
+  'weatherFx', 'voiceName', 'voiceReply', 'customDuas', 'hiddenDuas', 'occasions'];
 function applyPendingRestore(){
   var r = nat('pendingRestore');
   if (!r) return false;
   try {
     var o = JSON.parse(r);
+    if (o.__scope === 'ui') {
+      // نقل الواجهة والمظهر فقط من شاشة أخرى: نُبقي بيانات هذه الشاشة (ملاحظات، مصاريف، صيانة، مدينة...)
+      var cur = loadPrefs(), src = {}; try { src = JSON.parse(o[PREFS_KEY] || '{}'); } catch (e) {}
+      UI_TRANSFER.forEach(function (k) { if (src[k] !== undefined) cur[k] = src[k]; });
+      localStorage.setItem(PREFS_KEY, JSON.stringify(cur));
+      ['carlauncher.profiles', 'carlauncher.logo'].forEach(function (k) { if (o[k] !== undefined) localStorage.setItem(k, o[k]); });
+      _imgs = null; _prefsCache = null;
+      return true;
+    }
     Object.keys(localStorage).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.removeItem(k); });
     Object.keys(o).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.setItem(k, o[k]); });
     _imgs = null;
@@ -986,7 +1028,7 @@ var CARD_PARTS = {
   media: [['art', 'الغلاف'], ['prog', 'شريط التقدم'], ['app', 'اسم التطبيق']],
   weather: [['range', 'العظمى والصغرى'], ['ago', 'وقت التحديث']],
   speed: [['ticks', 'الأرقام حول العداد']],
-  trip: [['time', 'مدة القيادة']],
+  trip: [['time', 'مدة القيادة'], ['cost', 'تكلفة الوقود']],
   qibla: [['txt', 'الوصف']]
 };
 var CLOCK_STYLES = [['digital', 'رقمية'], ['thin', 'رقمية نحيفة'], ['analog', 'بعقارب'], ['ring', 'حلقة الصلاة'], ['flip', 'أرقام تتقلب'], ['words', 'بالحروف'], ['dual', 'مع الصلاة القادمة']];
@@ -1027,6 +1069,59 @@ function applyProfile(id){
   p.activeProfile = id; savePrefs(p); _prefsCache = null;
   return pr;
 }
+
+
+/* ===== تكلفة الوقود ===== */
+/* استهلاك السيارة كم/لتر: من سجل الوقود (تعبئتان كاملتان على الأقل)، وإلا الرقم المدخل يدوياً */
+function kmPerLiter(){
+  var items = lsGet('carlauncher.fuel', []).slice().sort(function (a, b) { return a.odo - b.odo; });
+  var last = null, lit = 0, km = 0, L = 0;
+  items.forEach(function (it) { if (last) lit += it.liters; if (it.full) { if (last && it.odo > last.odo && lit > 0) { km += it.odo - last.odo; L += lit; } last = it; lit = 0; } });
+  if (L > 0 && km / L > 3 && km / L < 40) return { v: km / L, src: 'log' };
+  var p = loadPrefsCached();
+  return { v: +p.kmpl || 12, src: p.kmpl ? 'manual' : 'default' };
+}
+function fuelCost(km){ var p = loadPrefsCached(), k = kmPerLiter().v; return km / k * (+p.fuelPrice || 2.33); }
+function sar(v){ return (v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString('en')) + ' ر.س'; }
+
+/* ===== وضع الضيف: يخفي البيانات الخاصة ويقفل الإعدادات ===== */
+var GUEST_CARDS = { notes: 1, reminders: 1, expenses: 1, wallet: 1 };
+var GUEST_PAGES = ['settings.html', 'notes.html', 'reminders.html', 'expenses.html', 'log.html', 'parking.html', 'upload.html', 'maintenance.html', 'features.html', 'check.html', 'wizard.html', 'apps.html'];
+function guestOn(){ return !!loadPrefsCached().guest; }
+function setGuest(on){
+  var p = loadPrefs(); p.guest = !!on; savePrefs(p); _prefsCache = null;
+  if (on) { try { sessionStorage.removeItem('carlauncher.unlocked'); } catch (e) {} }
+}
+function exitGuest(cb){ requirePin(function () { setGuest(false); if (cb) cb(); }); }
+(function () {
+  var page = location.pathname.split('/').pop();
+  if (GUEST_PAGES.indexOf(page) < 0) return;
+  function lock(){
+    if (!guestOn()) return;
+    var st = document.getElementById('stage') || document.body;
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:absolute;inset:0;z-index:60;background:rgba(5,10,25,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#fff;text-align:center';
+    ov.innerHTML = '<div style="font-size:34px;font-weight:700">وضع الضيف مفعّل</div><div style="font-size:20px;color:#9FB0CC">هذه الصفحة مخفية حتى يُنهى وضع الضيف.</div>';
+    var r = document.createElement('div'); r.style.cssText = 'display:flex;gap:14px';
+    var b1 = document.createElement('button'); b1.textContent = 'إنهاء وضع الضيف'; b1.style.cssText = 'height:60px;padding:0 26px;border-radius:18px;border:1px solid #6FA8FF;background:#1F5FD1;color:#fff;font:inherit;font-size:20px';
+    b1.onclick = function () { exitGuest(function () { ov.remove(); location.reload(); }); };
+    var b2 = document.createElement('button'); b2.textContent = 'الرئيسية'; b2.style.cssText = 'height:60px;padding:0 26px;border-radius:18px;border:1px solid #2b4a80;background:#13254a;color:#fff;font:inherit;font-size:20px';
+    b2.onclick = function () { goHome(); };
+    r.appendChild(b1); r.appendChild(b2); ov.appendChild(r); st.appendChild(ov);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lock); else setTimeout(lock, 0);
+})();
+
+/* ===== مواقيت الإحرام (إحداثيات تقريبية لمساجد المواقيت) ===== */
+var MIQATS = [
+  { n: 'ذو الحليفة (أبيار علي)', lat: 24.4136, lng: 39.5431 },
+  { n: 'الجحفة', lat: 22.7140, lng: 39.1450 },
+  { n: 'قرن المنازل (السيل الكبير)', lat: 21.6305, lng: 40.4265 },
+  { n: 'وادي مَحرم', lat: 21.3750, lng: 40.2850 },
+  { n: 'يلملم (السعدية)', lat: 20.5290, lng: 39.8740 },
+  { n: 'ذات عرق', lat: 21.9300, lng: 40.4300 }
+];
+var MAKKAH = { lat: 21.4225, lng: 39.8262 };
 
 /* ===== الذاكرة ===== */
 function gb(b){ return (b / 1073741824).toFixed(1); }

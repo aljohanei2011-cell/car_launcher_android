@@ -54,12 +54,12 @@ var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 [['w', weekStart.getTime()], ['m', monthStart.getTime()], ['a', 0]].forEach(function (x) {
   var t = total(x[1]);
   document.getElementById(x[0]).textContent = Math.round(t.km).toLocaleString('en') + ' كم';
-  document.getElementById(x[0] + 'n').textContent = t.n + ' رحلة · قيادة ' + dur(t.sec);
+  document.getElementById(x[0] + 'n').textContent = t.n + ' رحلة · قيادة ' + dur(t.sec) + (t.km > 1 ? ' · وقود ≈ ' + sar(fuelCost(t.km)) : '');
 });
 document.getElementById('qrBtn').onclick = function () {
   var w = total(weekStart.getTime());
   var txt = 'رفيق الطريق — ملخص الأسبوع\nالمسافة: ' + Math.round(w.km) + ' كم\nالرحلات: ' + w.n + '\nوقت القيادة: ' + dur(w.sec) + '\nأعلى سرعة: ' + w.max + ' كم/س' +
-    (w.sec > 60 ? '\nمتوسط السرعة: ' + Math.round(w.km / (w.sec / 3600)) + ' كم/س' : '');
+    (w.sec > 60 ? '\nمتوسط السرعة: ' + Math.round(w.km / (w.sec / 3600)) + ' كم/س' : '') + (w.km > 1 ? '\nتكلفة الوقود التقريبية: ' + sar(fuelCost(w.km)) : '');
   var q = qrcode(0, 'M'); q.addData(unescape(encodeURIComponent(txt))); q.make();
   var ov = document.createElement('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:60;background:rgba(5,10,25,.92);display:flex;align-items:center;justify-content:center;gap:40px';
   ov.innerHTML = '<div style="width:360px;height:360px;background:#fff;border-radius:24px;display:flex;align-items:center;justify-content:center">' + q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }).replace('<svg ', '<svg style="width:330px;height:330px" ') + '</div>' +

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>المزايا</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow-y:auto;flex:1;min-height:0;scrollbar-width:none;align-content:start}
+.grid::-webkit-scrollbar{display:none}
+.grp{grid-column:1/-1;font-size:20px;font-weight:700;color:var(--accent,#5AB0FF);margin-top:6px}
+.f{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.f .tx{flex:1;min-width:0}.f b{display:block;font-size:18px}.f span{display:block;font-size:14px;color:#9FB0CC}
+.f .w{font-size:12px;padding:2px 8px;border-radius:8px;background:rgba(242,200,121,.15);color:#F2C879;display:inline-block;margin-right:6px}
+.sw{width:64px;height:36px;border-radius:18px;background:#2a3a58;border:none;position:relative;flex:none}
+.sw.on{background:#2F7BFF}
+.sw::after{content:'';position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:14px;background:#fff;transition:left .15s}
+.sw.on::after{left:32px}
+</style>
+</head>
+<body data-nodrive="1">
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">المزايا</span>
+      <span class="pnote" style="margin-right:12px">أطفئ ما لا تحتاجه لتصير الشاشة أخف. الإعدادات التفصيلية لكل ميزة في صفحات الإعدادات.</span>
+      <div class="prow" style="margin-right:auto"><button class="pbtn g" id="lite">وضع خفيف</button><button class="pbtn g" id="def">الافتراضي</button></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function getP(path){ var o = prefs, k = path.split('.'); for (var i = 0; i < k.length; i++) { if (o == null) return undefined; o = o[k[i]]; } return o; }
+function setP(path, v){
+  var k = path.split('.');
+  if (k.length === 1) prefs[k[0]] = v;
+  else { var o = Object.assign({}, DEFAULT_PREFS[k[0]] || {}, prefs[k[0]] || {}); o[k[1]] = v; prefs[k[0]] = o; }
+}
+/* [المسار، الاسم، الوصف، يستهلك؟] */
+var F = [
+  ['g', 'القيادة'],
+  ['safeMode', 'قفل الصفحات أثناء القيادة', 'يمنع الإعدادات والتحرير والسيارة تمشي'],
+  ['driveSimple.on', 'شاشة مبسطة عند السرعة', 'سرعة كبيرة وأزرار قليلة'],
+  ['zoneSpeed.on', 'تنبيه سرعة المدينة والطريق', ''],
+  ['drowsy', 'تنبيه النعاس ليلاً', 'بعد ساعتين قيادة متواصلة'],
+  ['qasrNote', 'ملاحظة القصر والجمع في السفر', ''],
+  ['miqat', 'تنبيه المواقيت للحج والعمرة', 'عند الاقتراب من الميقات'],
+  ['arrive.on', 'رسالة الوصول بواتساب', 'تحتاج حفظ المكان والرقم'],
+  ['g', 'الاتصال والإشعارات'],
+  ['callCard', 'بطاقة المكالمة الواردة', 'تحتاج الوصول إلى الإشعارات'],
+  ['msgNotify', 'اسم مرسل الرسالة', ''],
+  ['voice', 'الأوامر الصوتية', 'على هذه الشاشة فقط', 1],
+  ['obdAuto', 'اتصال OBD تلقائياً', 'يحتاج قطعة ELM327'],
+  ['g', 'الطقس والمظهر'],
+  ['weatherOn', 'الطقس', 'يحتاج إنترنت'],
+  ['weatherFx', 'تأثيرات الطقس على الخلفية', 'مطر وسحب وغبار', 1],
+  ['weatherAlerts', 'تنبيهات الطقس', 'غبار وأمطار وحرارة'],
+  ['occasions', 'زينة المناسبات', ''],
+  ['hideEmpty', 'إخفاء بطاقة الموسيقى الفارغة', ''],
+  ['autoProfile.on', 'تبديل التخطيط تلقائياً (سفر/مدينة)', 'يحتاج تخطيطات محفوظة'],
+  ['g', 'العبادة'],
+  ['ramadanOn', 'وضع رمضان', ''],
+  ['fridayOn', 'تذكير صلاة الجمعة', ''],
+  ['azkarAuto', 'أذكار الصباح والمساء في الشريط', ''],
+  ['reminders', 'تذكيرات التقويم الهجري', 'الجمعة والصيام والمناسبات'],
+  ['adhan', 'تنبيه الصلاة', 'يعمل في الخلفية'],
+  ['g', 'الثبات'],
+  ['watchdog', 'إعادة فتح الواجهة إن أُغلقت', ''],
+  ['ramOnRest', 'تحرير الذاكرة عند الاستراحة', ''],
+  ['ramOnBoot', 'تحرير الذاكرة عند التشغيل', '']
+];
+function isOn(k){ if (k === 'voice') return !!nat('voiceEnabled'); var v = getP(k); if (v === undefined) { var d = k.split('.'); v = d.length > 1 ? (DEFAULT_PREFS[d[0]] || {})[d[1]] : DEFAULT_PREFS[k]; } return v !== false && !!v; }
+function render(){
+  var g = document.getElementById('grid'); g.innerHTML = '';
+  F.forEach(function (f) {
+    if (f[0] === 'g') { var h = document.createElement('div'); h.className = 'grp'; h.textContent = f[1]; g.appendChild(h); return; }
+    var on = isOn(f[0]);
+    var d = document.createElement('div'); d.className = 'f';
+    d.innerHTML = '<div class="tx"><b>' + f[1] + (f[3] ? '<span class="w">يستهلك أكثر</span>' : '') + '</b><span>' + (f[2] || '') + '</span></div>';
+    var b = document.createElement('button'); b.className = 'sw' + (on ? ' on' : ''); b.setAttribute('aria-label', f[1]);
+    b.onclick = function () {
+      if (f[0] === 'voice') { if (!on) { location.href = 'settings.html'; try { sessionStorage.setItem('settings.tab', 'system'); } catch (e) {} return; } nat('setVoiceEnabled', false); render(); return; }
+      setP(f[0], !on); savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); render();
+    };
+    d.appendChild(b); g.appendChild(d);
+  });
+}
+document.getElementById('lite').onclick = function () {
+  ['weatherFx', 'occasions', 'driveSimple.on', 'zoneSpeed.on', 'obdAuto', 'autoProfile.on', 'ramOnBoot'].forEach(function (k) { setP(k, false); });
+  prefs.voiceWake = false; prefs.perf = 'on'; prefs.ramOnRest = true; nat('setVoiceEnabled', false);
+  savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); render(); toast('فُعّل الوضع الخفيف: أُطفئت المزايا الثقيلة ووضع الأداء مفعّل');
+};
+document.getElementById('def').onclick = function () {
+  F.forEach(function (f) { if (f[0] === 'g' || f[0] === 'voice') return; var d = f[0].split('.'); setP(f[0], d.length > 1 ? (DEFAULT_PREFS[d[0]] || {})[d[1]] : DEFAULT_PREFS[f[0]]); });
+  prefs.perf = 'auto'; savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); render(); toast('أُعيدت المزايا لوضعها الافتراضي');
+};
+window.onPageResume = render;
+render();
+fitStage();
+</script>
+</body>
+</html>

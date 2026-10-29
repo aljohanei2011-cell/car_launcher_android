@@ -190,7 +190,7 @@ function renderDriveSimple(t){
 /* ---------- المكالمات والرسائل ---------- */
 var _msgSeen = +(lsGet('carlauncher.msgSeen', 0)) || Date.now();
 function notifTick(){
-  if (!HAS_NATIVE) return;
+  if (!HAS_NATIVE || (prefs.callCard === false && prefs.msgNotify === false)) return;
   var n = natJSON('notifs') || {};
   var box = document.getElementById('callOv');
   if (n.call && prefs.callCard !== false) {
@@ -202,12 +202,12 @@ function notifTick(){
         var red = /رفض|decline|إنهاء|end|hang/i.test(a);
         return '<button class="' + (red ? 'cr' : 'cg') + '" onclick="nat(\'callAction\',' + i + ')">' + esc(a || (i ? 'رفض' : 'رد')) + '</button>';
       }).join('');
-      box.innerHTML = '<div style="font-size:18px;color:#9FD0FF">مكالمة · ' + esc(n.call.app) + '</div><div style="font-size:34px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(n.call.name || 'رقم غير معروف') + '</div><div class="cbtns">' + acts + '</div>';
+      box.innerHTML = '<div style="font-size:18px;color:#9FD0FF">مكالمة · ' + esc(n.call.app) + '</div><div style="font-size:34px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (prefs.guest ? 'مكالمة واردة' : esc(n.call.name || 'رقم غير معروف')) + '</div><div class="cbtns">' + acts + '</div>';
     }
   } else if (box) box.remove();
   if (n.msg && n.msg.at > _msgSeen) {
     _msgSeen = n.msg.at; lsSet('carlauncher.msgSeen', _msgSeen);
-    if (prefs.msgNotify !== false) toast('رسالة من ' + n.msg.from + ' (' + n.msg.app + ')', null, null, 6000);
+    if (prefs.msgNotify !== false && !prefs.guest) toast('رسالة من ' + n.msg.from + ' (' + n.msg.app + ')', null, null, 6000);
   }
 }
 
@@ -232,6 +232,7 @@ function openQuickPanel(){
     '<button class="qpB" onclick="nat(\'freeRam\');toast(\'جارٍ تحرير الذاكرة…\')">تحرير الذاكرة</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openNearbySheet()">أقرب مكان</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openPage(\'settings.html\')">الإعدادات</button>' +
+    '<button class="qpB' + (prefs.guest ? ' on' : '') + '" onclick="document.getElementById(\'qp\').remove();toggleGuest()">وضع الضيف</button>' +
     '</div><div class="note" style="text-align:center;font-size:15px;opacity:.7">اسحب للأعلى أو اضغط خارج اللوحة للإغلاق</div></div>';
   o.addEventListener('click', function (e) { if (e.target === o) o.remove(); });
   var y0 = null;
@@ -410,4 +411,57 @@ setTimeout(function () { if (HAS_NATIVE && prefs.obdAuto) { var o = natJSON('obd
   safe('occ', renderOccasion);
   setInterval(function () { if (!document.hidden) { safe('fri', fridayTick); safe('arrive', arriveTick); safe('obd', obdTick); } }, 5000);
   setInterval(function () { safe('occ', renderOccasion); }, 30 * 60000);
+})();
+
+
+/* ---------- وضع الضيف ---------- */
+function toggleGuest(){
+  if (prefs.guest) exitGuest(function () { prefs = loadPrefs(); renderGuestChip(); later(); toast('انتهى وضع الضيف'); });
+  else { setGuest(true); prefs = loadPrefs(); renderGuestChip(); later(); toast('وضع الضيف: أُخفيت الملاحظات والمصاريف والرسائل، وقُفلت الإعدادات' + (prefs.pin ? '' : ' (ضع رقماً سرياً من الإعدادات ليكون القفل أقوى)')); }
+}
+function renderGuestChip(){
+  var r = document.querySelector('.top .right'); if (!r) return;
+  var c = document.getElementById('guestChip');
+  if (!prefs.guest) { if (c) c.remove(); return; }
+  if (!c) { c = document.createElement('button'); c.id = 'guestChip'; c.onclick = toggleGuest; r.appendChild(c); }
+  c.textContent = 'وضع الضيف';
+}
+DOCK_ITEMS.guest = { label: 'وضع الضيف', go: toggleGuest };
+IC.guest = '<svg viewBox="0 0 24 24" fill="none" stroke="#C9B6FF" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0M17 3l4 4M21 3l-4 4"/></svg>';
+
+/* ---------- تنبيه المواقيت للحج والعمرة ---------- */
+var MIQ_KEY = 'carlauncher.miqat', _mqPrev = null;
+function miqatTick(){
+  if (prefs.miqat === false) return;
+  var t = natJSON('trip'); if (!t || !t.gps || typeof t.lat !== 'number' || (t.speed || 0) < 20) return;
+  var dM = distKm(t.lat, t.lng, MAKKAH.lat, MAKKAH.lng);
+  var approaching = _mqPrev !== null && dM < _mqPrev - 0.05; _mqPrev = dM;
+  if (!approaching || dM < 40) return;
+  var seen = lsGet(MIQ_KEY, {});
+  MIQATS.forEach(function (m) {
+    var d = distKm(t.lat, t.lng, m.lat, m.lng), mM = distKm(m.lat, m.lng, MAKKAH.lat, MAKKAH.lng);
+    // قبل الميقات (لم نتجاوزه بعد) وعلى بعد 25 كم أو أقل
+    if (d <= 25 && dM > mM - 3 && Date.now() - (seen[m.n] || 0) > 12 * 3600000) {
+      seen[m.n] = Date.now(); lsSet(MIQ_KEY, seen); beep(2);
+      showMiqat(m, Math.round(d));
+    }
+  });
+}
+function showMiqat(m, d){
+  var o = document.createElement('div'); o.id = 'miqOv'; o.className = 'sheetBg';
+  o.innerHTML = '<div class="sheet glass" style="text-align:center;gap:14px"><div style="font-size:22px;color:#F2C879">تقترب من الميقات</div><div style="font-size:38px;font-weight:700">' + m.n + '</div>' +
+    '<div style="font-size:21px;color:#C3D1E8">على بعد ' + d + ' كم تقريباً. لمن أراد الحج أو العمرة: الإحرام من الميقات، ثم التلبية.</div>' +
+    '<div class="font-dua" style="font-size:26px;line-height:1.8;color:#F5D58A">لبيك اللهم لبيك، لبيك لا شريك لك لبيك، إن الحمد والنعمة لك والملك، لا شريك لك</div>' +
+    '<div style="font-size:15px;color:#9FB0CC">الموقع تقريبي، تأكد من لوحات الطريق.</div>' +
+    '<div class="nbg big" style="grid-template-columns:repeat(2,1fr)"><button onclick="document.getElementById(\'miqOv\').remove();nearby(\'mosque\')">' + nbIcon('mosque', '#5AD1A0') + '<span>مسجد الميقات</span></button><button onclick="document.getElementById(\'miqOv\').remove()"><span style="font-size:22px">تم</span></button></div></div>';
+  document.getElementById('stage').appendChild(o);
+  setTimeout(function () { if (o.parentNode) o.remove(); }, 90000);
+}
+(function () {
+  var css = document.createElement('style');
+  css.textContent = '#guestChip{height:40px;padding:0 16px;border-radius:20px;border:1.5px solid #C9B6FF;background:rgba(80,60,140,.45);color:#fff;font:inherit;font-size:17px;white-space:nowrap}';
+  document.head.appendChild(css);
+  renderGuestChip();
+  var _opr = window.onPageResume; window.onPageResume = function () { if (_opr) _opr.apply(this, arguments); safe('guest', renderGuestChip); };
+  setInterval(function () { if (!document.hidden) safe('miqat', miqatTick); }, 10000);
 })();

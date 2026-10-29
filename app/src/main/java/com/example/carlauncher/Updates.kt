@@ -170,23 +170,51 @@ object Updater {
         else -> "خطأ من GitHub ($code)"
     }
 
-    fun check(c: Context) {
+    /** قناة التحديث لهذه الشاشة: beta (كل إصدار فوراً) أو stable (الإصدار بعد مرور يومين على نشره دون سحبه) */
+    fun channel(c: Context): String = sp(c).getString("channel", "stable") ?: "stable"
+    fun setChannel(c: Context, ch: String) { sp(c).edit().putString("channel", if (ch == "beta") "beta" else "stable").apply() }
+    private const val STABLE_DELAY_MS = 48L * 3600_000L
+
+    private fun parseTime(s: String): Long = try {
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.parse(s)?.time ?: 0L
+    } catch (e: Exception) { 0L }
+
+    fun check(c: Context, forceBeta: Boolean = false) {
         set("phase" to "checking", "error" to null)
         thread {
             try {
-                val conn = open("https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases/latest", token(c), "application/vnd.github+json")
+                val conn = open("https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases?per_page=15", token(c), "application/vnd.github+json")
                 val code = conn.responseCode
                 if (code != 200) { set("phase" to "error", "error" to httpError(code)); return@thread }
-                val j = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                val latest = j.optString("tag_name").removePrefix("v").toIntOrNull() ?: 0
+                val arr = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
+                val beta = forceBeta || channel(c) == "beta"
+                val now = System.currentTimeMillis()
+                var best: JSONObject? = null; var bestN = 0
+                var newest: JSONObject? = null; var newestN = 0
+                for (i in 0 until arr.length()) {
+                    val r = arr.getJSONObject(i)
+                    if (r.optBoolean("draft")) continue
+                    val n = r.optString("tag_name").removePrefix("v").toIntOrNull() ?: continue
+                    val hasApk = (0 until (r.optJSONArray("assets")?.length() ?: 0)).any { r.getJSONArray("assets").getJSONObject(it).optString("name").endsWith(".apk") }
+                    if (!hasApk) continue
+                    if (n > newestN) { newestN = n; newest = r }
+                    val ok = beta || (!r.optBoolean("prerelease") && now - parseTime(r.optString("published_at")) >= STABLE_DELAY_MS)
+                    if (ok && n > bestN) { bestN = n; best = r }
+                }
+                // إصدار أحدث لم يصل للقناة الثابتة بعد
+                val pendingHrs = if (!beta && newest != null && newestN > maxOf(bestN, BuildConfig.VERSION_CODE))
+                    Math.max(1L, (STABLE_DELAY_MS - (now - parseTime(newest.optString("published_at")))) / 3600_000L) else 0L
+                set("channel" to (if (beta) "beta" else "stable"), "newest" to newestN, "pendingHrs" to pendingHrs)
+                val j = best
+                if (j == null) { set("latest" to 0, "current" to BuildConfig.VERSION_CODE, "phase" to "none"); return@thread }
                 val assets = j.optJSONArray("assets") ?: JSONArray()
                 var asset: JSONObject? = null
                 for (i in 0 until assets.length()) if (assets.getJSONObject(i).optString("name").endsWith(".apk")) asset = assets.getJSONObject(i)
                 if (asset == null) { set("phase" to "error", "error" to "الإصدار لا يحتوي على ملف APK."); return@thread }
                 assetId = asset.getLong("id")
-                set("latest" to latest, "current" to BuildConfig.VERSION_CODE, "notes" to j.optString("body"),
+                set("latest" to bestN, "current" to BuildConfig.VERSION_CODE, "notes" to j.optString("body"),
                     "size" to asset.optLong("size"), "date" to j.optString("published_at"),
-                    "phase" to if (latest > BuildConfig.VERSION_CODE) "available" else "none")
+                    "phase" to if (bestN > BuildConfig.VERSION_CODE) "available" else "none")
             } catch (e: IOException) {
                 set("phase" to "error", "error" to "لا يوجد اتصال بالإنترنت. اربط الشاشة بنقطة اتصال الجوال ثم حاول مرة أخرى.")
             } catch (e: Exception) {
@@ -273,11 +301,12 @@ object Backup {
         true
     } catch (e: Exception) { false }
 
-    fun restore(c: Context, f: File): Boolean = try {
+    /** uiOnly: الواجهة والمظهر فقط (للنقل بين الشاشات) — لا يمس الرحلات والتنبيهات والأصوات */
+    fun restore(c: Context, f: File, uiOnly: Boolean = false): Boolean = try {
         val o = JSONObject(f.readText())
         if (o.optString("app") != "rafiq") throw IllegalArgumentException()
         val sp = o.optJSONObject("prefs") ?: JSONObject()
-        for (name in PREF_FILES) {
+        if (!uiOnly) for (name in PREF_FILES) {
             val m = sp.optJSONObject(name) ?: continue
             val e = c.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear()
             for (k in m.keys()) {
@@ -299,9 +328,13 @@ object Backup {
             }
         }
         writeFiles(o.optJSONArray("images"), Images.dir(c))
-        Sounds.dir(c).listFiles()?.forEach { it.delete() }
-        writeFiles(o.optJSONArray("sounds"), Sounds.dir(c))
-        pending(c).writeText((o.optJSONObject("web") ?: JSONObject()).toString())
+        if (!uiOnly) {
+            Sounds.dir(c).listFiles()?.forEach { it.delete() }
+            writeFiles(o.optJSONArray("sounds"), Sounds.dir(c))
+        }
+        val web = o.optJSONObject("web") ?: JSONObject()
+        if (uiOnly) web.put("__scope", "ui")
+        pending(c).writeText(web.toString())
         true
     } catch (e: Exception) { false }
 

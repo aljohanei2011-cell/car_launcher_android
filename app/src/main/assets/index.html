@@ -144,6 +144,8 @@ body.skin-light .flip .fl{background:rgba(255,255,255,.75)}
 
 <script src="common.js"></script>
 <script>
+/* أول تشغيل على هذه الشاشة: معالج الإعداد */
+var FIRST_RUN = (function () { try { return !localStorage.getItem(PREFS_KEY) && !lsGet('carlauncher.wizardDone', 0); } catch (e) { return false; } })();
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
 
@@ -459,7 +461,8 @@ card('trip', 'الرحلة', function (o) {
   var mins = Math.floor((t.movingSec || 0) / 60);
   return '<a href="trip.html" style="display:contents"><span class="k-lbl">الرحلة</span>' +
     '<div style="direction:ltr;text-align:right"><span class="k-big" style="font-size:3.6em">' + (t.km || 0).toFixed(1) + '</span><span class="k-sub"> كم</span></div>' +
-    (partHidden(o, 'time') ? '<div></div>' : '<div class="k-sub">مدة القيادة ' + Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0') + '</div>') + '</a>';
+    (partHidden(o, 'time') ? '' : '<div class="k-sub">مدة القيادة ' + Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0') + '</div>') +
+    (partHidden(o, 'cost') || !(t.km > 0.5) ? '<div></div>' : '<div class="k-sub">تكلفة الوقود ≈ ' + sar(fuelCost(t.km)) + '</div>') + '</a>';
 });
 card('qibla', 'القبلة', function (o) {
   var t = natJSON('trip');
@@ -625,7 +628,8 @@ function renderCards(){
     if (rid === 'media' && prefs.hideEmpty && mediaEmpty() && CARDS[prefs.emptyAlt]) rid = prefs.emptyAlt;
     if (c.rid !== rid) { c.rid = rid; c.baseFs = 0; }
     _rcEl = c.el;
-    try { h = CARDS[rid].render(c.opt || {}); } catch (e) { h = '<span class="k-lbl">' + CARDS[rid].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
+    if (prefs.guest && GUEST_CARDS[rid]) h = '<span class="k-lbl">' + CARDS[rid].label + '</span><div class="k-center" style="height:auto"><div class="k-sub">مخفية في وضع الضيف</div></div><div></div>';
+    else try { h = CARDS[rid].render(c.opt || {}); } catch (e) { h = '<span class="k-lbl">' + CARDS[rid].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
     if (h !== c.html) { c.el.innerHTML = h; c.html = h; fitCard(c); }
   });
 }
@@ -775,6 +779,7 @@ function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + na
 if ((HAS_NATIVE && nat('voiceEnabled')) || lsGet('carlauncher.voiceTest', false)) { var _vs = document.createElement('script'); _vs.src = 'voice.js'; document.body.appendChild(_vs); }
 </script>
 <script>
+if (FIRST_RUN) setTimeout(function () { openPage('wizard.html'); }, 700);
 safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
 safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
 setInterval(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);

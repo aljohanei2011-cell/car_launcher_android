@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>إعداد رفيق الطريق</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.wz{position:absolute;inset:0;background:linear-gradient(160deg,#071026,#0c1b3a);display:flex;flex-direction:column;padding:30px 50px 26px;box-sizing:border-box;color:#fff;gap:18px}
+.steps{display:flex;gap:10px}
+.steps i{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.15)}
+.steps i.on{background:#2F7BFF}
+h1{font-size:34px;margin:0}
+.sub2{font-size:19px;color:#9FB0CC;margin-top:-8px}
+.content{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
+.content::-webkit-scrollbar{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chips button{height:54px;padding:0 20px;border-radius:16px;border:1px solid #23406f;background:#13254a;color:#fff;font:inherit;font-size:19px}
+.chips button.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.tiles button{height:150px;border-radius:20px;border:3px solid transparent;background-size:cover;background-position:center;color:#fff;font:inherit;font-size:22px;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.8);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.tiles button.on{border-color:#2F7BFF;box-shadow:0 0 0 4px rgba(47,123,255,.35)}
+.lays button{background:#13254a;border:3px solid #23406f;height:130px;flex-direction:column;justify-content:center;gap:6px;text-shadow:none}
+.lays button small{font-size:15px;font-weight:400;color:#9FB0CC}
+.perm{display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.05);margin-bottom:10px;font-size:20px}
+.perm span{flex:1}.perm small{display:block;font-size:15px;color:#9FB0CC}
+.perm b{font-size:22px;width:36px;text-align:center}
+.perm button{height:48px;padding:0 18px;border-radius:14px;border:1px solid #6FA8FF;background:#1F5FD1;color:#fff;font:inherit;font-size:17px}
+.nav{display:flex;gap:12px;align-items:center}
+.nav button{height:60px;padding:0 30px;border-radius:18px;border:1px solid #2b4a80;background:#13254a;color:#fff;font:inherit;font-size:20px}
+.nav .pri{background:#1F5FD1;border-color:#6FA8FF;font-weight:700;min-width:160px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="wz">
+    <div class="steps" id="steps"></div>
+    <h1 id="h"></h1>
+    <div class="sub2" id="s"></div>
+    <div class="content" id="c"></div>
+    <div class="nav"><button id="prev">السابق</button><button id="skip">تخطي الإعداد</button><span style="flex:1"></span><button class="pri" id="next">التالي</button></div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs();
+var step = 0, N = 5;
+function $(i){ return document.getElementById(i); }
+function save(){ savePrefs(prefs); _prefsCache = null; }
+function nearestCity(){
+  var t = natJSON('trip'); if (!t || typeof t.lat !== 'number') return null;
+  var best = null, bd = 1e9; Object.keys(CITIES).forEach(function (k) { var d = distKm(t.lat, t.lng, CITIES[k].lat, CITIES[k].lng); if (d < bd) { bd = d; best = k; } });
+  return best;
+}
+var STEPS = [
+  function () {
+    $('h').textContent = 'أهلاً بك في رفيق الطريق'; $('s').textContent = 'خطوات بسيطة لتجهيز الشاشة. يمكنك تغيير كل شيء لاحقاً من الإعدادات. اختر مدينتك (لمواقيت الصلاة):';
+    var nc = nearestCity();
+    var h = nc ? '<div class="chips" style="margin-bottom:14px"><button class="on" onclick="prefs.city=\'' + nc + '\';save();render()">📍 أقرب مدينة لموقعك: ' + CITIES[nc].label + '</button></div>' : '';
+    h += '<div class="chips">' + Object.keys(CITIES).sort(function (a, b) { return CITIES[a].label.localeCompare(CITIES[b].label, 'ar'); }).map(function (k) { return '<button class="' + (prefs.city === k ? 'on' : '') + '" onclick="prefs.city=\'' + k + '\';save();render()">' + CITIES[k].label + '</button>'; }).join('') + '</div>';
+    $('c').innerHTML = h;
+  },
+  function () {
+    $('h').textContent = 'اختر الثيم'; $('s').textContent = 'شكل البطاقات والألوان. يتغير لاحقاً بضغطة.';
+    var L = [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg'], ['light', 'skins/light/bg_sky.jpg'], ['saudi', 'skins/saudi/bg_riyadh_night.jpg'], ['ptime', 'skins/ptime/bg_maghrib.jpg']];
+    $('c').innerHTML = '<div class="tiles">' + L.map(function (x) { return '<button class="' + ((prefs.skin || 'classic') === x[0] ? 'on' : '') + '" style="background-image:url(\'' + thumb(x[1]) + '\')" onclick="prefs.skin=\'' + x[0] + '\';prefs.theme=SKINS[\'' + x[0] + '\'].theme;save();render()">' + SKINS[x[0]].label + '</button>'; }).join('') + '</div>';
+  },
+  function () {
+    $('h').textContent = 'تصميم الشاشة الرئيسية'; $('s').textContent = 'ترتيب البطاقات والأزرار. اضغط مطولاً على أي بطاقة لاحقاً لتعديلها.';
+    var D = { classic: 'بطاقات كبيرة وقائمة أسفل الشاشة', grid: 'بطاقات أكثر بأحجام مختلفة', side: 'القائمة على الجانب', minimal: 'ساعة كبيرة وبطاقات قليلة' };
+    $('c').innerHTML = '<div class="tiles lays">' + LAYOUTS.map(function (L) { return '<button class="' + (prefs.layout === L[0] ? 'on' : '') + '" onclick="prefs.layout=\'' + L[0] + '\';save();render()">' + L[1] + '<small>' + D[L[0]] + '</small></button>'; }).join('') + '</div>';
+  },
+  function () {
+    $('h').textContent = 'الأذونات'; $('s').textContent = 'امنح ما تحتاجه. كل إذن يوضح فائدته، والمطلوب منها الأول فقط.';
+    var P = [
+      ['الموقع (مطلوب)', 'مواقيت الصلاة بموقعك، الرحلة، السرعة، القبلة', nat('hasLocation'), 'askLocation'],
+      ['الوصول إلى الإشعارات', 'عرض الموسيقى والتحكم بها، والمكالمات', (natJSON('media') || {}).access !== false && !!natJSON('media'), 'openNotificationAccess'],
+      ['تعديل إعدادات النظام', 'خفض السطوع ليلاً', nat('canWriteSettings'), 'openWriteSettings'],
+      ['الظهور فوق التطبيقات', 'إعادة فتح الواجهة إن أُغلقت', nat('canOverlay'), 'openOverlaySettings'],
+      ['تثبيت التحديثات', 'التحديث من الشاشة مباشرة', nat('canInstall'), 'openInstallSettings']
+    ];
+    $('c').innerHTML = HAS_NATIVE ? P.map(function (p) { return '<div class="perm"><b style="color:' + (p[2] ? '#5AD1A0' : '#F2C879') + '">' + (p[2] ? '✓' : '!') + '</b><span>' + p[0] + '<small>' + p[1] + '</small></span>' + (p[2] ? '' : '<button onclick="nat(\'' + p[3] + '\')">السماح</button>') + '</div>'; }).join('') : '<div class="perm">تعمل داخل التطبيق</div>';
+  },
+  function () {
+    var d = nat('isDefaultHome');
+    $('h').textContent = 'الخطوة الأخيرة'; $('s').textContent = 'اجعل رفيق الطريق الواجهة الافتراضية حتى لا ترجع الشاشة لواجهتها الأصلية.';
+    $('c').innerHTML = '<div class="perm"><b style="color:' + (d ? '#5AD1A0' : '#F2C879') + '">' + (d ? '✓' : '!') + '</b><span>الواجهة الافتراضية<small>' + (d ? 'تم' : 'اضغط ثم اختر «رفيق الطريق» و«دائماً»') + '</small></span>' + (d ? '' : '<button onclick="nat(\'makeDefaultHome\')">جعله الافتراضي</button>') + '</div>' +
+      '<div class="perm"><b>💡</b><span>نصائح<small>اسحب من أعلى الشاشة للأسفل للوحة السريعة · اضغط مطولاً على أي بطاقة لتحريرها · «فحص شامل» في الإعدادات ▸ النظام</small></span></div>';
+  }
+];
+function render(){
+  $('steps').innerHTML = ''; for (var i = 0; i < N; i++) { var e = document.createElement('i'); if (i <= step) e.className = 'on'; $('steps').appendChild(e); }
+  STEPS[step]();
+  $('prev').style.visibility = step ? 'visible' : 'hidden';
+  $('next').textContent = step === N - 1 ? 'ابدأ' : 'التالي';
+}
+function finish(){ lsSet('carlauncher.wizardDone', Date.now()); save(); goHome(true); }
+$('next').onclick = function () { if (step < N - 1) { step++; render(); } else finish(); };
+$('prev').onclick = function () { if (step) { step--; render(); } };
+$('skip').onclick = finish;
+window.onPageBack = function () { if (step) { step--; render(); return true; } return false; };
+window.onPageResume = render;
+render();
+fitStage();
+</script>
+</body>
+</html>
