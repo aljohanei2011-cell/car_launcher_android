@@ -245,6 +245,78 @@ class Bridge(private val act: MainActivity) {
         am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code))
     }
 
+
+    // ===== المكالمات والرسائل (الاسم فقط) =====
+    @JavascriptInterface fun notifs(): String = Notifs.json()
+    @JavascriptInterface fun callAction(i: Int): Boolean = Notifs.action(i)
+
+    // ===== البحث في الخرائط والملاحة =====
+    /** «أقرب مسجد» وما شابه: يفتح تطبيق الخرائط المختار (أو أي تطبيق خرائط) على البحث */
+    @JavascriptInterface
+    fun mapSearch(q: String, lat: Double, lng: Double, pkg: String): Boolean {
+        val enc = android.net.Uri.encode(q)
+        val tries = mutableListOf<Intent>()
+        if (pkg.contains("waze")) tries.add(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://waze.com/ul?q=$enc")).setPackage(pkg))
+        val geo = android.net.Uri.parse("geo:$lat,$lng?q=$enc")
+        if (pkg.isNotEmpty()) tries.add(Intent(Intent.ACTION_VIEW, geo).setPackage(pkg))
+        tries.add(Intent(Intent.ACTION_VIEW, geo))
+        for (i in tries) {
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (i.resolveActivity(ctx.packageManager) != null) { act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
+        }
+        return false
+    }
+    @JavascriptInterface
+    fun navigateTo(lat: Double, lng: Double, label: String, pkg: String): Boolean {
+        val tries = mutableListOf<Intent>()
+        if (pkg.contains("waze")) tries.add(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://waze.com/ul?ll=$lat,$lng&navigate=yes")).setPackage(pkg))
+        tries.add(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("google.navigation:q=$lat,$lng")).apply { if (pkg.isNotEmpty() && !pkg.contains("waze")) setPackage(pkg) })
+        tries.add(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("geo:$lat,$lng?q=$lat,$lng(" + android.net.Uri.encode(label) + ")")))
+        for (i in tries) {
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (i.resolveActivity(ctx.packageManager) != null) { act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
+        }
+        return false
+    }
+
+    // ===== اللوحة السريعة: الصوت والسطوع والبلوتوث =====
+    @JavascriptInterface
+    fun volume(): String {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        return JSONObject().put("v", am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)).put("max", am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)).toString()
+    }
+    @JavascriptInterface
+    fun setVolume(v: Int) {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        try { am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, v.coerceIn(0, am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)), android.media.AudioManager.FLAG_SHOW_UI) } catch (e: Exception) {}
+    }
+    @JavascriptInterface
+    fun brightness(): Int = try { Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 200) * 100 / 255 } catch (e: Exception) { -1 }
+    @JavascriptInterface
+    fun setBrightness(pct: Int): Boolean {
+        if (!Settings.System.canWrite(ctx)) return false
+        return try {
+            Settings.System.putInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+            Settings.System.putInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, pct.coerceIn(3, 100) * 255 / 100); true
+        } catch (e: Exception) { false }
+    }
+    @Suppress("DEPRECATION", "MissingPermission")
+    @JavascriptInterface
+    fun btToggle(): Boolean = try {
+        val a = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+        if (a == null) false else { if (a.isEnabled) a.disable() else a.enable(); true }
+    } catch (e: Exception) { false }
+    /** لوحات النظام السريعة (أندرويد 10+): الإنترنت، الصوت، الواي فاي */
+    @JavascriptInterface
+    fun openPanel(which: String) {
+        val action = if (android.os.Build.VERSION.SDK_INT >= 29) when (which) {
+            "wifi" -> Settings.Panel.ACTION_WIFI
+            "volume" -> Settings.Panel.ACTION_VOLUME
+            else -> Settings.Panel.ACTION_INTERNET_CONNECTIVITY
+        } else if (which == "volume") Settings.ACTION_SOUND_SETTINGS else Settings.ACTION_WIFI_SETTINGS
+        act.runOnUiThread { try { act.startActivity(Intent(action)) } catch (e: Exception) { try { act.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) } catch (x: Exception) {} } }
+    }
+
     // ===== الإضاءة الليلية =====
     @JavascriptInterface fun canWriteSettings(): Boolean = Settings.System.canWrite(ctx)
     @JavascriptInterface fun openWriteSettings() {

@@ -690,6 +690,7 @@ function renderBanner(){
   if (prefs.reminders && prefs.remPlace === 'banner') hijriReminders().forEach(function (r) { bannerItems.push({ t: r, href: 'azkar.html' }); });
   var us = natJSON('updateState');
   if (us && us.phase === 'available') bannerItems.unshift({ t: 'يوجد تحديث جديد (الإصدار ' + us.latest + ') — اضغط للتحديث', href: 'update.html' });
+  if (window.extraBanner) { try { bannerItems = bannerItems.concat(window.extraBanner()); } catch (e) {} }
   if (HAS_NATIVE && nat('isDefaultHome') === false) bannerItems.unshift({ t: 'اضغط هنا لجعل رفيق الطريق الواجهة الافتراضية', href: 'javascript:nat(\'makeDefaultHome\')' });
   showBanner();
 }
@@ -765,6 +766,9 @@ window.onPageResume = function () { var of = document.getElementById('restFrame'
 
 /* كل خطوة مستقلة: لو تعطلت واحدة تُسجَّل في سجل الأعطال وتكمل البقية، فلا تبقى الشاشة فارغة */
 function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + name + ': ' + (e && e.message)); } }
+</script>
+<script src="drive.js"></script>
+<script>
 safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
 safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
 setInterval(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);

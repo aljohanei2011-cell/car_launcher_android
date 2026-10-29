@@ -48,7 +48,7 @@ var HAS_NATIVE = typeof window.Native !== 'undefined';
 window.addEventListener('error', function (e) {
   try { if (HAS_NATIVE && Native.logError) Native.logError((location.pathname.split('/').pop() || '') + ': ' + (e.message || '') + ' @' + (e.lineno || 0)); } catch (x) {}
 });
-var _natCache = {}, NAT_READS = { memKills: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1 };
+var _natCache = {}, NAT_READS = { memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
   if (!NAT_READS[fn]) _natCache = {}; // أي أمر (تشغيل، إيقاف...) يلغي القراءات المحفوظة
@@ -96,7 +96,8 @@ var DEFAULT_PREFS = {
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
   safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false, weatherFx: true, accent: '',
-  clockStyle: 'digital', textScale: 1, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
+  clockStyle: 'digital', textScale: 1,
+  driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
   perf: 'auto', perfDetected: null, watchdog: true
 };
 function loadPrefs(){
@@ -932,7 +933,8 @@ var CARD_CATALOG = [
   ['clock', 'الساعة'], ['prayer', 'الصلاة القادمة'], ['times', 'مواقيت اليوم'], ['media', 'الموسيقى'],
   ['speed', 'عداد السرعة'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس'],
   ['apps', 'تطبيقاتي المفضلة'], ['notes', 'الملاحظات'], ['reminders', 'تذكيراتي'], ['sysrem', 'تذكيرات اليوم'],
-  ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)']
+  ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)'],
+  ['nearby', 'أقرب مكان'], ['ramadan', 'رمضان']
 ];
 var LAYOUTS = [['classic', 'كلاسيكي'], ['grid', 'شبكة'], ['side', 'جانبي'], ['minimal', 'بسيط']];
 function defaultHomes(p){

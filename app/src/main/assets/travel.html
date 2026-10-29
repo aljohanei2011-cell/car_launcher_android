@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>مخطط رحلة السفر</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.cities{display:flex;flex-wrap:wrap;gap:8px;max-height:300px;overflow-y:auto;scrollbar-width:none}
+.cities::-webkit-scrollbar{display:none}
+.cities button{height:46px;padding:0 16px;border-radius:14px;border:1px solid #23406f;background:#13254a;color:#fff;font:inherit;font-size:17px}
+.cities button.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
+.srch{height:50px;border-radius:14px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:18px;padding:0 14px;box-sizing:border-box;width:100%}
+.big3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.big3 div{background:rgba(255,255,255,.05);border-radius:16px;padding:12px;text-align:center}
+.big3 b{display:block;font-size:30px;margin-top:4px}
+.lst{display:flex;flex-direction:column;gap:6px;font-size:18px;max-height:220px;overflow-y:auto;scrollbar-width:none}
+.lst div{display:flex;justify-content:space-between;padding:6px 12px;border-radius:12px;background:rgba(255,255,255,.04)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{height:44px;padding:0 14px;border-radius:13px;border:1px solid #23406f;background:#13254a;color:#fff;font:inherit;font-size:16px}
+.chips button.on{background:#1F5FD1;border-color:#6FA8FF}
+</style>
+</head>
+<body data-nodrive="1">
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">مخطط رحلة السفر</span>
+    </div>
+    <div class="pcols" style="grid-template-columns:1fr 1.15fr">
+      <div class="pcard">
+        <span class="ph">إلى أين؟</span>
+        <input class="srch" id="q" placeholder="ابحث عن مدينة">
+        <div class="cities" id="cities"></div>
+        <span class="ph" style="margin-top:6px">متوسط السرعة</span>
+        <div class="chips" id="avg"></div>
+        <span class="ph">وقت الانطلاق</span>
+        <div class="chips" id="dep"></div>
+      </div>
+      <div class="pcard" id="plan"></div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(id){ return document.getElementById(id); }
+var st = lsGet('carlauncher.travel', {}) || {};
+var sel = st.to || '', avg = st.avg || 100, depMin = 0, q = '';
+function origin(){
+  var t = natJSON('trip');
+  if (t && typeof t.lat === 'number') return { lat: t.lat, lng: t.lng, label: 'موقعك الحالي' };
+  var c = CITIES[prefs.city] || CITIES.riyadh; return { lat: c.lat, lng: c.lng, label: c.label };
+}
+function renderCities(){
+  var h = '';
+  Object.keys(CITIES).filter(function (k) { return !q || CITIES[k].label.indexOf(q) >= 0; }).forEach(function (k) {
+    h += '<button class="' + (k === sel ? 'on' : '') + '" onclick="pick(\'' + k + '\')">' + CITIES[k].label + '</button>';
+  });
+  $('cities').innerHTML = h || '<span class="pnote">لا توجد نتيجة</span>';
+  $('avg').innerHTML = [90, 100, 110, 120].map(function (v) { return '<button class="' + (v === avg ? 'on' : '') + '" onclick="avg=' + v + ';save();render()">' + v + ' كم/س</button>'; }).join('');
+  $('dep').innerHTML = [[0, 'الآن'], [30, 'بعد نصف ساعة'], [60, 'بعد ساعة'], [120, 'بعد ساعتين'], [240, 'بعد 4 ساعات']].map(function (x) { return '<button class="' + (x[0] === depMin ? 'on' : '') + '" onclick="depMin=' + x[0] + ';render()">' + x[1] + '</button>'; }).join('');
+}
+function pick(k){ sel = k; save(); render(); }
+function save(){ st = { to: sel, avg: avg, at: Date.now() }; lsSet('carlauncher.travel', st); }
+function hm(min){ var h = Math.floor(min / 60), m = Math.round(min % 60); return (h ? h + ' س ' : '') + m + ' د'; }
+function clock(d){ return clockStr(d) + (ampm(d) ? ' ' + ampm(d) : ''); }
+function render(){
+  renderCities();
+  var p = $('plan');
+  if (!sel || !CITIES[sel]) { p.innerHTML = '<span class="ph">الخطة</span><div class="pnote" style="font-size:19px">اختر مدينة الوصول لترى المسافة التقريبية ووقت الوصول والصلوات التي تدركها في الطريق ومواعيد الاستراحة.</div>'; return; }
+  var o = origin(), to = CITIES[sel];
+  var air = distKm(o.lat, o.lng, to.lat, to.lng), road = air * 1.22, mins = road / avg * 60;
+  var restEvery = +prefs.restMin || 120, stops = Math.floor(mins / restEvery), total = mins + stops * 15;
+  var dep = new Date(Date.now() + depMin * 60000), arr = new Date(dep.getTime() + total * 60000);
+  var h = '<span class="ph">من ' + o.label + ' إلى ' + to.label + '</span>' +
+    '<div class="big3"><div><span class="pnote">المسافة التقريبية</span><b>' + Math.round(road) + ' كم</b></div><div><span class="pnote">المدة مع الاستراحات</span><b>' + hm(total) + '</b></div><div><span class="pnote">الوصول المتوقع</span><b>' + clock(arr) + '</b></div></div>';
+  // الصلوات خلال الرحلة (حسب مواقيت مدينتك، تقريبية)
+  var pr = [];
+  for (var day = 0; day < 2; day++) {
+    var base = new Date(dep.getTime() + day * 86400000);
+    prayerMinutes(base).forEach(function (x) {
+      var d0 = new Date(base); var r = riyadhMinutes(base); var t = new Date(base.getTime() + (x.min - r) * 60000 - base.getSeconds() * 1000);
+      if (t >= dep && t <= arr) pr.push({ name: x.name, t: t, km: Math.round((t - dep) / 60000 / total * road) });
+    });
+  }
+  h += '<span class="ph">الصلوات في الطريق (تقريبية)</span><div class="lst">' + (pr.length ? pr.map(function (x) { return '<div><span>' + x.name + ' ' + clock(x.t) + '</span><span class="pnote">بعد ~' + x.km + ' كم</span></div>'; }).join('') : '<div><span class="pnote">لا توجد صلاة خلال الرحلة</span></div>') + '</div>';
+  var sl = '';
+  for (var i = 1; i <= stops; i++) sl += '<div><span>استراحة ' + i + ' (15 دقيقة)</span><span class="pnote">بعد ' + hm(i * restEvery) + ' · ~' + Math.round(i * restEvery / 60 * avg) + ' كم</span></div>';
+  h += '<span class="ph">الاستراحات المقترحة (كل ' + hm(restEvery) + ')</span><div class="lst">' + (sl || '<div><span class="pnote">رحلة قصيرة، لا تحتاج استراحة</span></div>') + '</div>';
+  if (air > 80) h += '<div class="pnote" style="font-size:17px;color:#F2C879">المسافة تزيد على 80 كم: يجوز قصر الصلاة الرباعية وجمعها بعد مغادرة مدينتك.</div>';
+  h += '<div class="prow" style="margin-top:auto"><button class="pbtn" onclick="go1()">ابدأ الملاحة</button><button class="pbtn g" onclick="clearPlan()">إلغاء الخطة</button><span class="pnote" id="msg"></span></div>';
+  p.innerHTML = h;
+}
+function go1(){ var to = CITIES[sel]; save(); if (!nat('navigateTo', to.lat, to.lng, to.label, prefs.mapsApp || '')) $('msg').textContent = 'لا يوجد تطبيق خرائط'; }
+function clearPlan(){ sel = ''; lsSet('carlauncher.travel', {}); render(); }
+$('q').oninput = function () { q = this.value.trim(); renderCities(); };
+render();
+fitStage();
+</script>
+</body>
+</html>
