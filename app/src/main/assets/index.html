@@ -564,7 +564,12 @@ function later(){ setTimeout(function () { forceCards = true; tick(); forceCards
 var cardEls = [];
 /* كم ثانية بين تحديث كل بطاقة (الباقي كل 30 ثانية) */
 var CARD_RATE = { clock: 1, speed: 1, media: 2, trip: 2, qibla: 3, ram: 5, radio: 2, reminders: 5 };
-function cardRate(id){ if (id === 'prayer') return fancySkin() ? 1 : 15; return CARD_RATE[id] || 30; }
+function cardRate(id){
+  if (id === 'prayer') return fancySkin() ? 1 : 15;
+  // النسخة الخفيفة: تحديث أبطأ لكل البطاقات ما عدا الساعة والسرعة
+  if (LITE) return id === 'clock' ? 1 : id === 'speed' ? 2 : id === 'media' ? 3 : Math.max(60, CARD_RATE[id] || 60);
+  return CARD_RATE[id] || 30;
+}
 function buildPages(){
   var stage = document.getElementById('stage');
   stage.classList.remove('L-classic', 'L-grid', 'L-side', 'L-minimal');
@@ -776,7 +781,7 @@ function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + na
 <script src="drive.js"></script>
 <script>
 /* الأوامر الصوتية تُحمَّل فقط إذا فُعّلت على هذه الشاشة */
-if ((HAS_NATIVE && nat('voiceEnabled')) || lsGet('carlauncher.voiceTest', false)) { var _vs = document.createElement('script'); _vs.src = 'voice.js'; document.body.appendChild(_vs); }
+if (!LITE && ((HAS_NATIVE && nat('voiceEnabled')) || lsGet('carlauncher.voiceTest', false))) { var _vs = document.createElement('script'); _vs.src = 'voice.js'; document.body.appendChild(_vs); }
 </script>
 <script>
 if (FIRST_RUN) setTimeout(function () { openPage('wizard.html'); }, 700);

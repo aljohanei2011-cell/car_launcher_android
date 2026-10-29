@@ -26,6 +26,21 @@ android {
         buildConfig = true
     }
 
+    // نسختان من نفس الكود ونفس التطبيق (التحويل بينهما يحفظ الإعدادات):
+    // full: كاملة بكل الثيمات والمزايا — lite: خفيفة للشاشات الضعيفة (بدون صور الثيمات)
+    flavorDimensions += "edition"
+    productFlavors {
+        create("full") {
+            dimension = "edition"
+            buildConfigField("boolean", "LITE", "false")
+        }
+        create("lite") {
+            dimension = "edition"
+            versionNameSuffix = "-lite"
+            buildConfigField("boolean", "LITE", "true")
+        }
+    }
+
     // مفتاح توقيع ثابت: بدونه لا يقبل أندرويد تثبيت التحديث فوق النسخة السابقة
     val signProps = Properties().apply {
         val f = rootProject.file("signing/signing.properties")

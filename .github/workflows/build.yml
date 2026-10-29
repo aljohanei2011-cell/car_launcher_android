@@ -48,17 +48,21 @@ jobs:
           fi
 
       # رقم الإصدار يزيد مع كل بناء حتى يعرف التطبيق أن هناك تحديثاً
-      - name: Build signed APK
+      - name: Build signed APKs (full + lite)
         env:
           VERSION_CODE: ${{ github.run_number }}
-        run: gradle :app:assembleRelease --no-daemon --stacktrace
+        run: gradle :app:assembleFullRelease :app:assembleLiteRelease --no-daemon --stacktrace
 
-      - name: Rename APK
+      - name: Rename APKs
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk "out/rafiq-v${{ github.run_number }}.apk"
-          # نسخة باسم ثابت لرابط التحميل المباشر: releases/latest/download/rafiq.apk
-          cp app/build/outputs/apk/release/app-release.apk out/rafiq.apk
+          FULL=$(ls app/build/outputs/apk/full/release/*.apk | head -1)
+          LITE=$(ls app/build/outputs/apk/lite/release/*.apk | head -1)
+          cp "$FULL" "out/rafiq-v${{ github.run_number }}.apk"
+          # أسماء ثابتة لروابط التحميل المباشر: releases/latest/download/rafiq.apk و rafiq-lite.apk
+          cp "$FULL" out/rafiq.apk
+          cp "$LITE" out/rafiq-lite.apk
+          ls -la out
 
       - uses: actions/upload-artifact@v4
         with:

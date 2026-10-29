@@ -78,6 +78,7 @@ function isOn(k){ if (k === 'voice') return !!nat('voiceEnabled'); var v = getP(
 function render(){
   var g = document.getElementById('grid'); g.innerHTML = '';
   F.forEach(function (f) {
+    if (LITE && ['voice', 'weatherFx', 'driveSimple.on', 'zoneSpeed.on', 'obdAuto', 'callCard', 'msgNotify'].indexOf(f[0]) >= 0) return;
     if (f[0] === 'g') { var h = document.createElement('div'); h.className = 'grp'; h.textContent = f[1]; g.appendChild(h); return; }
     var on = isOn(f[0]);
     var d = document.createElement('div'); d.className = 'f';

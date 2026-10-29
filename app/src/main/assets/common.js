@@ -78,7 +78,7 @@ window.addEventListener('error', function (e) {
 });
 var _natCache = {}, NAT_READS = { memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
 /* قراءات سريعة التغير: لا تُحفظ ولا تلغي المحفوظ */
-var NAT_FRESH = { voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1 };
+var NAT_FRESH = { voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1, isLite: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
   if (!NAT_READS[fn] && !NAT_FRESH[fn]) _natCache = {}; // أي أمر (تشغيل، إيقاف...) يلغي القراءات المحفوظة
@@ -101,6 +101,8 @@ function natJSONraw(fn){
   try { return JSON.parse(r); } catch (e) { return null; }
 }
 
+/* ===== النسخة الخفيفة: نفس الكود بدون صور الثيمات والمزايا الثقيلة ===== */
+var LITE = (function () { if (HAS_NATIVE) return nat('isLite') === true; try { return localStorage.getItem('carlauncher.liteTest') === '1'; } catch (e) { return false; } })();
 /* ===== الإعدادات المحفوظة (آمنة إن فشل التخزين) ===== */
 var PREFS_KEY = 'carlauncher.prefs';
 var DEFAULT_PREFS = {
@@ -139,6 +141,7 @@ function loadPrefs(){
     var p = Object.assign({}, DEFAULT_PREFS, raw ? JSON.parse(raw) : {});
     // الخطوط المحذوفة من التطبيق تُستبدل بالافتراضي (الخطوط المرفوعة u: تبقى)
     ['font', 'clockFont', 'duaFont'].forEach(function (k) { if (p[k] && !FONTS[p[k]] && String(p[k]).indexOf('u:') !== 0) p[k] = k === 'duaFont' ? 'alyamama' : k === 'clockFont' ? '' : 'thmanyah'; });
+    if (LITE) liteFix(p);
     return p;
   } catch (e) { return Object.assign({}, DEFAULT_PREFS); }
 }
@@ -223,6 +226,20 @@ var SKINS = {
   saudi:   { label: 'سعودي', theme: 'saudi_auto' },
   ptime:   { label: 'أوقات الصلاة', theme: 'ptime_auto' }
 };
+/* في النسخة الخفيفة: ثيم واحد داكن وخلفية الليل (أو صورتك)، ووضع الأداء دائماً */
+if (LITE) {
+  Object.keys(THEMES).forEach(function (k) { if (k !== 'night') delete THEMES[k]; });
+  Object.keys(SKINS).forEach(function (k) { if (k !== 'classic') delete SKINS[k]; });
+  SKINS.classic.theme = 'night';
+}
+function liteFix(p){
+  var ok = function (k) { return !!k && (THEMES[k] || String(k).indexOf('user:') === 0); };
+  p.skin = 'classic'; if (!ok(p.theme)) p.theme = 'night'; if (!ok(p.nightTheme)) p.nightTheme = 'night';
+  if (p.restBg && p.restBg !== 'auto' && !ok(p.restBg)) p.restBg = 'auto';
+  p.weatherFx = false; p.perf = 'on'; p.voiceWake = false;
+  if (['digital', 'thin', 'words'].indexOf(p.clockStyle) < 0) p.clockStyle = 'digital';
+  p.driveSimple = { on: false, speed: 80 }; p.obdAuto = false;
+}
 var SKIN_CLASSES = ['skin-gold', 'skin-red', 'skin-light', 'skin-saudi', 'skin-ptime', 'skinx'];
 /* ألوان التمييز التي يختارها المستخدم (فوق لون الثيم) */
 var ACCENTS = [['', 'لون الثيم'], ['#2BB673', 'أخضر'], ['#D9B65C', 'ذهبي'], ['#2F7BFF', 'أزرق'], ['#FF8A4C', 'برتقالي'], ['#FF5FA2', 'وردي'], ['#9B7BFF', 'بنفسجي'], ['#E8334A', 'أحمر']];
@@ -1000,6 +1017,7 @@ var CARD_CATALOG = [
   ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)'],
   ['nearby', 'أقرب مكان'], ['ramadan', 'رمضان'], ['khatma', 'وردي من القرآن'], ['wallet', 'وثائق السيارة'], ['expenses', 'مصاريف السيارة'], ['obd', 'بيانات السيارة (OBD)']
 ];
+if (LITE) CARD_CATALOG = CARD_CATALOG.filter(function (c) { return c[0] !== 'obd'; });
 var LAYOUTS = [['classic', 'كلاسيكي'], ['grid', 'شبكة'], ['side', 'جانبي'], ['minimal', 'بسيط']];
 function defaultHomes(p){
   return {
@@ -1032,6 +1050,7 @@ var CARD_PARTS = {
   qibla: [['txt', 'الوصف']]
 };
 var CLOCK_STYLES = [['digital', 'رقمية'], ['thin', 'رقمية نحيفة'], ['analog', 'بعقارب'], ['ring', 'حلقة الصلاة'], ['flip', 'أرقام تتقلب'], ['words', 'بالحروف'], ['dual', 'مع الصلاة القادمة']];
+if (LITE) CLOCK_STYLES = CLOCK_STYLES.filter(function (x) { return ['digital', 'thin', 'words'].indexOf(x[0]) >= 0; });
 var TEXT_SCALES = [[0.9, 'أصغر'], [1, 'عادي'], [1.15, 'كبير'], [1.3, 'كبير جداً']];
 function partHidden(o, k){ return !!(o && o.hide && o.hide[k]); }
 /* الوقت بالحروف: «العاشرة والنصف مساءً» (يُقرَّب لأقرب 5 دقائق) */
@@ -1134,6 +1153,7 @@ function memText(){
 /* ===== وضع الأداء ===== */
 var _memKills = null;
 function perfOn(p){
+  if (LITE) return true;
   p = p || loadPrefsCached();
   if (p.perf === 'on') return true;
   if (p.perf !== 'auto') return false;

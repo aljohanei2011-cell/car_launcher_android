@@ -145,6 +145,7 @@ var SEC_CAT = {
   'أدوات الشاشة': 'system', 'التحديث والنسخ الاحتياطي': 'system', 'الواجهة الافتراضية': 'system', 'الأداء': 'system', 'الرقم السري': 'system', 'حول التطبيق': 'system',
   'الاستقرار': 'system*', 'الذاكرة (RAM)': 'system*', 'إعادة التعيين': 'system*'
 };
+var LITE_HIDE = { 'الثيم': 1, 'الأوامر الصوتية': 1, 'المكالمات والرسائل': 1, 'مساعد القيادة': 1 };
 var tab = 'overview', citySearch = '', pageIdx = 0;
 try { tab = sessionStorage.getItem('settings.tab') || 'overview'; } catch (e) {}
 if (tab === 'apps') tab = 'comm';
@@ -157,6 +158,8 @@ function section(title, note){
   if (title) { var lb = el('span', 'label'); lb.innerHTML = svgI(window._cat || tab); lb.appendChild(document.createTextNode(title)); s.appendChild(lb); }
   if (note) s.appendChild(el('span', 'note', note));
   var c = SEC_CAT[title] || '', want = window._cat;
+  // النسخة الخفيفة: بطاقات المزايا غير الموجودة فيها لا تُعرض
+  if (LITE && LITE_HIDE[title]) return s;
   // أثناء رسم قسم: البطاقات التابعة لأقسام أخرى لا تُعرض
   if (want && c.replace('*', '') !== want) return s;
   if (c.indexOf('*') > 0) { s.classList.add('adv'); window._advN = (window._advN || 0) + 1; }
@@ -232,7 +235,7 @@ function renderLook(){
   var sk = section('الثيم', 'شكل البطاقات والألوان والزخارف. يتغير فوراً لتراه هنا قبل الرجوع للرئيسية، ويمكنك التراجع.');
   var sg = el('div', 'themes'); sg.style.gridTemplateColumns = 'repeat(3,minmax(0,1fr))';
   [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg'],
-   ['light', 'skins/light/bg_sky.jpg'], ['saudi', 'skins/saudi/bg_riyadh_night.jpg'], ['ptime', 'skins/ptime/bg_maghrib.jpg']].forEach(function (x) {
+   ['light', 'skins/light/bg_sky.jpg'], ['saudi', 'skins/saudi/bg_riyadh_night.jpg'], ['ptime', 'skins/ptime/bg_maghrib.jpg']].filter(function (x) { return SKINS[x[0]]; }).forEach(function (x) {
     var b = el('button', 'tile' + ((prefs.skin || 'classic') === x[0] ? ' on' : ''), SKINS[x[0]].label);
     b.style.backgroundImage = "url('" + thumb(x[1]) + "')"; b.style.height = '100px'; b.style.fontSize = '19px';
     b.onclick = function () {
@@ -511,7 +514,7 @@ function renderApps(){
 
   s = section('السيارة');
   var r = el('div', 'opts');
-  [['travel.html', 'مخطط رحلة السفر'], ['obd.html', 'بيانات السيارة OBD'], ['expenses.html', 'مصاريف السيارة'], ['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['notes.html', 'الملاحظات'], ['reminders.html', 'التذكيرات'], ['radio.html', 'الراديو'], ['parking.html', 'موقف السيارة'], ['upload.html', 'الإرسال من الجوال']].forEach(function (x) {
+  [['travel.html', 'مخطط رحلة السفر'], ['obd.html', 'بيانات السيارة OBD'], ['expenses.html', 'مصاريف السيارة'], ['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['notes.html', 'الملاحظات'], ['reminders.html', 'التذكيرات'], ['radio.html', 'الراديو'], ['parking.html', 'موقف السيارة'], ['upload.html', 'الإرسال من الجوال']].filter(function (x) { return !LITE || (x[0] !== 'obd.html' && x[0] !== 'travel.html'); }).forEach(function (x) {
     var a = el('a', 'opt', x[1]); a.href = x[0]; a.style.display = 'flex'; a.style.alignItems = 'center'; r.appendChild(a);
   });
   s.appendChild(r);
@@ -1004,7 +1007,7 @@ function renderQuick(){
   var q = document.getElementById('quick'); q.innerHTML = '';
   [['الإضاءة الليلية', !!prefs.nightBright, function () { prefs.nightBright = !prefs.nightBright; upd(); }],
    ['وضع الأداء', perfOn(prefs), function () { prefs.perf = perfOn(prefs) ? 'off' : 'on'; upd(); }],
-   ['الضيف', !!prefs.guest, function () { setGuest(!prefs.guest); prefs = loadPrefs(); render(); }]].forEach(function (x) {
+   ['الضيف', !!prefs.guest, function () { setGuest(!prefs.guest); prefs = loadPrefs(); render(); }]].filter(function (x) { return !(LITE && x[0] === 'وضع الأداء'); }).forEach(function (x) {
     var b = el('button', 'qk glass' + (x[1] ? ' on' : '')); b.appendChild(document.createTextNode(x[0])); b.appendChild(el('b'));
     b.onclick = x[2]; q.appendChild(b);
   });
@@ -1024,7 +1027,7 @@ function renderOverview(){
   var body = document.getElementById('body');
   var v = natJSON('version') || {}, ch = nat('updChannel') || 'stable', m = memText(), us = natJSON('updateState') || {};
   var ov = el('div', 'ov4');
-  [['الإصدار', (v.name || '—') + ' <span class="tag ' + (ch === 'beta' ? 't1' : 't3') + '">' + (ch === 'beta' ? 'تجريبية' : 'ثابتة') + '</span>'],
+  [['الإصدار' + (LITE ? ' (النسخة الخفيفة)' : ''), (v.name || '—').replace('-lite', '') + ' <span class="tag ' + (ch === 'beta' ? 't1' : 't3') + '">' + (ch === 'beta' ? 'تجريبية' : 'ثابتة') + '</span>'],
    ['الذاكرة', m ? m.pct + '% <span style="font-size:14px;opacity:.7">من ' + m.total + ' ج</span>' : '—'],
    ['الثيم', (SKINS[prefs.skin || 'classic'] || SKINS.classic).label],
    ['المدينة', esc0(cityLabel())]].forEach(function (x) { var c = el('div', 'ovc glass'); c.innerHTML = '<span>' + x[0] + '</span><b>' + x[1] + '</b>'; ov.appendChild(c); });
@@ -1045,6 +1048,8 @@ function renderOverview(){
     if (prefs.nightBright && !nat('canWriteSettings')) items.push(['إذن تعديل السطوع', 'الإضاءة الليلية مفعّلة وتحتاجه', 't1', 'مطلوب', 'السماح', function () { nat('openWriteSettings'); }]);
     if (prefs.watchdog !== false && !nat('canOverlay')) items.push(['إذن الظهور فوق التطبيقات', 'لإعادة فتح الواجهة إن أُغلقت', 't1', 'اختياري', 'السماح', function () { nat('openOverlaySettings'); }]);
     if (us.phase === 'available') items.push(['يوجد تحديث جديد (' + us.latest + ')', 'اضغط للتحديث', 't3', 'جديد', 'تحديث', function () { location.href = 'update.html'; }]);
+    var mi = natJSON('memInfo') || {}, kk = nat('memKillsWeek') || 0;
+    if (!LITE && ((mi.total && mi.total < 2.3 * 1073741824) || kk >= 2)) items.push(['ننصح بالنسخة الخفيفة لهذه الشاشة', (kk >= 2 ? 'أغلق النظام الواجهة ' + kk + ' مرات هذا الأسبوع' : 'ذاكرة الشاشة محدودة') + '. إعداداتك تبقى كما هي', 't1', 'مقترح', 'التحويل', function () { location.href = 'update.html?switch=lite'; }]);
     var k = nat('memKillsWeek'); if (k > 0 && !perfOn(prefs)) items.push(['أغلق النظام الواجهة ' + k + ' مرة هذا الأسبوع', 'وضع الأداء يخفف الحمل', 't1', 'ذاكرة', 'تفعيل وضع الأداء', function () { prefs.perf = 'on'; upd(); }]);
   }
   var at = section(items.length ? 'تحتاج انتباهك' : 'كل شيء جاهز ✓');

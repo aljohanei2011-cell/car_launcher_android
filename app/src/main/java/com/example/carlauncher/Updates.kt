@@ -179,7 +179,22 @@ object Updater {
         java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.parse(s)?.time ?: 0L
     } catch (e: Exception) { 0L }
 
-    fun check(c: Context, forceBeta: Boolean = false) {
+    /** ملف التحديث المناسب لهذه النسخة (أو للنسخة المطلوب التحويل إليها) */
+    private fun pickApk(assets: JSONArray, lite: Boolean): JSONObject? {
+        var best: JSONObject? = null
+        for (i in 0 until assets.length()) {
+            val a = assets.getJSONObject(i); val n = a.optString("name")
+            if (!n.endsWith(".apk")) continue
+            val isLite = n.contains("-lite")
+            if (isLite != lite) continue
+            if (best == null || n == "rafiq.apk" || n == "rafiq-lite.apk") best = a
+        }
+        return best
+    }
+    @Volatile private var switching = false
+
+    /** switchTo: "lite" أو "full" للتحويل بين النسختين (يقبل نفس رقم الإصدار) */
+    fun check(c: Context, forceBeta: Boolean = false, switchTo: String? = null) {
         set("phase" to "checking", "error" to null)
         thread {
             try {
@@ -187,7 +202,9 @@ object Updater {
                 val code = conn.responseCode
                 if (code != 200) { set("phase" to "error", "error" to httpError(code)); return@thread }
                 val arr = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
-                val beta = forceBeta || channel(c) == "beta"
+                val wantLite = if (switchTo != null) switchTo == "lite" else BuildConfig.LITE
+                switching = switchTo != null && wantLite != BuildConfig.LITE
+                val beta = forceBeta || switchTo != null || channel(c) == "beta"
                 val now = System.currentTimeMillis()
                 var best: JSONObject? = null; var bestN = 0
                 var newest: JSONObject? = null; var newestN = 0
@@ -195,8 +212,7 @@ object Updater {
                     val r = arr.getJSONObject(i)
                     if (r.optBoolean("draft")) continue
                     val n = r.optString("tag_name").removePrefix("v").toIntOrNull() ?: continue
-                    val hasApk = (0 until (r.optJSONArray("assets")?.length() ?: 0)).any { r.getJSONArray("assets").getJSONObject(it).optString("name").endsWith(".apk") }
-                    if (!hasApk) continue
+                    if (pickApk(r.optJSONArray("assets") ?: JSONArray(), wantLite) == null) continue
                     if (n > newestN) { newestN = n; newest = r }
                     val ok = beta || (!r.optBoolean("prerelease") && now - parseTime(r.optString("published_at")) >= STABLE_DELAY_MS)
                     if (ok && n > bestN) { bestN = n; best = r }
@@ -207,14 +223,14 @@ object Updater {
                 set("channel" to (if (beta) "beta" else "stable"), "newest" to newestN, "pendingHrs" to pendingHrs)
                 val j = best
                 if (j == null) { set("latest" to 0, "current" to BuildConfig.VERSION_CODE, "phase" to "none"); return@thread }
-                val assets = j.optJSONArray("assets") ?: JSONArray()
-                var asset: JSONObject? = null
-                for (i in 0 until assets.length()) if (assets.getJSONObject(i).optString("name").endsWith(".apk")) asset = assets.getJSONObject(i)
+                val asset = pickApk(j.optJSONArray("assets") ?: JSONArray(), wantLite)
                 if (asset == null) { set("phase" to "error", "error" to "الإصدار لا يحتوي على ملف APK."); return@thread }
                 assetId = asset.getLong("id")
+                val avail = if (switching) bestN >= BuildConfig.VERSION_CODE else bestN > BuildConfig.VERSION_CODE
                 set("latest" to bestN, "current" to BuildConfig.VERSION_CODE, "notes" to j.optString("body"),
                     "size" to asset.optLong("size"), "date" to j.optString("published_at"),
-                    "phase" to if (bestN > BuildConfig.VERSION_CODE) "available" else "none")
+                    "edition" to (if (wantLite) "lite" else "full"), "switching" to switching,
+                    "phase" to if (avail) "available" else "none")
             } catch (e: IOException) {
                 set("phase" to "error", "error" to "لا يوجد اتصال بالإنترنت. اربط الشاشة بنقطة اتصال الجوال ثم حاول مرة أخرى.")
             } catch (e: Exception) {

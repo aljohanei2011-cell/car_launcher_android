@@ -63,7 +63,7 @@ var STEPS = [
   function () {
     $('h').textContent = 'اختر الثيم'; $('s').textContent = 'شكل البطاقات والألوان. يتغير لاحقاً بضغطة.';
     var L = [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg'], ['light', 'skins/light/bg_sky.jpg'], ['saudi', 'skins/saudi/bg_riyadh_night.jpg'], ['ptime', 'skins/ptime/bg_maghrib.jpg']];
-    $('c').innerHTML = '<div class="tiles">' + L.map(function (x) { return '<button class="' + ((prefs.skin || 'classic') === x[0] ? 'on' : '') + '" style="background-image:url(\'' + thumb(x[1]) + '\')" onclick="prefs.skin=\'' + x[0] + '\';prefs.theme=SKINS[\'' + x[0] + '\'].theme;save();render()">' + SKINS[x[0]].label + '</button>'; }).join('') + '</div>';
+    $('c').innerHTML = '<div class="tiles">' + L.filter(function (x) { return SKINS[x[0]]; }).map(function (x) { return '<button class="' + ((prefs.skin || 'classic') === x[0] ? 'on' : '') + '" style="background-image:url(\'' + thumb(x[1]) + '\')" onclick="prefs.skin=\'' + x[0] + '\';prefs.theme=SKINS[\'' + x[0] + '\'].theme;save();render()">' + SKINS[x[0]].label + '</button>'; }).join('') + '</div>';
   },
   function () {
     $('h').textContent = 'تصميم الشاشة الرئيسية'; $('s').textContent = 'ترتيب البطاقات والأزرار. اضغط مطولاً على أي بطاقة لاحقاً لتعديلها.';
@@ -95,10 +95,12 @@ function render(){
   $('next').textContent = step === N - 1 ? 'ابدأ' : 'التالي';
 }
 function finish(){ lsSet('carlauncher.wizardDone', Date.now()); save(); goHome(true); }
-$('next').onclick = function () { if (step < N - 1) { step++; render(); } else finish(); };
-$('prev').onclick = function () { if (step) { step--; render(); } };
+/* النسخة الخفيفة: لا توجد خطوة الثيم */
+function skipStep(st){ return LITE && st === 1; }
+$('next').onclick = function () { if (step < N - 1) { step++; if (skipStep(step)) step++; render(); } else finish(); };
+$('prev').onclick = function () { if (step) { step--; if (skipStep(step)) step--; render(); } };
 $('skip').onclick = finish;
-window.onPageBack = function () { if (step) { step--; render(); return true; } return false; };
+window.onPageBack = function () { if (step) { step--; if (skipStep(step)) step--; render(); return true; } return false; };
 window.onPageResume = render;
 render();
 fitStage();

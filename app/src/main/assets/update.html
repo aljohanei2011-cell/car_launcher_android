@@ -44,6 +44,8 @@
         <span class="h">تحديث رفيق الطريق</span>
         <div class="row"><span class="sub">الإصدار الحالي</span><span class="big" id="cur">—</span></div>
         
+        <div class="row"><span class="sub">النسخة</span><span style="display:flex;gap:8px;align-items:center"><b id="edName"></b><button class="btn g" id="edSw"></button></span></div>
+        <span class="note sub" id="edNote" style="font-size:15px;margin-top:-10px"></span>
         <div class="row"><span class="sub">قناة التحديث لهذه الشاشة</span><span style="display:flex;gap:8px"><button class="btn g" id="chS">ثابتة</button><button class="btn g" id="chB">تجريبية</button></span></div>
         <span class="note sub" id="chNote" style="font-size:15px;margin-top:-10px"></span>
         <button class="btn" id="check">بحث عن تحديث</button>
@@ -103,9 +105,26 @@ function poll(){
     pd.innerHTML = 'يوجد إصدار تجريبي أحدث (' + s.newest + ') يصل للقناة الثابتة بعد ' + s.pendingHrs + ' ساعة تقريباً. <button class="btn g" id="nowBeta">تثبيته الآن</button>';
     $('nowBeta').onclick = function () { betaOnce = true; nat('updateCheckBeta'); poll(); };
   } else pd.style.display = 'none';
+  if (switchTo && s.phase === 'available' && s.switching) { switchTo = null; nat('updateDownload'); }
+  if (s.phase === 'available' && s.switching) { m.textContent = 'جارٍ تحميل النسخة ' + (s.edition === 'lite' ? 'الخفيفة' : 'الكاملة') + '…'; }
   if (betaOnce && s.phase === 'available' && s.channel === 'beta') { betaOnce = false; if (nat('canInstall')) { nat('clearInstallStatus'); nat('updateDownload'); } }
 }
-var betaOnce = false;
+var betaOnce = false, switchTo = null;
+/* التحويل بين النسخة الكاملة والخفيفة (نفس التطبيق؛ تبقى الإعدادات والبيانات) */
+function renderEd(){
+  $('edName').textContent = LITE ? 'الخفيفة' : 'الكاملة';
+  $('edSw').textContent = LITE ? 'التحويل للكاملة' : 'التحويل للخفيفة';
+  $('edNote').textContent = LITE ? 'الخفيفة: بدون صور الثيمات والأوامر الصوتية وOBD، ووضع الأداء دائماً. للشاشات الضعيفة.' : 'الكاملة: كل الثيمات والمزايا. على الشاشات الضعيفة جرّب الخفيفة؛ إعداداتك تبقى كما هي.';
+}
+function startSwitch(to){
+  if (!HAS_NATIVE) return;
+  if (!nat('canInstall')) { askInstallPermission(); return; }
+  switchTo = to; nat('clearInstallStatus'); nat('updateSwitch', to); poll();
+}
+$('edSw').onclick = function () { startSwitch(LITE ? 'full' : 'lite'); };
+renderEd();
+var swq = (location.search.match(/switch=(lite|full)/) || [])[1];
+if (swq && (swq === 'lite') !== LITE) setTimeout(function () { $('edSw').textContent = 'جارٍ التحضير…'; startSwitch(swq); }, 300);
 function renderCh(){
   var ch = nat('updChannel') || 'stable';
   $('chS').className = 'btn' + (ch === 'stable' ? '' : ' g'); $('chB').className = 'btn' + (ch === 'beta' ? '' : ' g');

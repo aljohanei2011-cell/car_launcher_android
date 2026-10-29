@@ -137,7 +137,7 @@ function driveTick(){
   }
   // الشاشة المبسطة عند السرعة
   var ds = prefs.driveSimple || {};
-  if (ds.on) {
+  if (ds.on && !LITE) {
     var lim = +ds.speed || 80;
     if (v >= lim) { _fast += 2; _slow = 0; } else if (v < lim - 15) { _slow += 2; _fast = 0; }
     if (_fast >= 10 && !document.getElementById('driveOv') && !restOpen()) showDriveSimple();
@@ -146,7 +146,7 @@ function driveTick(){
   }
   // سرعة المنطقة
   var zs = prefs.zoneSpeed || {};
-  if (zs.on && now - _zoneAt > 45000) {
+  if (zs.on && !LITE && now - _zoneAt > 45000) {
     var near = 1e9; Object.keys(CITIES).forEach(function (k) { var c = CITIES[k]; near = Math.min(near, distKm(t.lat, t.lng, c.lat, c.lng)); });
     var zone = near < 15 ? 'city' : 'hwy', zl = zone === 'city' ? (+zs.city || 80) : (+zs.hwy || 120);
     if (v > zl + (+zs.margin || 10)) { _zoneAt = now; beep(2); toast('السرعة ' + Math.round(v) + ' — حد ' + (zone === 'city' ? 'المدينة' : 'الطريق') + ' ' + zl); }
@@ -190,7 +190,7 @@ function renderDriveSimple(t){
 /* ---------- المكالمات والرسائل ---------- */
 var _msgSeen = +(lsGet('carlauncher.msgSeen', 0)) || Date.now();
 function notifTick(){
-  if (!HAS_NATIVE || (prefs.callCard === false && prefs.msgNotify === false)) return;
+  if (LITE || !HAS_NATIVE || (prefs.callCard === false && prefs.msgNotify === false)) return;
   var n = natJSON('notifs') || {};
   var box = document.getElementById('callOv');
   if (n.call && prefs.callCard !== false) {
@@ -395,12 +395,12 @@ card('obd', 'بيانات السيارة (OBD)', function () {
 CARD_RATE.obd = 2;
 var _obdWarn = 0;
 function obdTick(){
-  if (!HAS_NATIVE) return;
+  if (LITE || !HAS_NATIVE) return;
   var o = natJSON('obd'); if (!o || o.state !== 'on') return;
   if (o.coolant >= 108 && Date.now() - _obdWarn > 120000) { _obdWarn = Date.now(); beep(3); toast('تنبيه: حرارة المحرك مرتفعة (' + o.coolant + '°) — توقف بأمان وافحص التبريد', null, null, 20000); }
 }
 /* الاتصال التلقائي بآخر قطعة OBD عند التشغيل */
-setTimeout(function () { if (HAS_NATIVE && prefs.obdAuto) { var o = natJSON('obd') || {}; if (o.state !== 'on' && o.state !== 'connecting' && o.saved) nat('obdStart', o.saved); } }, 8000);
+setTimeout(function () { if (HAS_NATIVE && !LITE && prefs.obdAuto) { var o = natJSON('obd') || {}; if (o.state !== 'on' && o.state !== 'connecting' && o.saved) nat('obdStart', o.saved); } }, 8000);
 
 (function () {
   var css = document.createElement('style');

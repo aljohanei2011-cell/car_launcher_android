@@ -54,6 +54,11 @@ var CHECKS = [
   ['البلوتوث', function () { var s = natJSON('status') || {}; return { s: s.bt === 'connected' ? 'ok' : s.bt === 'on' ? 'ok' : 'warn', t: s.bt === 'connected' ? 'متصل بجهاز' : s.bt === 'on' ? 'يعمل' : 'مُطفأ أو غير متاح' }; }],
   ['قطعة OBD', function () { var o = natJSON('obd') || {}, d = natJSON('obdDevices') || []; if (o.state === 'on') return { s: 'ok', t: 'متصلة: ' + o.dev }; var lk = d.filter(function (x) { return x.likely; }); return lk.length ? { s: 'warn', t: 'مقترنة وغير متصلة: ' + lk[0].name, fix: ['اتصال', function () { nat('obdStart', lk[0].addr); }] } : { s: 'warn', t: 'لا توجد قطعة (اختياري)' }; }],
   ['الإصدار', function () { var v = natJSON('version') || {}, u = natJSON('updateState') || {}; return { s: u.phase === 'available' ? 'warn' : 'ok', t: 'الإصدار ' + (v.name || '—') + ' · قناة ' + (nat('updChannel') === 'beta' ? 'تجريبية' : 'ثابتة') + (u.phase === 'available' ? ' · يوجد تحديث ' + u.latest : '') }; }],
+  ['النسخة المناسبة', function () {
+    var m = natJSON('memInfo') || {}, k = nat('memKillsWeek') || 0, weak = (m.total && m.total < 2.3 * 1073741824) || k >= 2;
+    if (LITE) return { s: 'ok', t: 'النسخة الخفيفة' + (weak ? ' (مناسبة لهذه الشاشة)' : ' — الشاشة تتحمل الكاملة إن أردت'), fix: weak ? null : ['الكاملة', function () { location.href = 'update.html?switch=full'; }] };
+    return weak ? { s: 'warn', t: 'ننصح بالنسخة الخفيفة لهذه الشاشة', fix: ['التحويل', function () { location.href = 'update.html?switch=lite'; }] } : { s: 'ok', t: 'النسخة الكاملة مناسبة' };
+  }],
   ['المدينة والمواقيت', function () { var np = nextPrayer(new Date()); return { s: 'ok', t: cityLabel() + ' · ' + np.name + ' ' + np.timeFmt }; }]
 ];
 function run(){
