@@ -218,6 +218,9 @@ function applyPrefs(bgKey, p){
   document.body.classList.remove('skin-gold', 'skin-red');
   if (p.skin === 'gold' || p.skin === 'red') document.body.classList.add('skin-' + p.skin);
   renderBrand(p);
+  /* حفظ الخلفية والأصناف لتُطبَّق فوراً عند فتح الصفحة التالية (بدون وميض الخلفية الافتراضية) */
+  try { if (img) localStorage.setItem('carlauncher.bg.' + (bgKey === 'rest' ? 'rest' : 'home'), img.getAttribute('src') || '');
+        localStorage.setItem('carlauncher.bodycls', ['solid','perf','skin-gold','skin-red'].filter(function(c){ return document.body.classList.contains(c); }).join(' ')); } catch (e) {}
 }
 
 /* ===== مواقيت الصلاة على الجهاز (بدون إنترنت) — طريقة أم القرى =====
