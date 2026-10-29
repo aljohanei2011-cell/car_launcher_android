@@ -1,13 +1,29 @@
 /* ملف مشترك لكل صفحات التطبيق: التحجيم، المواقيت، الإعدادات، الجسر مع النظام */
 
 /* ===== التحجيم: scale = min(W/1280, H/720) ===== */
+/* بدون أي سكربت تظهر الصفحة صحيحة على 1280×720؛ هنا نكبّر أو نصغّر للمقاسات الأخرى ونوسّطها */
 function fitStage(){
   var el = document.getElementById('stage');
   if (!el) return;
-  var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
-  el.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  var W = window.innerWidth, H = window.innerHeight;
+  if (!W || !H) return;
+  var s = Math.min(W / 1280, H / 720);
+  var tx = Math.round((W - 1280 * s) / 2), ty = Math.round((H - 720 * s) / 2);
+  el.style.transform = (s === 1 && !tx && !ty) ? 'none' : 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
 }
 window.addEventListener('resize', fitStage);
+fitStage();
+
+/* هل الصفحة داخل نافذة الاستراحة فوق الرئيسية؟ */
+var IN_FRAME = window.parent !== window;
+/* الرسائل بين النافذة والرئيسية تعمل حتى لو اعتبر المتصفح الملفين من مصدرين مختلفين */
+function goHome(){ if (IN_FRAME) { try { window.parent.postMessage({ rafiq: 'closeRest' }, '*'); return; } catch (e) {} } location.href = 'index.html'; }
+/* أي رابط للرئيسية من داخل نافذة الاستراحة يغلقها بدل تحميل رئيسية ثانية */
+document.addEventListener('click', function (e) {
+  if (!IN_FRAME) return;
+  var a = e.target.closest && e.target.closest('a[href]');
+  if (a && /(^|\/)index\.html/.test(a.getAttribute('href'))) { e.preventDefault(); goHome(); }
+}, true);
 
 /* ===== الجسر مع أندرويد (Native). في المتصفح يعمل كل شيء بدونه ===== */
 var HAS_NATIVE = typeof window.Native !== 'undefined';

@@ -109,7 +109,7 @@
       <div class="right"><div class="logo" id="brand" aria-label="اسم السيارة"></div></div>
       <div class="center"><a class="banner" id="banner" href="maintenance.html"></a></div>
       <div class="left">
-        <span class="clockTop" id="clockTop" ondblclick="location.href='rest.html'"></span>
+        <span class="clockTop" id="clockTop" ondblclick="openRest()"></span>
         <div class="status" id="status"></div>
         <div id="remChip"></div>
       </div>
@@ -154,7 +154,7 @@ var DOCK_ITEMS = {
   music: { label: 'الموسيقى', go: function () { openRole('music'); } },
   radio: { label: 'الراديو', href: 'radio.html' },
   apps: { label: 'التطبيقات', href: 'apps.html' },
-  rest: { label: 'الاستراحة', href: 'rest.html' },
+  rest: { label: 'الاستراحة', go: function () { openRest(); } },
   azkar: { label: 'الأذكار', href: 'azkar.html' },
   trip: { label: 'الرحلة', href: 'trip.html' },
   prayer: { label: 'الصلاة', href: 'prayer.html' },
@@ -166,13 +166,35 @@ var DOCK_ITEMS = {
   settings: { label: 'الإعدادات', href: 'settings.html' }
 };
 var appCache = {};
+/* أسماء وأيقونات التطبيقات تُحفظ محلياً، فلا نسأل النظام عنها في كل فتح للرئيسية (كان يسبب تعليقاً) */
+var APP_CACHE_KEY = 'carlauncher.appcache';
+var appStore = lsGet(APP_CACHE_KEY, {});
 function appInfo(pkg){
-  if (!appCache[pkg]) {
-    var a = (natJSON('apps') || []).filter(function (x) { return x.pkg === pkg; })[0];
-    appCache[pkg] = { label: a ? a.label : pkg.split('.').pop(), icon: nat('appIcon', pkg) || '' };
-  }
-  return appCache[pkg];
+  if (appCache[pkg]) return appCache[pkg];
+  var s = appStore[pkg];
+  if (s && s.icon && Date.now() - (s.at || 0) < 7 * 86400000) { appCache[pkg] = s; return s; }
+  var a = (natJSON('apps') || []).filter(function (x) { return x.pkg === pkg; })[0];
+  var info = { label: a ? a.label : pkg.split('.').pop(), icon: nat('appIcon', pkg) || '', at: Date.now() };
+  appCache[pkg] = info;
+  if (info.icon) { appStore[pkg] = info; lsSet(APP_CACHE_KEY, appStore); }
+  return info;
 }
+/* ===== شاشة الاستراحة كنافذة فوق الرئيسية ===== */
+function openRest(q){
+  if (document.getElementById('restFrame')) return;
+  var f = document.createElement('iframe');
+  f.id = 'restFrame'; f.src = 'rest.html' + (q || '');
+  document.getElementById('stage').appendChild(f);
+}
+window.closeRest = function () {
+  var f = document.getElementById('restFrame');
+  if (f) { try { f.src = 'about:blank'; } catch (e) {} f.remove(); }
+  nat('keepOn', false);
+  lastTouch = Date.now();
+  forceCards = true; tick(); forceCards = false;
+};
+function restOpen(){ return !!document.getElementById('restFrame'); }
+window.addEventListener('message', function (e) { if (e.data && e.data.rafiq === 'closeRest') window.closeRest(); });
 function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
 function renderDock(){
@@ -224,7 +246,7 @@ function card(id, label, render){ CARDS[id] = { label: label, render: render }; 
 
 card('clock', 'الساعة', function () {
   var d = new Date();
-  return '<div class="k-center" ondblclick="location.href=\'rest.html\'">' +
+  return '<div class="k-center" ondblclick="openRest()">' +
     '<div class="k-sub">' + fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + '</div>' +
     '<div class="k-huge">' + clockStr(d) + '<span style="font-size:.25em;font-weight:500;margin-left:.2em">' + ampm(d) + '</span></div>' +
     '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div></div>';
@@ -424,7 +446,7 @@ function buildPages(){
   pages.forEach(function (cards, pi) {
     var pg = document.createElement('div'); pg.className = 'page';
     if (prefs.layout === 'minimal') {
-      pg.innerHTML = '<div class="minClock" ondblclick="location.href=\'rest.html\'"><div class="sub" id="minDate" style="font-size:24px"></div><div id="minClock" class="font-clock" style="font-size:150px;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums"></div><div class="sub" id="minPrayer" style="font-size:26px"></div></div>';
+      pg.innerHTML = '<div class="minClock" ondblclick="openRest()"><div class="sub" id="minDate" style="font-size:24px"></div><div id="minClock" class="font-clock" style="font-size:150px;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums"></div><div class="sub" id="minPrayer" style="font-size:26px"></div></div>';
       cards = cards.slice(0, 3);
     }
     var wrap = document.createElement('div'); wrap.className = 'cards';
@@ -519,13 +541,13 @@ document.addEventListener('pointerdown', function () { lastTouch = touchAt = Dat
 function autoRest(){
   var mode = prefs.restAuto, min = (+prefs.restAutoMin || 5) * 60000, now = Date.now();
   if (mode === 'manual') return;
-  if (mode === 'idle' && now - lastTouch > min) location.href = 'rest.html?auto=1';
-  if (mode === 'night' && isNight() && now - lastTouch > min) location.href = 'rest.html?auto=1';
+  if (mode === 'idle' && now - lastTouch > min) openRest('?auto=1');
+  if (mode === 'night' && isNight() && now - lastTouch > min) openRest('?auto=1');
   if (mode === 'stopped') {
     var t = natJSON('trip'); if (!t || !t.gps) return;
     if (t.speed > 5) { movedSinceStop = true; stoppedSince = 0; return; }
     if (!stoppedSince) stoppedSince = now;
-    if (movedSinceStop && now - stoppedSince > min && now - lastTouch > 30000) { movedSinceStop = false; location.href = 'rest.html?auto=1'; }
+    if (movedSinceStop && now - stoppedSince > min && now - lastTouch > 30000) { movedSinceStop = false; openRest('?auto=1'); }
   }
 }
 
@@ -544,9 +566,11 @@ function tick(){
 }
 window.onPageResume = function () { forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
 
-processInbox();
-buildPages(); renderDock(); renderStatus(); tick(); renderBanner(); bootAction(); applyBrightness(); weatherRefreshIfStale();
-setInterval(function () { if (!document.hidden) tick(); }, 1000);
+/* كل خطوة مستقلة: لو تعطلت واحدة تُسجَّل في سجل الأعطال وتكمل البقية، فلا تبقى الشاشة فارغة */
+function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + name + ': ' + (e && e.message)); } }
+safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
+safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale);
+setInterval(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
 setInterval(function () { if (!document.hidden) renderStatus(); }, 5000);
 autoDetectPerf();
 /* البحث عن تحديث بهدوء كل 6 ساعات عند توفر الإنترنت */
@@ -557,7 +581,7 @@ function autoUpdateCheck(){
 }
 setTimeout(autoUpdateCheck, 15000);
 setInterval(autoUpdateCheck, 10 * 60000);
-setInterval(function () { processInbox(); updatePlaceReminders(); autoRest(); }, 5000);
+setInterval(function () { processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest(); }, 5000);
 setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 fitStage();
 </script>

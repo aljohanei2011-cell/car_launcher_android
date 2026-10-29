@@ -238,7 +238,7 @@ var openedAt = Date.now();
 document.addEventListener('pointerdown', function () { openedAt = Date.now(); }, true);
 setInterval(function () {
   var r = +prefs.restReturn || 0;
-  if (r && !napEnd && Date.now() - openedAt > r * 60000) location.href = 'index.html';
+  if (r && !napEnd && Date.now() - openedAt > r * 60000) goHome();
 }, 10000);
 
 applyStyle(); tick();

@@ -18,7 +18,7 @@
 @font-face{font-family:'KOMission';src:url(fonts/komission-black.otf) format('opentype')}
 
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
-#stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center center;font-family:'Thmanyah','Noto Sans Arabic',Tahoma,sans-serif;color:#fff;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;font-family:'Thmanyah','Noto Sans Arabic',Tahoma,sans-serif;color:#fff;overflow:hidden}
 #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,0) 45%,rgba(0,0,0,.55) 100%)}
 .wrap{position:relative;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
@@ -123,3 +123,6 @@ body.skin-red .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:#C8102E!i
 body.perf .page{background:#0a0f1f!important}
 body.perf.skin-gold .page{background:#071426!important}
 body.perf.skin-red .page{background:#0b0c0e!important}
+
+/* شاشة الاستراحة فوق الرئيسية (بدون إعادة تحميل الرئيسية) */
+#restFrame{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;z-index:80;background:#000}
