@@ -24,6 +24,7 @@
     <div class="top">
       <a class="icon-btn" href="trip.html" aria-label="رجوع" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a>
       <span style="font-size:26px;font-weight:700">سجل الرحلات</span>
+      <button id="qrBtn" style="margin-right:auto;height:48px;padding:0 18px;border-radius:14px;border:1px solid #2b4a80;background:#13254a;color:#fff;font:inherit;font-size:17px">إرسال ملخص الأسبوع للجوال</button>
     </div>
     <div class="sum">
       <div class="box"><span class="sub">هذا الأسبوع</span><b id="w">0</b><span class="sub" id="wn"></span></div>
@@ -34,6 +35,7 @@
     <div class="list" id="list"></div>
   </div>
 </div>
+<script src="lib/qrcode.js"></script>
 <script src="common.js"></script>
 <script>
 var prefs = loadPrefs(); applyPrefs('home', prefs);
@@ -42,9 +44,9 @@ var log = natJSON('tripLog') || [];
 function pad(x){ return (x < 10 ? '0' : '') + x; }
 function dur(s){ return pad(Math.floor(s/3600)) + ':' + pad(Math.floor((s%3600)/60)); }
 function total(from){
-  var km = 0, n = 0;
-  log.forEach(function (t) { if (t.start >= from) { km += t.km; n++; } });
-  return { km: km, n: n };
+  var km = 0, n = 0, sec = 0, mx = 0;
+  log.forEach(function (t) { if (t.start >= from) { km += t.km; n++; sec += t.movingSec || 0; mx = Math.max(mx, t.maxSpeed || 0); } });
+  return { km: km, n: n, sec: sec, max: mx };
 }
 var now = new Date();
 var weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // يبدأ الأحد
@@ -52,8 +54,19 @@ var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 [['w', weekStart.getTime()], ['m', monthStart.getTime()], ['a', 0]].forEach(function (x) {
   var t = total(x[1]);
   document.getElementById(x[0]).textContent = Math.round(t.km).toLocaleString('en') + ' كم';
-  document.getElementById(x[0] + 'n').textContent = t.n + ' رحلة';
+  document.getElementById(x[0] + 'n').textContent = t.n + ' رحلة · قيادة ' + dur(t.sec);
 });
+document.getElementById('qrBtn').onclick = function () {
+  var w = total(weekStart.getTime());
+  var txt = 'رفيق الطريق — ملخص الأسبوع\nالمسافة: ' + Math.round(w.km) + ' كم\nالرحلات: ' + w.n + '\nوقت القيادة: ' + dur(w.sec) + '\nأعلى سرعة: ' + w.max + ' كم/س' +
+    (w.sec > 60 ? '\nمتوسط السرعة: ' + Math.round(w.km / (w.sec / 3600)) + ' كم/س' : '');
+  var q = qrcode(0, 'M'); q.addData(unescape(encodeURIComponent(txt))); q.make();
+  var ov = document.createElement('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:60;background:rgba(5,10,25,.92);display:flex;align-items:center;justify-content:center;gap:40px';
+  ov.innerHTML = '<div style="width:360px;height:360px;background:#fff;border-radius:24px;display:flex;align-items:center;justify-content:center">' + q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }).replace('<svg ', '<svg style="width:330px;height:330px" ') + '</div>' +
+    '<div style="font-size:22px;line-height:1.8;white-space:pre-line;max-width:520px">' + txt.replace(/</g, '&lt;') + '<br><span style="font-size:17px;color:#8F9AB8">امسح بكاميرا الجوال لنسخ الملخص. اضغط للإغلاق.</span></div>';
+  ov.onclick = function () { ov.remove(); };
+  document.getElementById('stage').appendChild(ov);
+};
 var L = document.getElementById('list');
 if (!log.length) L.innerHTML = '<div class="empty">لا توجد رحلات مسجلة بعد.<br>تُحفظ الرحلة تلقائياً بعد التوقف 10 دقائق.</div>';
 log.slice().reverse().forEach(function (t) {

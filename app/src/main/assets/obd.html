@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>بيانات السيارة OBD</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.devs{display:flex;flex-direction:column;gap:8px;max-height:250px;overflow-y:auto;scrollbar-width:none}
+.devs button{height:58px;border-radius:14px;border:1px solid #23406f;background:#13254a;color:#fff;font:inherit;font-size:18px;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
+.devs button.on{background:#1F5FD1;border-color:#6FA8FF}
+.devs small{font-size:13px;color:#9FB0CC;direction:ltr}
+.g4{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4 div{background:rgba(255,255,255,.05);border-radius:16px;padding:12px 14px;text-align:center}
+.g4 b{display:block;font-size:40px;direction:ltr}
+.g4 .warn b{color:#FF6B5A}
+.dtc{display:flex;flex-wrap:wrap;gap:8px}
+.dtc span{padding:8px 14px;border-radius:12px;background:rgba(255,107,90,.15);border:1px solid #FF6B5A;font-size:18px;direction:ltr}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">بيانات السيارة (OBD)</span>
+    </div>
+    <div class="pcols" style="grid-template-columns:1fr 1.3fr">
+      <div class="pcard">
+        <span class="ph">قطعة OBD البلوتوث</span>
+        <span class="pnote">1) ركّب قطعة ELM327 بلوتوث في منفذ OBD تحت المقود. 2) اقرنها من إعدادات بلوتوث الشاشة (الرقم غالباً 1234 أو 0000). 3) اخترها هنا.</span>
+        <div class="devs" id="devs"></div>
+        <div class="prow"><button class="pbtn g" id="bt">إعدادات البلوتوث</button><button class="pbtn g" id="stop">قطع الاتصال</button></div>
+        <div class="toggle" style="display:flex;justify-content:space-between;align-items:center;font-size:18px"><span>الاتصال تلقائياً عند تشغيل الشاشة</span><button class="pbtn g" id="auto"></button></div>
+        <span class="pnote" id="st"></span>
+      </div>
+      <div class="pcard">
+        <span class="ph">القراءات الحية</span>
+        <div class="g4" id="vals"></div>
+        <span class="ph">أكواد الأعطال (لمبة المحرك)</span>
+        <div class="dtc" id="dtc"></div>
+        <div class="prow"><button class="pbtn" id="read">قراءة الأعطال</button><button class="pbtn r" id="clear">مسح الأعطال</button><span class="pnote" id="msg"></span></div>
+        <span class="pnote" style="margin-top:auto">المسح يطفئ لمبة المحرك فقط ولا يصلح السبب. إن عادت اللمبة راجع الورشة. لا تمسح الأعطال والسيارة تمشي.</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(id){ return document.getElementById(id); }
+var DTC_HINT = { P0300: 'احتراق غير منتظم', P0171: 'خليط فقير', P0420: 'كفاءة الدبة (الكتلايزر)', P0128: 'حرارة المحرك منخفضة (ثرموستات)', P0442: 'تسريب بخار وقود صغير', P0455: 'تسريب بخار وقود (غطاء البنزين)', P0505: 'نظام الهواء الخامل', P0113: 'حساس حرارة الهواء' };
+function renderDevs(){
+  var list = natJSON('obdDevices') || [], o = natJSON('obd') || {};
+  $('devs').innerHTML = list.length ? list.map(function (d) {
+    return '<button class="' + (o.saved === d.addr ? 'on' : '') + '" onclick="conn(\'' + d.addr + '\')"><span>' + (d.likely ? '★ ' : '') + d.name.replace(/</g, '&lt;') + '</span><small>' + d.addr + '</small></button>';
+  }).join('') : '<span class="pnote">' + (HAS_NATIVE ? 'لا توجد أجهزة مقترنة. اقرن القطعة من إعدادات البلوتوث أولاً.' : 'يعمل داخل التطبيق') + '</span>';
+  $('auto').textContent = prefs.obdAuto ? 'مفعّل' : 'مُطفأ';
+}
+function conn(a){ nat('obdStart', a); $('st').textContent = 'جارٍ الاتصال…'; setTimeout(renderDevs, 400); }
+function render(){
+  var o = natJSON('obd') || {};
+  $('st').textContent = { on: 'متصل: ' + (o.dev || ''), connecting: 'جارٍ الاتصال… (شغّل المحرك)', error: 'تعذّر: ' + (o.err || ''), off: 'غير متصل' }[o.state || 'off'] || '';
+  var cell = function (l, v, u, w) { return '<div class="' + (w ? 'warn' : '') + '"><span class="pnote">' + l + '</span><b>' + (v === undefined || v === null ? '—' : v) + '<span style="font-size:18px"> ' + u + '</span></b></div>'; };
+  $('vals').innerHTML = cell('حرارة المحرك', o.coolant, '°م', o.coolant >= 105) + cell('البطارية', o.volt ? o.volt.toFixed(1) : null, 'فولت', o.volt && (o.volt < 11.8 || o.volt > 15)) + cell('دورات المحرك', o.rpm, 'د/د') +
+    cell('السرعة', o.speed, 'كم/س') + cell('الوقود', o.fuel, '%', o.fuel !== undefined && o.fuel < 12) + cell('حمل المحرك', o.load, '%');
+  var d = o.dtcs || [];
+  $('dtc').innerHTML = o.state !== 'on' ? '<span class="pnote" style="background:none;border:none;direction:rtl">اتصل بالقطعة أولاً</span>' : d.length ? d.map(function (c) { return '<span>' + c + (DTC_HINT[c] ? ' · ' + DTC_HINT[c] : '') + '</span>'; }).join('') : '<span class="pnote" style="background:none;border:none;direction:rtl">لا توجد أعطال مسجلة ✓</span>';
+}
+$('bt').onclick = function () { nat('openSystem', 'bt'); };
+$('stop').onclick = function () { nat('obdStop'); setTimeout(render, 300); };
+$('auto').onclick = function () { prefs.obdAuto = !prefs.obdAuto; savePrefs(prefs); renderDevs(); };
+$('read').onclick = function () { nat('obdReadDtc'); $('msg').textContent = 'جارٍ القراءة…'; setTimeout(function () { $('msg').textContent = ''; render(); }, 5000); };
+$('clear').onclick = function () {
+  var t = natJSON('trip'); if (t && t.speed > 5) { $('msg').textContent = 'أوقف السيارة أولاً'; return; }
+  if (!window._clr || Date.now() - window._clr > 5000) { window._clr = Date.now(); $('msg').textContent = 'اضغط «مسح الأعطال» مرة أخرى للتأكيد'; return; }
+  window._clr = 0; nat('obdClearDtc'); $('msg').textContent = 'أُرسل أمر المسح'; setTimeout(render, 5000);
+};
+renderDevs(); render(); setInterval(render, 1500);
+fitStage();
+</script>
+</body>
+</html>

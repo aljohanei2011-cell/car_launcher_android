@@ -36,9 +36,9 @@
 <script>
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
-var pick = (location.search.match(/pick=(maps|music|radio|fav|dock)/) || [])[1] || '';
+var pick = (location.search.match(/pick=(maps|music|radio|fav|dock|quran|kids)/) || [])[1] || '';
 var MULTI = pick === 'fav' || pick === 'dock';
-var PICK_TITLES = { maps: 'اختر تطبيق الخرائط', music: 'اختر تطبيق الموسيقى', radio: 'اختر تطبيق الراديو (FM)', fav: 'اختر تطبيقاتك المفضلة (حتى 6)', dock: 'أضف تطبيقات إلى القائمة السفلية' };
+var PICK_TITLES = { maps: 'اختر تطبيق الخرائط', music: 'اختر تطبيق الموسيقى', radio: 'اختر تطبيق الراديو (FM)', fav: 'اختر تطبيقاتك المفضلة (حتى 6)', dock: 'أضف تطبيقات إلى القائمة السفلية', quran: 'اختر تطبيق المصحف', kids: 'اختر تطبيق الأطفال' };
 if (pick) {
   document.getElementById('title').textContent = PICK_TITLES[pick];
   var h = document.getElementById('hint'); h.style.display = 'block';
@@ -72,7 +72,7 @@ function render(){
         return;
       }
       if (pick) {
-        if (pick === 'maps') prefs.mapsApp = a.pkg; else if (pick === 'music') prefs.musicApp = a.pkg; else if (pick === 'radio') prefs.radioApp = a.pkg;
+        if (pick === 'maps') prefs.mapsApp = a.pkg; else if (pick === 'music') prefs.musicApp = a.pkg; else if (pick === 'radio') prefs.radioApp = a.pkg; else if (pick === 'quran') prefs.quranApp = a.pkg; else if (pick === 'kids') prefs.kidsApp = a.pkg;
         savePrefs(prefs);
       }
       nat('launch', a.pkg);

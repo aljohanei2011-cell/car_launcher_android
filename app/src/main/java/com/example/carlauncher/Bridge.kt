@@ -317,6 +317,28 @@ class Bridge(private val act: MainActivity) {
         act.runOnUiThread { try { act.startActivity(Intent(action)) } catch (e: Exception) { try { act.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) } catch (x: Exception) {} } }
     }
 
+
+    // ===== OBD (قطعة ELM327 بلوتوث) =====
+    @JavascriptInterface fun obd(): String = Obd.json(ctx)
+    @JavascriptInterface fun obdDevices(): String = Obd.devices()
+    @JavascriptInterface fun obdStart(addr: String) = Obd.start(ctx, addr)
+    @JavascriptInterface fun obdStop() = Obd.stop()
+    @JavascriptInterface fun obdReadDtc() = Obd.readDtc()
+    @JavascriptInterface fun obdClearDtc() = Obd.clearDtc()
+
+    // ===== رسالة واتساب جاهزة (المستخدم يضغط إرسال بنفسه) =====
+    @JavascriptInterface
+    fun whatsapp(phone: String, text: String): Boolean {
+        val num = phone.filter { it.isDigit() }
+        val u = android.net.Uri.parse("https://wa.me/" + num + "?text=" + android.net.Uri.encode(text))
+        for (pkg in listOf("com.whatsapp", "com.whatsapp.w4b", "")) {
+            val i = Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (pkg.isNotEmpty()) i.setPackage(pkg)
+            if (i.resolveActivity(ctx.packageManager) != null) { act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
+        }
+        return false
+    }
+
     // ===== الإضاءة الليلية =====
     @JavascriptInterface fun canWriteSettings(): Boolean = Settings.System.canWrite(ctx)
     @JavascriptInterface fun openWriteSettings() {

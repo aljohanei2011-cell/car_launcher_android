@@ -264,3 +264,150 @@ function openQuickPanel(){
   setInterval(function () { if (!document.hidden) safe('drive', driveTick); }, 2000);
   setInterval(function () { if (!document.hidden) safe('notif', notifTick); }, 1500);
 })();
+
+/* ================================================================
+   العبادة والسيارة: ورد القرآن، الجمعة، أذكار الصباح والمساء،
+   المناسبات، رسالة الوصول، وضع الركاب، وثائق السيارة، المصاريف، OBD
+   ================================================================ */
+NEARBY.push(['jami', 'جامع', 'جامع', '#5AD1A0']);
+NB_IC.jami = NB_IC.mosque;
+
+/* ---------- ورد القرآن اليومي بالتتابع (604 صفحة) ---------- */
+function khatma(){ return Object.assign({ pages: 4, cur: 1, done: '', count: 0 }, prefs.khatma || {}); }
+function pageJuz(p){ return Math.min(30, Math.max(1, Math.floor((p - 2) / 20) + 1)); }
+function khatmaDone(){
+  var k = khatma(), to = Math.min(604, k.cur + k.pages - 1);
+  k.cur = to >= 604 ? 1 : to + 1; k.done = todayStr(); if (to >= 604) k.count = (k.count || 0) + 1;
+  prefs.khatma = k; savePrefs(prefs); _prefsCache = null; later();
+  toast(to >= 604 ? 'ما شاء الله، أتممت الختمة! تبدأ ختمة جديدة' : 'تقبّل الله ✓ ورد الغد من الصفحة ' + k.cur);
+}
+function openQuran(){ if (prefs.quranApp && nat('launch', prefs.quranApp)) return; openPage('apps.html?pick=quran'); }
+card('khatma', 'وردي من القرآن', function () {
+  var k = khatma(), to = Math.min(604, k.cur + k.pages - 1), pct = Math.round((k.cur - 1) / 604 * 100), doneToday = k.done === todayStr();
+  return '<div class="k-row"><span class="k-lbl">وردي من القرآن</span><span class="k-sub">الجزء ' + pageJuz(k.cur) + '</span></div>' +
+    '<div class="k-center" style="height:auto"><div class="k-sub">' + (doneToday ? 'قرأت ورد اليوم ✓ — ورد الغد: ' : 'ورد اليوم: ') + (to > k.cur ? 'الصفحات' : 'الصفحة') + '</div><div class="k-big" style="font-size:2.6em">' + k.cur + (to > k.cur ? ' – ' + to : '') + '</div></div>' +
+    '<div><div style="height:.45em;border-radius:.25em;background:rgba(127,127,127,.25);overflow:hidden;direction:ltr"><div style="width:' + pct + '%;height:100%;background:var(--accent,#5AD1A0)"></div></div>' +
+    '<div class="k-row k-sub" style="font-size:.9em;margin-top:.2em"><span>' + pct + '% من الختمة</span><span>' + (k.count ? 'ختمات: ' + k.count : '') + '</span></div></div>' +
+    '<div style="display:flex;gap:.5em"><button class="k-btn" onclick="khatmaDone()"' + (doneToday ? ' style="opacity:.6"' : '') + '>قرأت</button><button class="k-btn" onclick="openQuran()">فتح المصحف</button></div>';
+});
+CARD_RATE.khatma = 60;
+
+/* ---------- المناسبات (زينة خفيفة بدون صور) ---------- */
+function occasion(d){
+  d = d || new Date();
+  var m = d.getMonth() + 1, day = d.getDate(), h = hijriParts(d);
+  if (m === 9 && day === 23) return { k: 'national', t: 'اليوم الوطني السعودي ' + (d.getFullYear() - 1930) };
+  if (m === 2 && day === 22) return { k: 'national', t: 'يوم التأسيس' };
+  if (h && h.m === 10 && h.d <= 3) return { k: 'eid', t: 'عيدكم مبارك' };
+  if (h && h.m === 12 && h.d >= 10 && h.d <= 13) return { k: 'eid', t: 'عيد أضحى مبارك' };
+  if (h && h.m === 12 && h.d === 9) return { k: 'arafa', t: 'يوم عرفة' };
+  if (h && h.m === 9) return { k: 'ramadan', t: 'رمضان كريم' };
+  return null;
+}
+var OCC_IC = {
+  national: '<svg viewBox="0 0 24 24" fill="none" stroke="#2BB673" stroke-width="2" stroke-linecap="round"><path d="M12 22V10M12 10c-3-4-7-4-9-2 3 0 6 1 9 2zM12 10c3-4 7-4 9-2-3 0-6 1-9 2zM12 10c-1-4 0-7 0-8 0 1 1 4 0 8z"/></svg>',
+  eid: '<svg viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="2" stroke-linecap="round"><path d="M12 3l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 15.2 7 18l1.2-5.6L4 8.6 9.6 8z"/></svg>',
+  arafa: '<svg viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="2" stroke-linecap="round"><path d="M3 20h18M6 20l4-9 3 5 2-3 3 7"/></svg>',
+  ramadan: '<svg viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/><path d="M18 3v3M16.5 4.5h3"/></svg>'
+};
+function renderOccasion(){
+  var o = prefs.occasions === false ? null : occasion(), box = document.getElementById('occ');
+  ['occ-national', 'occ-eid', 'occ-ramadan', 'occ-arafa'].forEach(function (c) { document.body.classList.remove(c); });
+  if (!box) { var r = document.querySelector('.top .right'); if (!r) return; box = document.createElement('div'); box.id = 'occ'; r.appendChild(box); }
+  if (!o) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  document.body.classList.add('occ-' + o.k);
+  box.style.display = 'flex'; box.innerHTML = OCC_IC[o.k] + '<span>' + o.t + '</span>';
+}
+
+/* ---------- أذكار الصباح والمساء والجمعة في الشريط العلوي ---------- */
+var _extraBase = window.extraBanner;
+window.extraBanner = function () {
+  var out = _extraBase ? _extraBase() : [], d = new Date(), now = riyadhMinutes(d), t = prayerTimes(d);
+  var read = lsGet('carlauncher.azkarRead', {});
+  if (prefs.azkarAuto !== false) {
+    if (now >= t.fajr && now < t.sunrise + 180 && read.morning !== todayStr()) out.push({ t: 'أذكار الصباح — اضغط للقراءة', href: 'azkar.html?g=morning' });
+    if (now >= t.asr && now < t.maghrib + 60 && read.evening !== todayStr()) out.push({ t: 'أذكار المساء — اضغط للقراءة', href: 'azkar.html?g=evening' });
+  }
+  var wd = new Date(d.getTime() + TZ * 3600000).getUTCDay(), fm = +prefs.fridayMin || 45;
+  if (prefs.fridayOn !== false && wd === 5 && now >= t.dhuhr - fm - 30 && now < t.dhuhr) out.unshift({ t: 'صلاة الجمعة بعد ' + fmtDiff(t.dhuhr - now) + ' — اضغط لأقرب جامع', href: 'javascript:nearby(\'jami\')' });
+  return out;
+};
+var _friToast = '';
+function fridayTick(){
+  if (prefs.fridayOn === false) return;
+  var d = new Date(), wd = new Date(d.getTime() + TZ * 3600000).getUTCDay(); if (wd !== 5) return;
+  var now = riyadhMinutes(d), t = prayerTimes(d), fm = +prefs.fridayMin || 45;
+  if (now >= t.dhuhr - fm && now < t.dhuhr - fm + 3 && _friToast !== todayStr()) { _friToast = todayStr(); beep(2); toast('صلاة الجمعة بعد ' + fmtDiff(t.dhuhr - now), 'أقرب جامع', function () { nearby('jami'); }, 20000); }
+}
+
+/* ---------- رسالة الوصول ---------- */
+var ARR_KEY = 'carlauncher.arrive';
+function arriveTick(){
+  var a = prefs.arrive || {}; if (!a.on || !a.phone || typeof a.lat !== 'number') return;
+  var t = natJSON('trip'); if (!t || !t.gps || typeof t.lat !== 'number') return;
+  var st = lsGet(ARR_KEY, { away: false, at: 0 }), d = distKm(t.lat, t.lng, a.lat, a.lng);
+  if (d > 3) { if (!st.away) { st.away = true; lsSet(ARR_KEY, st); } return; }
+  if (st.away && d < 0.35 && (t.speed || 0) < 5) {
+    st.away = false; st.at = Date.now(); lsSet(ARR_KEY, st);
+    toast('وصلت' + (a.place ? ' ' + a.place : '') + '؟ أرسل لـ' + (a.name || 'جهة الاتصال') + ' «' + (a.text || 'وصلت') + '»', 'إرسال بواتساب', function () { if (!nat('whatsapp', a.phone, a.text || 'وصلت الحمد لله ✓')) toast('واتساب غير مثبت'); }, 30000);
+  }
+}
+
+/* ---------- وضع الركاب (الأطفال) ---------- */
+DOCK_ITEMS.kids = { label: 'الركاب', go: function () { if (prefs.kidsApp && nat('launch', prefs.kidsApp)) return; openPage('apps.html?pick=kids'); } };
+IC.kids = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFB0D9" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="7" r="3.5"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M9.5 7.5h.01M14.5 7.5h.01"/></svg>';
+
+/* ---------- وثائق السيارة ---------- */
+card('wallet', 'وثائق السيارة', function () {
+  var docs = loadMaint().filter(function (it) { return !it.km; }).map(function (it) { return { it: it, s: maintStatus(it) }; })
+    .sort(function (a, b) { return (a.s.daysLeft === null ? 1e9 : a.s.daysLeft) - (b.s.daysLeft === null ? 1e9 : b.s.daysLeft); });
+  var h = '<a href="maintenance.html" style="display:contents"><span class="k-lbl">وثائق السيارة</span><div class="k-list" style="flex:1;margin-top:.4em">';
+  docs.slice(0, 4).forEach(function (x) {
+    var dl = x.s.daysLeft, txt = dl === null ? 'أدخل التاريخ' : dl < 0 ? 'منتهية' : dl === 0 ? 'تنتهي اليوم' : 'باقي ' + dl + ' يوم';
+    h += '<div class="k-li' + (x.s.due ? ' on' : '') + '"><span>' + esc(x.it.name.replace('تجديد ', '')) + '</span><span>' + txt + '</span></div>';
+  });
+  return h + '</div></a>';
+});
+CARD_RATE.wallet = 600;
+
+/* ---------- المصاريف ---------- */
+card('expenses', 'مصاريف السيارة', function () {
+  var ex = lsGet(EXP_KEY, []), d = new Date(), m0 = new Date(d.getFullYear(), d.getMonth(), 1).getTime(), tot = 0, by = {};
+  ex.forEach(function (e) { if (e.at >= m0) { tot += e.amount; by[e.cat] = (by[e.cat] || 0) + e.amount; } });
+  var top = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).slice(0, 3);
+  return '<a href="expenses.html" style="display:contents"><div class="k-row"><span class="k-lbl">مصاريف الشهر</span><span class="k-sub">' + fmt({ month: 'long' }, 'ar-u-nu-latn', d) + '</span></div>' +
+    '<div><span class="k-big">' + Math.round(tot).toLocaleString('en') + '</span><span class="k-sub"> ريال</span></div>' +
+    '<div class="k-sub" style="white-space:normal">' + (top.length ? top.map(function (k) { return EXP_CATS[k] + ' ' + Math.round(by[k]); }).join(' · ') : 'أضف مصروفاً من الصفحة أو من الجوال') + '</div></a>';
+});
+CARD_RATE.expenses = 300;
+
+/* ---------- OBD ---------- */
+card('obd', 'بيانات السيارة (OBD)', function () {
+  var o = natJSON('obd') || {};
+  if (o.state !== 'on') return '<a href="obd.html" style="display:contents"><span class="k-lbl">بيانات السيارة</span><div class="k-sub" style="white-space:normal">' +
+    (o.state === 'connecting' ? 'جارٍ الاتصال بقطعة OBD…' : o.state === 'error' ? 'تعذّر الاتصال: ' + esc(o.err) : 'وصّل قطعة OBD بلوتوث (ELM327) لعرض حرارة المحرك والبطارية والوقود') + '</div><span class="k-btn" style="align-self:flex-start">إعداد</span></a>';
+  var cool = o.coolant, hot = cool >= 105;
+  var cell = function (l, v, u, warn) { return '<div style="text-align:center"><div class="k-sub">' + l + '</div><div class="k-big" style="font-size:2em' + (warn ? ';color:#FF6B5A' : '') + '">' + (v === undefined || v === null ? '—' : v) + '<span style="font-size:.45em"> ' + u + '</span></div></div>'; };
+  return '<a href="obd.html" style="display:contents"><div class="k-row"><span class="k-lbl">بيانات السيارة</span><span class="k-sub">' + ((o.dtcs || []).length ? '<span style="color:#FF6B5A">أعطال: ' + o.dtcs.length + '</span>' : 'لا أعطال ✓') + '</span></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.4em .8em;flex:1;align-content:center">' + cell('حرارة المحرك', cool, '°', hot) + cell('البطارية', o.volt ? o.volt.toFixed(1) : null, 'ف', o.volt && (o.volt < 11.8 || o.volt > 15)) + cell('الدورات', o.rpm, '') + cell('الوقود', o.fuel, '%', o.fuel !== undefined && o.fuel < 12) + '</div></a>';
+});
+CARD_RATE.obd = 2;
+var _obdWarn = 0;
+function obdTick(){
+  if (!HAS_NATIVE) return;
+  var o = natJSON('obd'); if (!o || o.state !== 'on') return;
+  if (o.coolant >= 108 && Date.now() - _obdWarn > 120000) { _obdWarn = Date.now(); beep(3); toast('تنبيه: حرارة المحرك مرتفعة (' + o.coolant + '°) — توقف بأمان وافحص التبريد', null, null, 20000); }
+}
+/* الاتصال التلقائي بآخر قطعة OBD عند التشغيل */
+setTimeout(function () { if (HAS_NATIVE && prefs.obdAuto) { var o = natJSON('obd') || {}; if (o.state !== 'on' && o.state !== 'connecting' && o.saved) nat('obdStart', o.saved); } }, 8000);
+
+(function () {
+  var css = document.createElement('style');
+  css.textContent = '#occ{display:none;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:20px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.2);font-size:17px;white-space:nowrap}#occ svg{width:24px;height:24px}' +
+    'body.occ-national:not(.accent-custom){--accent:#2BB673;--accent2:#7FE0AE}body.occ-national #occ{border-color:#2BB673}' +
+    'body.skin-light #occ{background:rgba(255,255,255,.7);color:#13202f}';
+  document.head.appendChild(css);
+  safe('occ', renderOccasion);
+  setInterval(function () { if (!document.hidden) { safe('fri', fridayTick); safe('arrive', arriveTick); safe('obd', obdTick); } }, 5000);
+  setInterval(function () { safe('occ', renderOccasion); }, 30 * 60000);
+})();

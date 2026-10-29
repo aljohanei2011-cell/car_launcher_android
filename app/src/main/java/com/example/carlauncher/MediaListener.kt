@@ -56,7 +56,7 @@ object Notifs {
             if (System.currentTimeMillis() - c.at < 10 * 60_000) {
                 val a = JSONArray(); c.actions.forEach { a.put(it.first) }
                 o.put("call", JSONObject().put("name", c.name).put("app", c.app).put("actions", a).put("at", c.at))
-            } else call = null
+            } else { call = null }
         }
         msg?.let { o.put("msg", it) }
         return o.toString()

@@ -97,7 +97,8 @@ var DEFAULT_PREFS = {
   /* القيادة */
   safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false, weatherFx: true, accent: '',
   clockStyle: 'digital', textScale: 1,
-  driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
+  driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true,
+  khatma: null, quranApp: '', kidsApp: '', fridayOn: true, fridayMin: 45, azkarAuto: true, occasions: true, arrive: { on: false, phone: '', name: '', text: 'وصلت الحمد لله ✓', place: 'البيت', lat: null, lng: null }, obdAuto: false, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
   perf: 'auto', perfDetected: null, watchdog: true
 };
 function loadPrefs(){
@@ -525,10 +526,19 @@ var DEFAULT_MAINT = [
   { id: 'filter',name: 'فلتر الهواء',       km: 20000, months: 12 },
   { id: 'reg',   name: 'تجديد الاستمارة',   km: 0,     months: 0 },
   { id: 'ins',   name: 'تجديد التأمين',     km: 0,     months: 12 },
-  { id: 'mvpi',  name: 'الفحص الدوري',      km: 0,     months: 12 }
+  { id: 'mvpi',  name: 'الفحص الدوري',      km: 0,     months: 12 },
+  { id: 'lic',   name: 'رخصة القيادة',      km: 0,     months: 0 }
 ];
 function loadMaint(){
-  try { var r = localStorage.getItem(MAINT_KEY); if (r) return JSON.parse(r); } catch (e) {}
+  try {
+    var r = localStorage.getItem(MAINT_KEY);
+    if (r) {
+      var l = JSON.parse(r);
+      // بنود جديدة في التحديثات تُضاف للقائمة المحفوظة
+      DEFAULT_MAINT.forEach(function (x) { if (!l.some(function (y) { return y.id === x.id; })) l.push(Object.assign({ lastDate: '', lastKm: null, dueDate: '' }, x)); });
+      return l;
+    }
+  } catch (e) {}
   return DEFAULT_MAINT.map(function (x) { return Object.assign({ lastDate: '', lastKm: null, dueDate: '' }, x); });
 }
 function saveMaint(l){ try { localStorage.setItem(MAINT_KEY, JSON.stringify(l)); } catch (e) {} }
@@ -541,12 +551,17 @@ function carOdometer(){
 function maintStatus(it){
   var odo = carOdometer(), out = { kmLeft: null, daysLeft: null };
   if (it.km && it.lastKm !== null && it.lastKm !== '' && odo !== null) out.kmLeft = (+it.lastKm + it.km) - odo;
+  else if (it.km && typeof it.lastAppOdo === 'number') {
+    // بدون ضبط عداد السيارة: نحسب المسافة من رحلات التطبيق منذ آخر مرة
+    var tt = natJSON('trip'); if (tt && typeof tt.odo === 'number') { out.kmLeft = Math.round(it.km - (tt.odo - it.lastAppOdo)); out.byApp = true; }
+  }
   var due = it.dueDate;
   if (!due && it.months && it.lastDate) {
     var d = new Date(it.lastDate); d.setMonth(d.getMonth() + it.months); due = d.toISOString().slice(0, 10);
   }
   if (due) out.daysLeft = Math.ceil((new Date(due + 'T00:00:00') - new Date()) / 86400000);
-  out.due = (out.kmLeft !== null && out.kmLeft <= 500) || (out.daysLeft !== null && out.daysLeft <= 14);
+  // الوثائق (بدون مسافة) ننبّه قبل انتهائها بشهر
+  out.due = (out.kmLeft !== null && out.kmLeft <= 500) || (out.daysLeft !== null && out.daysLeft <= (it.km ? 14 : 30));
   out.dueDate = due;
   return out;
 }
@@ -753,11 +768,15 @@ function processInbox(){
     if (it.type === 'note' && d.text) notes.unshift({ id: uid(), text: String(d.text).slice(0, 4000), at: it.at || Date.now() });
     if (it.type === 'reminder' && d.text) rems.push(Object.assign({ id: uid(), kind: 'once' }, d));
     if (it.type === 'station' && d.url) st.push({ id: uid(), name: d.name || 'محطة', url: d.url });
+    if (it.type === 'expense' && +d.amount > 0) { var ex = lsGet(EXP_KEY, []); ex.push({ id: uid(), amount: +d.amount, cat: EXP_CATS[d.cat] ? d.cat : 'other', note: String(d.note || '').slice(0, 120), at: +d.at || it.at || Date.now() }); lsSet(EXP_KEY, ex); }
   });
   saveNotes(notes); saveStations(st); saveRems(rems);
   return items.length;
 }
 
+/* ===== مصاريف السيارة ===== */
+var EXP_KEY = 'carlauncher.expenses';
+var EXP_CATS = { fuel: 'وقود', wash: 'غسيل', service: 'صيانة', parts: 'قطع', fine: 'مخالفة', ins: 'تأمين وتجديد', other: 'أخرى' };
 var WD_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 function todayStr(d){ d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function atTime(day, time){ var p = (time || '09:00').split(':'); var d = new Date(day); d.setHours(+p[0], +p[1], 0, 0); return d; }
@@ -934,7 +953,7 @@ var CARD_CATALOG = [
   ['speed', 'عداد السرعة'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس'],
   ['apps', 'تطبيقاتي المفضلة'], ['notes', 'الملاحظات'], ['reminders', 'تذكيراتي'], ['sysrem', 'تذكيرات اليوم'],
   ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)'],
-  ['nearby', 'أقرب مكان'], ['ramadan', 'رمضان']
+  ['nearby', 'أقرب مكان'], ['ramadan', 'رمضان'], ['khatma', 'وردي من القرآن'], ['wallet', 'وثائق السيارة'], ['expenses', 'مصاريف السيارة'], ['obd', 'بيانات السيارة (OBD)']
 ];
 var LAYOUTS = [['classic', 'كلاسيكي'], ['grid', 'شبكة'], ['side', 'جانبي'], ['minimal', 'بسيط']];
 function defaultHomes(p){

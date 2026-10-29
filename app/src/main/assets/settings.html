@@ -344,6 +344,41 @@ function renderPrayer(){
   toggle(s, 'ملاحظة قصر الصلاة وجمعها عند السفر', 'qasrNote', 'تظهر إذا ابتعدت أكثر من 80 كم عن مدينتك.');
   toggle(s, 'وضع رمضان', 'ramadanOn', 'العد التنازلي للإفطار في الشريط العلوي، وتنبيه قبله بربع ساعة. أضف بطاقة «رمضان» من الواجهة.');
 
+  s = section('العبادة');
+  var kh = Object.assign({ pages: 4, cur: 1 }, prefs.khatma || {});
+  s.appendChild(el('span', 'note', 'ورد القرآن اليومي (بطاقة «وردي من القرآن»): عدد الصفحات يومياً'));
+  opts(s, [[1, 'صفحة'], [2, 'صفحتان'], [4, '4 صفحات'], [10, '10 صفحات'], [20, 'جزء'], [40, 'جزءان']], kh.pages, function (k) { kh.pages = k; prefs.khatma = kh; upd(); }, true);
+  var kl = el('div', 'line'); kl.appendChild(el('span', '', 'الصفحة الحالية: ' + kh.cur + ' · تطبيق المصحف: ' + appLabel(prefs.quranApp)));
+  var ko = el('div', 'opts'); ko.style.marginRight = 'auto';
+  var kr = el('button', 'opt sm', 'البدء من أول المصحف'); kr.onclick = function () { kh.cur = 1; prefs.khatma = kh; upd(); };
+  var ka = el('a', 'opt sm', 'اختيار تطبيق المصحف'); ka.href = 'apps.html?pick=quran'; ka.style.display = 'flex'; ka.style.alignItems = 'center';
+  ko.appendChild(kr); ko.appendChild(ka); kl.appendChild(ko); s.appendChild(kl);
+  toggle(s, 'تذكير صلاة الجمعة', 'fridayOn');
+  if (prefs.fridayOn) opts(s, [[30, 'قبل الظهر بـ 30 دقيقة'], [45, 'بـ 45 دقيقة'], [60, 'بساعة'], [90, 'بساعة ونصف']], prefs.fridayMin, function (k) { prefs.fridayMin = k; upd(); }, true);
+  toggle(s, 'أذكار الصباح والمساء في الشريط العلوي', 'azkarAuto', 'تظهر بعد الفجر وبعد العصر، وتختفي بعد فتحها.');
+  toggle(s, 'زينة المناسبات (رمضان، العيدان، اليوم الوطني، يوم التأسيس)', 'occasions');
+
+  s = section('رسالة الوصول', 'عند الوصول لمكان تحفظه (مثل البيت) بعد رحلة، يقترح إرسال «وصلت» بواتساب. أنت تضغط إرسال بنفسك.');
+  var ar = Object.assign({}, DEFAULT_PREFS.arrive, prefs.arrive || {});
+  var at = el('div', 'toggle'); at.appendChild(el('span', '', 'تفعيل رسالة الوصول'));
+  var asw = el('button', 'sw' + (ar.on ? ' on' : '')); asw.onclick = function () { ar.on = !ar.on; prefs.arrive = ar; upd(); }; at.appendChild(asw); s.appendChild(at);
+  if (ar.on) {
+    [['name', 'اسم الشخص (مثل: أم محمد)', 30], ['phone', 'رقم الجوال مع رمز الدولة 9665xxxxxxxx', 16], ['text', 'نص الرسالة', 80], ['place', 'اسم المكان (البيت)', 20]].forEach(function (f) {
+      var i = el('input', 'txt'); i.placeholder = f[1]; i.maxLength = f[2]; i.value = ar[f[0]] || ''; i.style.width = '100%';
+      if (f[0] === 'phone') { i.inputMode = 'tel'; i.style.direction = 'ltr'; }
+      i.onchange = function () { ar[f[0]] = i.value.trim(); prefs.arrive = ar; savePrefs(prefs); };
+      s.appendChild(i);
+    });
+    var al = el('div', 'line'); al.appendChild(el('span', '', typeof ar.lat === 'number' ? 'المكان محفوظ ✓' : 'لم يُحفظ المكان بعد'));
+    var ab = el('button', 'opt sm', 'حفظ موقعي الحالي كمكان الوصول'); ab.style.marginRight = 'auto';
+    ab.onclick = function () { var t = natJSON('trip'); if (!t || typeof t.lat !== 'number') { ab.textContent = 'لا توجد إشارة GPS'; return; } ar.lat = t.lat; ar.lng = t.lng; prefs.arrive = ar; upd(); };
+    al.appendChild(ab); s.appendChild(al);
+  }
+
+  s = section('وضع الركاب', 'زر «الركاب» في القائمة السفلية يفتح تطبيقاً تختاره للأطفال أو الركاب.');
+  var kd = el('div', 'line'); kd.appendChild(el('span', '', 'التطبيق: ' + appLabel(prefs.kidsApp)));
+  var kb = el('a', 'opt sm', 'اختيار'); kb.href = 'apps.html?pick=kids'; kb.style.cssText = 'display:flex;align-items:center;margin-right:auto'; kd.appendChild(kb); s.appendChild(kd);
+
   s = section('المكالمات والرسائل', 'يحتاج «الوصول إلى الإشعارات» (تبويب التطبيقات). لا نقرأ نص أي رسالة.');
   toggle(s, 'بطاقة المكالمة الواردة بأزرار كبيرة', 'callCard');
   toggle(s, 'إظهار اسم مرسل الرسالة فقط', 'msgNotify');
@@ -371,7 +406,7 @@ function renderApps(){
 
   s = section('السيارة');
   var r = el('div', 'opts');
-  [['travel.html', 'مخطط رحلة السفر'], ['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['notes.html', 'الملاحظات'], ['reminders.html', 'التذكيرات'], ['radio.html', 'الراديو'], ['parking.html', 'موقف السيارة'], ['upload.html', 'الإرسال من الجوال']].forEach(function (x) {
+  [['travel.html', 'مخطط رحلة السفر'], ['obd.html', 'بيانات السيارة OBD'], ['expenses.html', 'مصاريف السيارة'], ['maintenance.html', 'الصيانة والتجديدات'], ['fuel.html', 'سجل الوقود'], ['log.html', 'سجل الرحلات'], ['trip.html', 'الرحلة والقبلة'], ['notes.html', 'الملاحظات'], ['reminders.html', 'التذكيرات'], ['radio.html', 'الراديو'], ['parking.html', 'موقف السيارة'], ['upload.html', 'الإرسال من الجوال']].forEach(function (x) {
     var a = el('a', 'opt', x[1]); a.href = x[0]; a.style.display = 'flex'; a.style.alignItems = 'center'; r.appendChild(a);
   });
   s.appendChild(r);
@@ -629,7 +664,7 @@ function renderHome(){
   s = section('القائمة السفلية', 'حتى 8 أزرار. زر الإعدادات ثابت دائماً.');
   var dock = (prefs.dock || []).slice();
   if (dock.indexOf('settings') < 0) dock.push('settings');
-  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', settings: 'الإعدادات' };
+  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', kids: 'الركاب', settings: 'الإعدادات' };
   dock.forEach(function (id, i) {
     var row = el('div', 'line');
     row.appendChild(el('span', '', id.indexOf('app:') === 0 ? appLabel(id.slice(4)) : (DN[id] || id)));

@@ -48,6 +48,7 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <button data-m="font">خط</button>
   <button data-m="note">ملاحظة</button>
   <button data-m="rem">تذكير</button>
+  <button data-m="exp">مصروف</button>
   <button data-m="st">محطة راديو</button>
   <button data-m="bak">نسخة احتياطية</button>
   <button data-m="log">سجل الأعطال</button>
@@ -110,6 +111,17 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   </div>
   <button class="send" id="remSend" style="margin-top:12px">إرسال التذكير</button>
   <div class="msg" id="remMsg"></div>
+</section>
+
+<section id="m-exp">
+  <div class="box">سجّل مصروفاً للسيارة ليظهر في «مصاريف السيارة» على الشاشة.</div>
+  <input id="expAmt" type="number" inputmode="decimal" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:18px system-ui;padding:0 12px;box-sizing:border-box" placeholder="المبلغ (ريال)">
+  <div class="seg" id="expCat" style="margin-top:10px;flex-wrap:wrap">
+    <button data-k="fuel" class="on">وقود</button><button data-k="wash">غسيل</button><button data-k="service">صيانة</button><button data-k="parts">قطع</button><button data-k="fine">مخالفة</button><button data-k="ins">تأمين وتجديد</button><button data-k="other">أخرى</button>
+  </div>
+  <input id="expNote" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:16px system-ui;padding:0 12px;margin-top:10px;box-sizing:border-box" placeholder="ملاحظة (اختياري)">
+  <button class="send" id="expSend" style="margin-top:12px">إرسال المصروف</button>
+  <div class="msg" id="expMsg"></div>
 </section>
 
 <section id="m-st">
@@ -276,6 +288,16 @@ document.getElementById('bakDl').href = '/backup?t=' + token;
 document.getElementById('logDl').href = '/log?t=' + token;
 
 /* ملاحظة / تذكير / محطة */
+(function () {
+  var cat = 'fuel';
+  [].forEach.call(document.querySelectorAll('#expCat button'), function (b) { b.onclick = function () { cat = b.getAttribute('data-k'); [].forEach.call(document.querySelectorAll('#expCat button'), function (x) { x.classList.toggle('on', x === b); }); }; });
+  document.getElementById('expSend').onclick = function () {
+    var a = parseFloat(document.getElementById('expAmt').value);
+    if (!(a > 0)) { var m = document.getElementById('expMsg'); m.className = 'msg err'; m.textContent = 'اكتب المبلغ'; return; }
+    postJSON('/expense', { amount: a, cat: cat, note: document.getElementById('expNote').value.slice(0, 120), at: Date.now() }, 'expMsg', 'وصل المصروف ✓');
+    document.getElementById('expAmt').value = ''; document.getElementById('expNote').value = '';
+  };
+})();
 function postJSON(path, obj, msgId, okText){
   var m = document.getElementById(msgId);
   fetch(path + '?t=' + token, { method: 'POST', body: JSON.stringify(obj) }).then(function (r) {

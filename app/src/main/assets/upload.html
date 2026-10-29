@@ -64,10 +64,10 @@ else {
   // نسخة احتياطية جاهزة للتحميل من الجوال
   nat('backupPrepare', webBackupJSON());
   var seen = nat('uploadCount') || 0;
-  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «تثبيت تطبيقات مرفوعة».', sound: 'وصل صوت التنبيه ✓', font: 'وصل الخط ✓ تجده في الإعدادات ▸ المظهر ▸ الخطوط.', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', station: 'وصلت محطة الراديو ✓' };
+  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «تثبيت تطبيقات مرفوعة».', sound: 'وصل صوت التنبيه ✓', font: 'وصل الخط ✓ تجده في الإعدادات ▸ المظهر ▸ الخطوط.', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', station: 'وصلت محطة الراديو ✓', expense: 'وصل المصروف ✓' };
   setInterval(function () {
     var ev = natJSON('uploadLast') || {}, c = ev.count || 0;
-    if (c > seen && (ev.type === 'note' || ev.type === 'reminder' || ev.type === 'station')) processInbox();
+    if (c > seen && (ev.type === 'note' || ev.type === 'reminder' || ev.type === 'station' || ev.type === 'expense')) processInbox();
     if (c > seen && ev.type && ev.type !== 'image') {
       seen = c;
       var ok0 = document.getElementById('ok'); ok0.style.display = 'block'; ok0.textContent = LABEL[ev.type] || 'تم ✓';

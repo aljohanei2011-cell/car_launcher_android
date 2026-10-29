@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>مصاريف السيارة</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.inp{height:54px;border-radius:14px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:20px;padding:0 14px;box-sizing:border-box}
+.cats{display:flex;flex-wrap:wrap;gap:8px}
+.cats button{height:48px;padding:0 16px;border-radius:14px;border:1px solid #23406f;background:#13254a;color:#fff;font:inherit;font-size:17px}
+.cats button.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
+.tot{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tot div{background:rgba(255,255,255,.05);border-radius:16px;padding:12px 14px}
+.tot b{display:block;font-size:30px;direction:ltr;text-align:right}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:120px 1fr 90px;align-items:center;gap:10px;font-size:17px}
+.bar i{display:block;height:14px;border-radius:7px;background:var(--accent,#2F7BFF)}
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;scrollbar-width:none}
+.lst div{display:grid;grid-template-columns:1.2fr 1fr 1.6fr 90px 40px;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.04);font-size:17px}
+.lst button{width:36px;height:36px;border-radius:10px;border:1px solid #5a2a2a;background:none;color:#FFB4A8;font-size:18px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">مصاريف السيارة</span>
+    </div>
+    <div class="pcols" style="grid-template-columns:1fr 1.2fr">
+      <div class="pcard">
+        <span class="ph">إضافة مصروف</span>
+        <input class="inp" id="amt" type="number" inputmode="decimal" placeholder="المبلغ (ريال)">
+        <div class="cats" id="cats"></div>
+        <input class="inp" id="note" maxlength="120" placeholder="ملاحظة (اختياري)">
+        <div class="prow"><button class="pbtn" id="add">إضافة</button><span class="pnote" id="msg"></span></div>
+        <span class="pnote" style="margin-top:auto">يمكنك أيضاً الإرسال من الجوال: «الإرسال من الجوال» ▸ مصروف.</span>
+      </div>
+      <div class="pcard">
+        <div class="tot"><div><span class="pnote">هذا الشهر</span><b id="tm">0</b></div><div><span class="pnote">الشهر الماضي</span><b id="tl">0</b></div><div><span class="pnote">هذه السنة</span><b id="ty">0</b></div></div>
+        <span class="ph">توزيع هذا الشهر</span>
+        <div class="bars" id="bars"></div>
+        <span class="ph">آخر المصاريف</span>
+        <div class="lst" id="lst"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(id){ return document.getElementById(id); }
+var cat = 'fuel';
+function renderCats(){ $('cats').innerHTML = Object.keys(EXP_CATS).map(function (k) { return '<button class="' + (k === cat ? 'on' : '') + '" onclick="cat=\'' + k + '\';renderCats()">' + EXP_CATS[k] + '</button>'; }).join(''); }
+function sum(list, from, to){ return list.reduce(function (a, e) { return a + (e.at >= from && e.at < to ? e.amount : 0); }, 0); }
+function money(v){ return Math.round(v).toLocaleString('en') + ' ر.س'; }
+function render(){
+  processInbox();
+  var ex = lsGet(EXP_KEY, []).sort(function (a, b) { return b.at - a.at; }), d = new Date();
+  var m0 = new Date(d.getFullYear(), d.getMonth(), 1).getTime(), l0 = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime(), y0 = new Date(d.getFullYear(), 0, 1).getTime(), inf = 9e15;
+  $('tm').textContent = money(sum(ex, m0, inf)); $('tl').textContent = money(sum(ex, l0, m0)); $('ty').textContent = money(sum(ex, y0, inf));
+  var by = {}, mx = 0; ex.forEach(function (e) { if (e.at >= m0) by[e.cat] = (by[e.cat] || 0) + e.amount; });
+  Object.keys(by).forEach(function (k) { mx = Math.max(mx, by[k]); });
+  $('bars').innerHTML = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).map(function (k) { return '<div class="bar"><span>' + EXP_CATS[k] + '</span><i style="width:' + Math.max(4, by[k] / mx * 100) + '%"></i><span style="direction:ltr;text-align:right">' + Math.round(by[k]) + '</span></div>'; }).join('') || '<span class="pnote">لا مصاريف هذا الشهر</span>';
+  $('lst').innerHTML = ex.slice(0, 60).map(function (e) {
+    return '<div><span>' + fmt({ day: 'numeric', month: 'short' }, 'ar-u-nu-latn', new Date(e.at)) + '</span><span>' + EXP_CATS[e.cat] + '</span><span class="pnote" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (e.note || '').replace(/</g, '&lt;') + '</span><b style="direction:ltr;text-align:right">' + (Math.round(e.amount * 100) / 100) + '</b><button aria-label="حذف" onclick="del(\'' + e.id + '\')">×</button></div>';
+  }).join('') || '<span class="pnote">لا توجد مصاريف مسجلة.</span>';
+}
+function del(id){ lsSet(EXP_KEY, lsGet(EXP_KEY, []).filter(function (e) { return e.id !== id; })); render(); }
+$('add').onclick = function () {
+  var a = parseFloat($('amt').value); if (!(a > 0)) { $('msg').textContent = 'اكتب المبلغ'; return; }
+  var ex = lsGet(EXP_KEY, []); ex.push({ id: uid(), amount: a, cat: cat, note: $('note').value.trim(), at: Date.now() }); lsSet(EXP_KEY, ex);
+  $('amt').value = ''; $('note').value = ''; $('msg').textContent = 'أُضيف ✓'; render();
+};
+renderCats(); render(); setInterval(render, 15000);
+fitStage();
+</script>
+</body>
+</html>

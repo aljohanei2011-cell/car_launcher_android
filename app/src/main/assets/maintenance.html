@@ -57,7 +57,7 @@ function render(){
     var parts = [];
     if (s.kmLeft !== null) parts.push(s.kmLeft >= 0 ? 'باقي ' + s.kmLeft.toLocaleString('en') + ' كم' : 'متأخر ' + (-s.kmLeft).toLocaleString('en') + ' كم');
     if (s.daysLeft !== null) parts.push(s.daysLeft >= 0 ? 'باقي ' + s.daysLeft + ' يوم (' + s.dueDate + ')' : 'انتهى منذ ' + (-s.daysLeft) + ' يوم');
-    if (!parts.length) parts.push(it.km && odo === null ? 'اضبط عداد السيارة أولاً' : 'أدخل آخر موعد أو تاريخ الاستحقاق');
+    if (!parts.length) parts.push(it.km && odo === null ? 'اضغط «تم اليوم» بعد الصيانة ليحسب المسافة من رحلات التطبيق، أو اضبط عداد السيارة' : 'أدخل آخر موعد أو تاريخ الاستحقاق');
     box.innerHTML =
       '<div class="h"><span></span><button class="btn g" style="height:42px;font-size:16px">تم اليوم</button></div>' +
       '<div class="st"></div>' +
@@ -76,6 +76,7 @@ function render(){
     });
     box.querySelector('button').onclick = function () {
       if (it.km) it.lastKm = odo;
+      var tA = natJSON('trip'); if (it.km && tA && typeof tA.odo === 'number') it.lastAppOdo = tA.odo;
       if (it.months) it.lastDate = today();
       if (!it.km && !it.months) { var d = new Date(); d.setFullYear(d.getFullYear() + 1); it.dueDate = d.toISOString().slice(0, 10); }
       saveMaint(items); render();

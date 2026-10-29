@@ -69,6 +69,8 @@ var gi = 0, ii = 0;
 var gq = (location.search.match(/g=(\w+)/) || [])[1];
 GROUPS.forEach(function (g, k) { if (g.key === gq) gi = k; });
 if (!gq) { var h = new Date().getHours(); gi = (h >= 15 || h < 3) ? 1 : 0; }
+/* تسجيل قراءة أذكار اليوم (لإخفاء تنبيهها من الرئيسية) */
+(function () { var r = lsGet('carlauncher.azkarRead', {}); r[GROUPS[gi].key] = todayStr(); lsSet('carlauncher.azkarRead', r); })();
 
 function render(){
   var g = GROUPS[gi], it = g.items[ii];
