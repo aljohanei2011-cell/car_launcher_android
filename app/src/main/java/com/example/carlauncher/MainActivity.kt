@@ -197,6 +197,9 @@ class MainActivity : AppCompatActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         // اللانشر هو الشاشة الرئيسية: الرجوع يعود للصفحة السابقة داخله فقط
-        if (webView.canGoBack()) webView.goBack()
+        // إن كانت صفحة مفتوحة فوق الرئيسية تعالج الرجوع بنفسها
+        webView.evaluateJavascript("(window.onBack&&window.onBack())?1:0") { r ->
+            if (r != "1" && webView.canGoBack()) webView.goBack()
+        }
     }
 }

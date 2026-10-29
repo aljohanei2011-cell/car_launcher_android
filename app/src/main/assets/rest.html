@@ -53,7 +53,7 @@ svg.layer{width:100%;height:100%}
 <body>
 <div id="stage">
   <img id="bg" alt="">
-  <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.rest');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}b.src=s||'bg/rest_night.jpg';if(c)document.body.className+=' '+c;})();</script>
+  <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.rest');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}if(s)b.src=s;if(c)document.body.className+=' '+c;})();</script>
   <div class="layer" id="gallery"></div>
   <svg class="layer" id="pattern" style="display:none" aria-hidden="true">
     <defs>

@@ -98,7 +98,7 @@
 <body>
 <div id="stage">
   <img id="bg" alt="">
-  <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.home');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}b.src=s||'bg/home_mountain.jpg';if(c)document.body.className+=' '+c;})();</script>
+  <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.home');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}if(s)b.src=s;if(c)document.body.className+=' '+c;})();</script>
   <div class="shade"></div>
   <div class="boot" id="boot" onclick="this.style.display='none'">
     <div style="color:#F2C879;font-size:22px">دعاء الركوب</div>
@@ -180,26 +180,55 @@ function appInfo(pkg){
   if (info.icon) { appStore[pkg] = info; lsSet(APP_CACHE_KEY, appStore); }
   return info;
 }
-/* ===== شاشة الاستراحة كنافذة فوق الرئيسية ===== */
-function openRest(q){
+/* ===== الصفحات (الاستراحة، الإعدادات، التطبيقات...) تُفتح كنافذة فوق الرئيسية =====
+   فلا تُعاد الرئيسية من الصفر عند الرجوع: لا وميض ولا شاشة خلفية مؤقتة، والرجوع فوري */
+var _ovl = null;
+function openPage(url){
   if (document.getElementById('restFrame')) return;
   var f = document.createElement('iframe');
-  f.id = 'restFrame'; f.src = 'rest.html' + (q || '');
+  f.id = 'restFrame'; f.src = url;
+  _ovl = { rest: /^rest\.html/.test(url), digits: prefs.digits, h24: prefs.h24 };
   document.getElementById('stage').appendChild(f);
-  // نخفي الرئيسية خلف الاستراحة حتى لا تستهلك الذاكرة والرسم
-  setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } }, 800);
+  // نخفي الرئيسية خلف النافذة حتى لا تستهلك الذاكرة والرسم
+  setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); if (bg.getAttribute('src')) { bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } } }, 800);
 }
+window.openPage = openPage;
+function openRest(q){ openPage('rest.html' + (q || '')); }
 window.closeRest = function () {
   var f = document.getElementById('restFrame');
   if (f) { try { f.src = 'about:blank'; } catch (e) {} f.remove(); }
-  document.getElementById('wrap').style.visibility = '';
-  var bg = document.getElementById('bg'); if (bg.dataset.src) { bg.src = bg.dataset.src; delete bg.dataset.src; }
+  var o = _ovl || {}; _ovl = null;
   nat('keepOn', false);
   lastTouch = Date.now();
-  forceCards = true; tick(); forceCards = false;
+  var np = loadPrefs();
+  // تغيير الأرقام أو صيغة الساعة يحتاج إعادة رسم كاملة للنصوص
+  if (!o.rest && (np.digits !== o.digits || np.h24 !== o.h24)) { location.reload(); return; }
+  document.getElementById('wrap').style.visibility = '';
+  var bg = document.getElementById('bg'); if (bg.dataset.src) { bg.src = bg.dataset.src; delete bg.dataset.src; }
+  if (o.rest) { forceCards = true; tick(); forceCards = false; }
+  else { _imgs = null; window.onPageResume(); }
 };
 function restOpen(){ return !!document.getElementById('restFrame'); }
-window.addEventListener('message', function (e) { if (e.data && e.data.rafiq === 'closeRest') window.closeRest(); });
+window.addEventListener('message', function (e) {
+  if (!e.data) return;
+  if (e.data.rafiq === 'closeRest') window.closeRest();
+  else if (e.data.rafiq === 'reloadHome') location.reload();
+});
+/* زر الرجوع في الجهاز */
+window.onBack = function () {
+  var f = document.getElementById('restFrame');
+  if (!f) return false;
+  try { f.contentWindow.postMessage({ rafiq: 'back' }, '*'); } catch (e) { window.closeRest(); }
+  return true;
+};
+/* روابط الصفحات داخل الرئيسية تُفتح كنافذة */
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href]');
+  if (!a) return;
+  var h = a.getAttribute('href') || '';
+  if (/^javascript:/i.test(h) || /(^|\/)index\.html/.test(h) || !/\.html(\?|#|$)/.test(h) || /^[a-z]+:\/\//i.test(h)) return;
+  e.preventDefault(); openPage(h);
+}, true);
 function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
 function renderDock(){
@@ -215,7 +244,7 @@ function renderDock(){
     } else {
       var it = DOCK_ITEMS[id]; if (!it) return;
       b.innerHTML = (IC[id] || IC.apps) + '<span>' + it.label + '</span>';
-      b.onclick = it.go || function () { location.href = it.href; };
+      b.onclick = it.go || function () { openPage(it.href); };
     }
     d.appendChild(b);
   });
@@ -432,7 +461,7 @@ card('ram', 'الذاكرة', function () {
     '<div><div class="k-big" style="color:' + col + '">' + m.pct + '%</div><div style="height:.5em;border-radius:.25em;background:rgba(255,255,255,.15);overflow:hidden;margin-top:.4em;direction:ltr"><div style="width:' + m.pct + '%;height:100%;background:' + col + '"></div></div></div>' +
     '<div class="k-row"><span class="k-sub">' + res + '</span><button class="k-btn" onclick="nat(\'freeRam\');later();setTimeout(tick,2500)">تحرير</button></div>';
 });
-function openRadioApp(){ if (prefs.radioApp && nat('launch', prefs.radioApp)) return; location.href = 'apps.html?pick=radio'; }
+function openRadioApp(){ if (prefs.radioApp && nat('launch', prefs.radioApp)) return; openPage('apps.html?pick=radio'); }
 function playStation(id){ var s = loadStations().filter(function (x) { return x.id === id; })[0]; if (s) { nat('radioPlay', s.url, s.name); later(); } }
 function later(){ setTimeout(function () { forceCards = true; tick(); forceCards = false; }, 500); setTimeout(function () { forceCards = true; tick(); forceCards = false; }, 1500); }
 
@@ -569,7 +598,7 @@ function tick(){
   }
   renderCards(); renderRemChip();
 }
-window.onPageResume = function () { forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
+window.onPageResume = function () { var of = document.getElementById('restFrame'); if (of && _ovl && !_ovl.rest) { try { of.contentWindow.postMessage({ rafiq: 'resume' }, '*'); } catch (e) {} return; } forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
 
 /* كل خطوة مستقلة: لو تعطلت واحدة تُسجَّل في سجل الأعطال وتكمل البقية، فلا تبقى الشاشة فارغة */
 function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + name + ': ' + (e && e.message)); } }
@@ -587,7 +616,7 @@ function autoUpdateCheck(){
 setTimeout(autoUpdateCheck, 15000);
 setInterval(autoUpdateCheck, 10 * 60000);
 setInterval(function () { processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest(); }, 5000);
-setInterval(function () { applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
+setInterval(function () { if (!restOpen()) applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 fitStage();
 </script>
 </body>

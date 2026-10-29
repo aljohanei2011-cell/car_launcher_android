@@ -125,4 +125,4 @@ body.perf.skin-gold .page{background:#071426!important}
 body.perf.skin-red .page{background:#0b0c0e!important}
 
 /* شاشة الاستراحة فوق الرئيسية (بدون إعادة تحميل الرئيسية) */
-#restFrame{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;z-index:80;background:#000}
+#restFrame{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;z-index:80;background:transparent}

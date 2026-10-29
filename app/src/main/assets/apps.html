@@ -20,7 +20,7 @@
 <body>
 <div id="stage">
   <img id="bg" alt="">
-  <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.home');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}b.src=s||'bg/home_mountain.jpg';if(c)document.body.className+=' '+c;})();</script>
+  <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.home');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}if(s)b.src=s;if(c)document.body.className+=' '+c;})();</script>
   <div class="shade" style="background:rgba(0,0,0,.45)"></div>
   <div class="wrap">
     <div class="top">
@@ -76,7 +76,7 @@ function render(){
         savePrefs(prefs);
       }
       nat('launch', a.pkg);
-      if (pick) setTimeout(function () { location.href = 'index.html'; }, 300);
+      if (pick) setTimeout(function () { goHome(); }, 300);
     };
     g.appendChild(b);
     // الأيقونات تُحمَّل بعد عرض القائمة حتى لا تتأخر الصفحة

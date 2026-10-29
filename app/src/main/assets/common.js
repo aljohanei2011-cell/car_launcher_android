@@ -17,7 +17,24 @@ fitStage();
 /* هل الصفحة داخل نافذة الاستراحة فوق الرئيسية؟ */
 var IN_FRAME = window.parent !== window;
 /* الرسائل بين النافذة والرئيسية تعمل حتى لو اعتبر المتصفح الملفين من مصدرين مختلفين */
-function goHome(){ if (IN_FRAME) { try { window.parent.postMessage({ rafiq: 'closeRest' }, '*'); return; } catch (e) {} } location.href = 'index.html'; }
+function goHome(reload){ if (IN_FRAME) { try { window.parent.postMessage({ rafiq: reload ? 'reloadHome' : 'closeRest' }, '*'); return; } catch (e) {} } location.href = 'index.html'; }
+/* فتح صفحة: من الرئيسية تُفتح كنافذة فوقها (بدون إعادة تحميل الرئيسية)، ومن غيرها انتقال عادي */
+function go(url){ if (typeof window.openPage === 'function') window.openPage(url); else location.href = url; }
+/* سجل الصفحات داخل النافذة (يُحفظ في اسم الإطار فيبقى بين التنقلات) لمعرفة متى يُغلق زر الرجوع النافذة */
+function _frameStack(){ try { return window.name.indexOf('rafiq:') === 0 ? JSON.parse(window.name.slice(6)) : []; } catch (e) { return []; } }
+if (IN_FRAME) (function () {
+  var t = ''; try { var n = performance.getEntriesByType('navigation')[0]; t = n ? n.type : (performance.navigation.type === 2 ? 'back_forward' : performance.navigation.type === 1 ? 'reload' : ''); } catch (e) {}
+  if (t === 'back_forward' || t === 'reload') return;
+  var st = _frameStack(); st.push(location.pathname.split('/').pop()); window.name = 'rafiq:' + JSON.stringify(st);
+})();
+/* رسائل من الرئيسية للصفحة المفتوحة فوقها: الرجوع، والعودة للتطبيق */
+window.addEventListener('message', function (e) {
+  if (!IN_FRAME || !e.data) return;
+  if (e.data.rafiq === 'back') {
+    var st = _frameStack(); st.pop(); window.name = 'rafiq:' + JSON.stringify(st);
+    if (st.length) history.back(); else goHome();
+  } else if (e.data.rafiq === 'resume' && window.onResumeNative) window.onResumeNative();
+});
 /* أي رابط للرئيسية من داخل نافذة الاستراحة يغلقها بدل تحميل رئيسية ثانية */
 document.addEventListener('click', function (e) {
   if (!IN_FRAME) return;
@@ -426,7 +443,7 @@ function openRole(role){
       nat('launch', cands[i]); return;
     }
   }
-  location.href = 'apps.html?pick=' + role;
+  go('apps.html?pick=' + role);
 }
 
 /* ===== الصيانة ===== */

@@ -38,7 +38,7 @@ var prefs = loadPrefs(); applyPrefs('home', prefs);
 document.body.style.background = '#0a0f1f';
 processInbox();
 function $(id){ return document.getElementById(id); }
-$('fm').onclick = function () { if (prefs.radioApp && nat('launch', prefs.radioApp)) return; location.href = 'apps.html?pick=radio'; };
+$('fm').onclick = function () { if (prefs.radioApp && nat('launch', prefs.radioApp)) return; go('apps.html?pick=radio'); };
 function render(){
   var r = natJSON('radioState') || { state: 'idle' }, list = loadStations(), L = $('list');
   var labels = { idle: '', buffering: 'جارٍ الاتصال…', playing: 'يُبث الآن', error: 'تعذّر التشغيل. تحقق من الإنترنت أو الرابط.' };
