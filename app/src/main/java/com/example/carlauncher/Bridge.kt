@@ -400,4 +400,5 @@ class Bridge(private val act: MainActivity) {
     }
 
     @JavascriptInterface fun memKills(): Int = CrashLog.memKills(ctx)
+    @JavascriptInterface fun memKillsWeek(): Int = CrashLog.memKills(ctx, 7)
 }

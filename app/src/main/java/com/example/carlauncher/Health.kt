@@ -27,10 +27,10 @@ object CrashLog {
     fun read(c: Context): String = try { file(c).takeIf { it.exists() }?.readText() ?: "" } catch (e: Exception) { "" }
     fun clear(c: Context) { file(c).delete() }
     /** عدد مرات إغلاق محرك الصفحات لنقص الذاكرة خلال آخر 3 أيام */
-    fun memKills(c: Context): Int {
+    fun memKills(c: Context, days: Int = 3): Int {
         val t = read(c); if (t.isEmpty()) return 0
         val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-        val since = System.currentTimeMillis() - 3 * 86_400_000L
+        val since = System.currentTimeMillis() - days * 86_400_000L
         return t.split("\n\n").count { e ->
             e.contains("[webview]") && e.contains("الذاكرة") &&
                 (try { fmt.parse(e.take(19))?.time ?: 0L } catch (x: Exception) { 0L }) > since
