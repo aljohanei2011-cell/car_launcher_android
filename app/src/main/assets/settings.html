@@ -365,7 +365,7 @@ function confirmBox(text, onYes){
   r.appendChild(y); r.appendChild(n); box.appendChild(r); ov.appendChild(box);
   document.getElementById('stage').appendChild(ov);
 }
-var UI_KEYS = ['layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
+var UI_KEYS = ['clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'autoProfile', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
 function renderSystem(){
   var s;
@@ -532,6 +532,10 @@ function renderHome(){
     if (prefs.layout !== 'minimal') [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']].forEach(function (z) {
       var b = el('button', 'opt sm' + (c.size === z[0] ? ' on' : ''), z[1]); b.onclick = function () { c.size = z[0]; saveHomes(homes); }; sz.appendChild(b);
     });
+    var tsv = +c.ts || 1;
+    var tm = el('button', 'opt sm', 'نص −'); tm.disabled = tsv <= 0.7; tm.onclick = function () { c.ts = Math.round((tsv - 0.1) * 10) / 10; saveHomes(homes); };
+    var tp = el('button', 'opt sm', 'نص + (' + Math.round(tsv * 100) + '%)'); tp.disabled = tsv >= 1.5; tp.onclick = function () { c.ts = Math.round((tsv + 0.1) * 10) / 10; saveHomes(homes); };
+    sz.appendChild(tm); sz.appendChild(tp);
     var up = el('button', 'opt sm', '▲'); up.setAttribute('aria-label', 'تقديم'); up.disabled = i === 0; up.onclick = function () { cards.splice(i - 1, 0, cards.splice(i, 1)[0]); saveHomes(homes); };
     var dn = el('button', 'opt sm', '▼'); dn.setAttribute('aria-label', 'تأخير'); dn.disabled = i === cards.length - 1; dn.onclick = function () { cards.splice(i + 1, 0, cards.splice(i, 1)[0]); saveHomes(homes); };
     var rm = el('button', 'opt sm', '×'); rm.setAttribute('aria-label', 'حذف البطاقة'); rm.onclick = function () { cards.splice(i, 1); saveHomes(homes); };
@@ -552,10 +556,52 @@ function renderHome(){
   rs.onclick = function () { var h = homesCopy(); h[prefs.layout] = defaultHomes(prefs)[prefs.layout]; saveHomes(h); };
   s.appendChild(rs);
 
+  s = section('شكل الساعة', 'يُطبَّق على بطاقة الساعة. يمكنك أيضاً اختيار شكل مختلف لكل بطاقة بالضغط المطوّل عليها.');
+  opts(s, CLOCK_STYLES, prefs.clockStyle || 'digital', function (k) { prefs.clockStyle = k; upd(); });
+
+  s = section('حجم النصوص وتحرير البطاقات', 'التكبير يغيّر النص فقط وتبقى البطاقات بحجمها. اضغط مطولاً على أي بطاقة في الرئيسية لتحريرها: حجم نصها، وما يظهر فيها، ومكانها، ونوعها.');
+  s.appendChild(el('span', 'note', 'حجم النص في كل البطاقات:'));
+  opts(s, TEXT_SCALES, +prefs.textScale || 1, function (k) { prefs.textScale = k; upd(); }, true);
+  toggle(s, 'قفل البطاقات (منع التعديل بلمسة خاطئة)', 'cardsLocked', 'الضغط العادي يبقى يعمل. فتح القفل يطلب الرقم السري إن كان مفعّلاً.');
+  toggle(s, 'إخفاء بطاقة الموسيقى إذا لا يوجد تشغيل', 'hideEmpty');
+  if (prefs.hideEmpty) {
+    s.appendChild(el('span', 'note', 'تظهر مكانها:'));
+    opts(s, CARD_CATALOG.filter(function (c) { return c[0] !== 'media'; }), prefs.emptyAlt || 'times', function (k) { prefs.emptyAlt = k; upd(); }, true);
+  }
+
+  s = section('التخطيطات المحفوظة', 'احفظ شكل الواجهة الحالي (التصميم والبطاقات والقائمة والثيم والساعة) باسم، وبدّل بينها بضغطة. تصلح أيضاً لكل سائق ملفه.');
+  var profs = loadProfiles();
+  profs.forEach(function (pr) {
+    var row = el('div', 'line');
+    row.appendChild(el('span', '', pr.name + (prefs.activeProfile === pr.id ? ' ✓' : '')));
+    var o = el('div', 'opts'); o.style.marginRight = 'auto';
+    var ap = el('button', 'opt sm', 'تطبيق'); ap.onclick = function () { applyProfile(pr.id); prefs = loadPrefs(); upd(); };
+    var up2 = el('button', 'opt sm', 'تحديثه بالشكل الحالي'); up2.onclick = function () { pr.data = snapshotProfile(prefs); saveProfiles(profs); render(); };
+    var dl = el('button', 'opt sm', 'حذف'); dl.onclick = function () { saveProfiles(profs.filter(function (x) { return x.id !== pr.id; })); if (prefs.activeProfile === pr.id) prefs.activeProfile = ''; upd(); };
+    o.appendChild(ap); o.appendChild(up2); o.appendChild(dl); row.appendChild(o); s.appendChild(row);
+  });
+  var pl = el('div', 'line');
+  var pin2 = el('input', 'txt'); pin2.placeholder = 'اسم التخطيط (سفر، مدينة، ليل، أحمد…)'; pin2.maxLength = 24; pin2.style.flex = '1';
+  var sv = el('button', 'opt sm', 'حفظ الشكل الحالي'); sv.onclick = function () { var nm = pin2.value.trim(); if (!nm) return; var id = uid(); profs.push({ id: id, name: nm, data: snapshotProfile(prefs) }); saveProfiles(profs); prefs.activeProfile = id; upd(); };
+  pl.appendChild(pin2); pl.appendChild(sv); s.appendChild(pl);
+  if (profs.length) {
+    var apf = Object.assign({ on: false, travel: '', city: '' }, prefs.autoProfile || {});
+    var tg = el('div', 'toggle'); tg.appendChild(el('span', '', 'تبديل تلقائي: تخطيط للسفر خارج مدينتك وتخطيط داخلها'));
+    var sw = el('button', 'sw' + (apf.on ? ' on' : '')); sw.onclick = function () { apf.on = !apf.on; prefs.autoProfile = apf; upd(); }; tg.appendChild(sw); s.appendChild(tg);
+    if (apf.on) {
+      var popts = [['', 'بدون']].concat(profs.map(function (x) { return [x.id, x.name]; }));
+      s.appendChild(el('span', 'note', 'خارج ' + ((CITIES[prefs.city] || {}).label || 'المدينة') + ' (أكثر من 60 كم):'));
+      opts(s, popts, apf.travel, function (k) { apf.travel = k; prefs.autoProfile = apf; upd(); }, true);
+      s.appendChild(el('span', 'note', 'داخل المدينة:'));
+      opts(s, popts, apf.city, function (k) { apf.city = k; prefs.autoProfile = apf; upd(); }, true);
+    }
+    s.appendChild(el('span', 'note', 'تلميح: أضف زر «التخطيط» للقائمة السفلية للتبديل بين التخطيطات بضغطة.'));
+  }
+
   s = section('القائمة السفلية', 'حتى 8 أزرار. زر الإعدادات ثابت دائماً.');
   var dock = (prefs.dock || []).slice();
   if (dock.indexOf('settings') < 0) dock.push('settings');
-  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', settings: 'الإعدادات' };
+  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', settings: 'الإعدادات' };
   dock.forEach(function (id, i) {
     var row = el('div', 'line');
     row.appendChild(el('span', '', id.indexOf('app:') === 0 ? appLabel(id.slice(4)) : (DN[id] || id)));

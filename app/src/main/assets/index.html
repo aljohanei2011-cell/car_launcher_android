@@ -47,12 +47,12 @@
 .L-minimal .page{display:flex;flex-direction:column}
 
 /* حجم الخط داخل البطاقة يتبع حجمها والتصميم */
-.card{--fs:17px;font-size:var(--fs);padding:1.3em 1.4em;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:0;overflow:hidden;color:#fff;position:relative}
+.card{--fs:17px;font-size:var(--fs);padding:calc(var(--fs)*1.3) calc(var(--fs)*1.4);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:0;overflow:hidden;color:#fff;position:relative}
 .L-classic .card.s{--fs:15px}.L-classic .card.l{--fs:19px}
-.L-grid .card,.L-side .card{--fs:13px;padding:1.1em 1.3em}
+.L-grid .card,.L-side .card{--fs:13px;padding:calc(var(--fs)*1.1) calc(var(--fs)*1.3)}
 .L-grid .card.l,.L-side .card.l{--fs:14.5px}
 .L-side .card{--fs:14px}.L-side .card.l{--fs:16px}
-.L-minimal .card{--fs:12px;padding:1em 1.2em}
+.L-minimal .card{--fs:12px;padding:var(--fs) calc(var(--fs)*1.2)}
 .k-row{display:flex;justify-content:space-between;align-items:center;gap:.6em;min-width:0}
 .k-lbl{font-size:1.15em;color:#5AB0FF;font-weight:600;white-space:nowrap}
 .k-sub{font-size:1.1em;color:#C3D1E8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -73,6 +73,22 @@
 .fav img{width:3.4em;height:3.4em;border-radius:.8em}
 .fav span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gauge{width:100%;flex:1;min-height:0}
+/* خيارات البطاقة: المحاذاة والشفافية */
+.card.al-c{text-align:center}.card.al-c .k-row{justify-content:center;gap:1em}
+.card.op-clear{background:rgba(0,0,0,.16)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-color:rgba(255,255,255,.18)!important;box-shadow:none!important}
+.card.op-solid{background:#0d1a33!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+body.skin-light .card.op-solid{background:#fff!important}
+body.skin-saudi .card.op-solid{background:#072A1E!important}
+body.skin-gold .card.op-solid{background:#0f1d30!important}
+body.skin-red .card.op-solid{background:#16191e!important}
+/* ساعة الأرقام المتقلبة */
+.flip{display:flex;align-items:center;justify-content:center;gap:.08em;direction:ltr}
+.flip .fl{display:inline-block;min-width:.66em;text-align:center;padding:.04em .06em;border-radius:.12em;background:rgba(0,0,0,.28);box-shadow:inset 0 -1px 0 rgba(255,255,255,.08),0 .05em .12em rgba(0,0,0,.3);position:relative;line-height:1.1}
+.flip .fl::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.45)}
+body.skin-light .flip .fl{background:rgba(255,255,255,.75)}
+.flip .fl.go{animation:flipIn .55s ease-out}
+.flip .flc{opacity:.7;margin:0 .02em}
+@keyframes flipIn{0%{transform:perspective(400px) rotateX(-90deg);opacity:.3}100%{transform:perspective(400px) rotateX(0);opacity:1}}
 
 /* ===== القائمة (Dock) ===== */
 #dock{display:flex;gap:14px;box-sizing:border-box}
@@ -149,6 +165,7 @@ var IC = {
   prayer: '<svg viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10M4 6h2M19 21V10M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>',
   parking: '<svg viewBox="0 0 24 24" fill="none" stroke="#6FA8FF" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3" stroke-linecap="round"/></svg>',
   fuel: '<svg viewBox="0 0 24 24" fill="none" stroke="#5AD1A0" stroke-width="2" stroke-linecap="round"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M7 7h4"/></svg>',
+  profile: '<svg viewBox="0 0 24 24" fill="none" stroke="#7FD4FF" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
   maint: '<svg viewBox="0 0 24 24" fill="none" stroke="#9FB0CC" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>'
 };
 var DOCK_ITEMS = {
@@ -165,6 +182,7 @@ var DOCK_ITEMS = {
   parking: { label: 'الموقف', href: 'parking.html' },
   fuel: { label: 'الوقود', href: 'fuel.html' },
   maint: { label: 'الصيانة', href: 'maintenance.html' },
+  profile: { label: 'التخطيط', go: function () { cycleProfile(); } },
   settings: { label: 'الإعدادات', href: 'settings.html' }
 };
 var appCache = {};
@@ -279,12 +297,76 @@ function renderStatus(){
 var CARDS = {};
 function card(id, label, render){ CARDS[id] = { label: label, render: render }; }
 
-card('clock', 'الساعة', function () {
-  var d = new Date();
-  return '<div class="k-center" ondblclick="openRest()">' +
-    '<div class="k-sub">' + fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + '</div>' +
-    '<div class="k-huge">' + clockStr(d) + '<span style="font-size:.25em;font-weight:500;margin-left:.2em">' + ampm(d) + '</span></div>' +
-    '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div></div>';
+/* ===== الساعة بأشكالها ===== */
+function clockDates(d, o){
+  return { greg: partHidden(o, 'greg') ? '' : '<div class="k-sub">' + fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + '</div>',
+           hijri: partHidden(o, 'hijri') ? '' : '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div>' };
+}
+function ampmHtml(d, o){ var a = partHidden(o, 'ampm') ? '' : ampm(d); return a ? '<span style="font-size:.25em;font-weight:500;margin-left:.2em">' + a + '</span>' : ''; }
+/* بداية الفترة الحالية (من الصلاة السابقة) للحلقة */
+function prayerProgress(d){
+  var now = riyadhMinutes(d), list = prayerMinutes(d), prev = null, next = null;
+  for (var i = 0; i < list.length; i++) { if (list[i].min <= now) prev = list[i]; else if (!next) next = list[i]; }
+  var start = prev ? prev.min : list[list.length - 1].min - 1440, end = next ? next.min : list[0].min + 1440;
+  return Math.max(0, Math.min(1, (now - start) / Math.max(1, end - start)));
+}
+var _flipPrev = '', _rcEl = null;
+/* البطاقة التي تُرسم الآن أعرض من ارتفاعها بوضوح؟ (لترتيب الساعة أفقياً أو عمودياً) */
+function cardWide(){ return !!_rcEl && _rcEl.clientWidth > _rcEl.clientHeight * 1.45; }
+var CLOCK_RENDER = {
+  digital: function (d, o) { var t = clockDates(d, o); return '<div class="k-center" ondblclick="openRest()">' + t.greg + '<div class="k-huge">' + clockStr(d) + ampmHtml(d, o) + '</div>' + t.hijri + '</div>'; },
+  thin: function (d, o) { var t = clockDates(d, o); return '<div class="k-center" ondblclick="openRest()"><div class="k-huge" style="font-weight:300;font-size:7.4em;letter-spacing:-.02em">' + clockStr(d) + ampmHtml(d, o) + '</div>' + t.greg + t.hijri + '</div>'; },
+  analog: function (d, o) {
+    var t = clockDates(d, o), fg = fgCol(), ac = accentCol('#5AB0FF');
+    var h = d.getHours() % 12, m = d.getMinutes(), sec = d.getSeconds();
+    var ha = h * 30 + m * 0.5, ma = m * 6 + sec * 0.1, sa = sec * 6, ticks = '';
+    for (var i = 0; i < 60; i++) { var big = i % 5 === 0; ticks += '<line x1="100" y1="' + (big ? 12 : 14) + '" x2="100" y2="' + (big ? 26 : 20) + '" stroke="' + (big ? ac : fg) + '" stroke-opacity="' + (big ? 1 : .35) + '" stroke-width="' + (big ? 3.2 : 1.2) + '" stroke-linecap="round" transform="rotate(' + i * 6 + ' 100 100)"/>'; }
+    var nums = [[12, 100, 46], [3, 158, 106], [6, 100, 166], [9, 42, 106]].map(function (n) { return '<text x="' + n[1] + '" y="' + n[2] + '" text-anchor="middle" fill="' + fg + '" font-size="17" font-weight="600">' + n[0] + '</text>'; }).join('');
+    var hand = function (a, len, w, col, tail) { return '<line x1="100" y1="' + (100 + (tail || 0)) + '" x2="100" y2="' + (100 - len) + '" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" transform="rotate(' + a + ' 100 100)"/>'; };
+    var wide = cardWide();
+    return '<div style="display:flex;flex-direction:' + (wide ? 'row' : 'column') + ';align-items:center;justify-content:center;gap:' + (wide ? '1.2em' : '.4em') + ';height:100%;min-height:0;text-align:center" ondblclick="openRest()">' +
+      '<svg viewBox="0 0 200 200" style="' + (wide ? 'height:100%' : 'flex:1;min-height:0;width:100%') + ';aspect-ratio:1;max-width:100%" aria-label="' + clockStr(d) + '"><circle cx="100" cy="100" r="96" fill="rgba(0,0,0,.18)" stroke="' + ac + '" stroke-opacity=".55" stroke-width="2"/>' + ticks + nums +
+      hand(ha, 52, 7, fg, 10) + hand(ma, 76, 4.5, fg, 12) + hand(sa, 82, 2, ac, 18) + '<circle cx="100" cy="100" r="6" fill="' + ac + '"/></svg>' +
+      '<div style="min-width:0;flex:none">' + (wide ? '<div class="k-big" style="font-size:2.4em">' + clockStr(d) + ampmHtml(d, o) + '</div>' : '') + t.greg + t.hijri + '</div></div>';
+  },
+  ring: function (d, o) {
+    var t = clockDates(d, o), np = nextPrayer(d), f = prayerProgress(d), C = 2 * Math.PI * 88, ac = accentCol('#5AB0FF');
+    var wide = cardWide();
+    return '<div style="display:flex;flex-direction:' + (wide ? 'row' : 'column') + ';align-items:center;justify-content:center;gap:' + (wide ? '1.2em' : '.5em') + ';height:100%;min-height:0;text-align:center" ondblclick="openRest()"><div style="position:relative;' + (wide ? 'height:100%' : 'flex:1;min-height:0;max-width:100%') + ';aspect-ratio:1">' +
+      '<svg viewBox="0 0 200 200" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="100" cy="100" r="88" fill="none" stroke="' + (isLight() ? 'rgba(0,0,0,.1)' : 'rgba(255,255,255,.12)') + '" stroke-width="10"/>' +
+      '<circle cx="100" cy="100" r="88" fill="none" stroke="' + ac + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (C * f).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 100 100)"/></svg>' +
+      '<div class="k-center" style="position:absolute;inset:0"><div class="k-big" style="font-size:2.7em">' + clockStr(d) + '</div><div class="k-sub">' + (partHidden(o, 'ampm') ? '' : ampm(d)) + '</div></div></div>' +
+      '<div style="min-width:0;flex:none"><div class="k-lbl">' + np.name + ' ' + np.timeFmt + ' · ' + fmtDiff(np.diff) + '</div>' + t.greg + t.hijri + '</div></div>';
+  },
+  flip: function (d, o) {
+    var t = clockDates(d, o), str = clockStr(d), out = '';
+    for (var i = 0; i < str.length; i++) {
+      var ch = str.charAt(i);
+      if (ch === ':') { out += '<span class="flc">:</span>'; continue; }
+      out += '<span class="fl' + (_flipPrev && _flipPrev.charAt(i) !== ch ? ' go' : '') + '">' + ch + '</span>';
+    }
+    _flipPrev = str;
+    return '<div class="k-center" ondblclick="openRest()">' + t.greg + '<div class="flip k-huge" style="font-size:5em">' + out + ampmHtml(d, o) + '</div>' + t.hijri + '</div>';
+  },
+  words: function (d, o) {
+    var w = timeWords(d), t = clockDates(d, o);
+    return '<div class="k-center" ondblclick="openRest()"><div class="k-mid font-dua" style="white-space:normal;font-size:2.5em;line-height:1.35;font-weight:700">' + w.main + '</div><div class="k-mid" style="font-size:1.6em;color:var(--accent,#5AB0FF)">' + w.part + '</div>' +
+      '<div class="k-sub">' + clockStr(d) + (ampm(d) ? ' ' + ampm(d) : '') + '</div>' + t.hijri + '</div>';
+  },
+  dual: function (d, o) {
+    var t = clockDates(d, o), np = nextPrayer(d), left = Math.max(0, np.diff * 60 - d.getSeconds());
+    var wide = cardWide();
+    return '<div style="display:flex;flex-direction:' + (wide ? 'row' : 'column') + ';align-items:center;justify-content:space-around;gap:' + (wide ? '1em' : '.4em') + ';height:100%" ondblclick="openRest()">' +
+      '<div class="k-center" style="height:auto"><div class="k-huge" style="font-size:' + (wide ? 5 : 4.2) + 'em">' + clockStr(d) + ampmHtml(d, o) + '</div>' + t.greg + t.hijri + '</div>' +
+      '<div style="' + (wide ? 'width:1px;align-self:stretch;margin:1em 0' : 'height:1px;align-self:stretch;margin:0 1em') + ';background:rgba(127,127,127,.35)"></div>' +
+      '<div class="k-center" style="height:auto"><div class="k-sub">الصلاة القادمة</div><div class="k-mid" style="font-size:2em;color:var(--accent,#5AB0FF)">' + np.name + '</div>' +
+      '<div class="k-big" style="font-size:2.4em">' + pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60) + '</div><div class="k-sub">' + np.timeFmt + '</div></div></div>';
+  }
+};
+function clockStyleOf(o){ return (o && o.style) || prefs.clockStyle || 'digital'; }
+card('clock', 'الساعة', function (o) {
+  var st = clockStyleOf(o);
+  return (CLOCK_RENDER[st] || CLOCK_RENDER.digital)(new Date(), o);
 });
 function skinImg(kind, key){
   if (prefs.skin === 'gold') return kind === 'prayer' ? 'skins/gold/prayer_' + (key || 'isha') + '.jpg' : 'skins/gold/music.jpg';
@@ -298,22 +380,22 @@ function isLight(){ return prefs.skin === 'light'; }
 function fgCol(){ return isLight() ? '#13202f' : '#fff'; }
 function accentCol(def){ var v = ''; try { v = getComputedStyle(document.body).getPropertyValue('--accent').trim(); } catch (e) {} return v || def; }
 function pad2(x){ return (x < 10 ? '0' : '') + x; }
-card('prayer', 'الصلاة القادمة', function () {
+card('prayer', 'الصلاة القادمة', function (o) {
   var d = new Date(), np = nextPrayer(d);
   if (fancySkin()) {
     var left = Math.max(0, np.diff * 60 - d.getSeconds());
-    return '<a href="prayer.html" style="display:contents"><div class="k-img" style="background-image:url(' + skinImg('prayer', np.key) + ')"></div>' +
-      '<div style="text-align:center"><div class="k-sub">الصلاة القادمة</div><div class="k-mid" style="font-size:2.2em;color:var(--accent2)">صلاة ' + np.name + '</div>' +
-      '<div class="k-big" style="font-size:2.6em;margin:.15em 0">' + pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60) + '</div>' +
-      '<div class="k-sub">' + np.timeFmt + ' · ' + esc(cityLabel()) + '</div></div></a>';
+    return '<a href="prayer.html" style="display:contents">' + (partHidden(o, 'img') ? '' : '<div class="k-img" style="background-image:url(' + skinImg('prayer', np.key) + ')"></div>') +
+      '<div style="text-align:center' + (partHidden(o, 'img') ? ';margin:auto 0' : '') + '"><div class="k-sub">الصلاة القادمة</div><div class="k-mid" style="font-size:2.2em;color:var(--accent2)">صلاة ' + np.name + '</div>' +
+      (partHidden(o, 'count') ? '' : '<div class="k-big" style="font-size:2.6em;margin:.15em 0">' + pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60) + '</div>') +
+      '<div class="k-sub">' + np.timeFmt + (partHidden(o, 'city') ? '' : ' · ' + esc(cityLabel())) + '</div></div></a>';
   }
-  return '<a href="prayer.html" style="display:contents"><div class="k-row"><span class="k-lbl">الصلاة القادمة</span><span class="k-sub" style="font-size:.95em">' + esc(cityLabel()) + '</span></div>' +
-    '<div><div class="k-mid" style="font-size:2.3em">' + np.name + '</div><div class="k-row" style="align-items:baseline"><span class="k-sub">' + fmtDiff(np.diff) + '</span>' +
+  return '<a href="prayer.html" style="display:contents"><div class="k-row"><span class="k-lbl">الصلاة القادمة</span><span class="k-sub" style="font-size:.95em">' + (partHidden(o, 'city') ? '' : esc(cityLabel())) + '</span></div>' +
+    '<div><div class="k-mid" style="font-size:2.3em">' + np.name + '</div><div class="k-row" style="align-items:baseline"><span class="k-sub">' + (partHidden(o, 'count') ? '' : fmtDiff(np.diff)) + '</span>' +
     '<span class="k-big">' + np.timeFmt + '</span></div></div></a>';
 });
-card('times', 'مواقيت اليوم', function () {
+card('times', 'مواقيت اليوم', function (o) {
   var d = new Date(), now = riyadhMinutes(d), list = prayerMinutes(d), next = list.filter(function (p) { return p.min > now; })[0];
-  var h = '<div class="k-row"><span class="k-lbl">مواقيت اليوم</span><span class="k-sub" style="font-size:.95em">' + esc(cityLabel()) + '</span></div><div class="k-list">';
+  var h = '<div class="k-row"><span class="k-lbl">مواقيت اليوم</span><span class="k-sub" style="font-size:.95em">' + (partHidden(o, 'city') ? '' : esc(cityLabel())) + '</span></div><div class="k-list">';
   list.forEach(function (p) { h += '<div class="k-li' + (next && p.key === next.key ? ' on' : '') + '"><span>' + p.name + '</span><span>' + fmtMin(p.min) + '</span></div>'; });
   return h + '</div>';
 });
@@ -323,20 +405,20 @@ var MI = {
   next: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M5 4v16l10-8zM17 4h2v16h-2z"/></svg>',
   prev: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M19 4v16L9 12zM5 4h2v16H5z"/></svg>'
 };
-card('media', 'الموسيقى', function () {
+card('media', 'الموسيقى', function (o) {
   if (!HAS_NATIVE) return '<span class="k-lbl">الموسيقى</span><div class="k-sub">يعمل داخل التطبيق</div><div></div>';
   var m = natJSON('media');
   if (!m || m.access === false) return '<span class="k-lbl">الموسيقى</span><div class="k-sub" style="white-space:normal">فعّل «الوصول إلى الإشعارات» مرة واحدة لعرض ما يُشغَّل.</div><button class="k-btn" style="align-self:flex-start" onclick="nat(\'openNotificationAccess\')">تفعيل</button>';
   if (!m.title) return '<span class="k-lbl">الموسيقى</span><div class="k-sub">لا يوجد تشغيل الآن</div><button class="k-btn" style="align-self:flex-start" onclick="openRole(\'music\')">فتح تطبيق الموسيقى</button>';
-  var art = m.art || skinImg('music');
+  var art = partHidden(o, 'art') ? '' : (m.art || skinImg('music'));
   var prog = '';
-  if (m.duration > 0) {
+  if (m.duration > 0 && !partHidden(o, 'prog')) {
     var pos = Math.min(m.duration, (m.position || 0) + (m.playing ? Date.now() - (m.at || Date.now()) : 0)), pct = Math.round(pos / m.duration * 100);
     var t = function (ms) { var s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + pad2(s % 60); };
     prog = '<div><div style="height:.35em;border-radius:.2em;background:rgba(255,255,255,.18);overflow:hidden;direction:ltr"><div style="width:' + pct + '%;height:100%;background:var(--accent,#5AB0FF)"></div></div>' +
       '<div class="k-row k-sub" style="font-size:.85em;direction:ltr;margin-top:.2em"><span>' + t(pos) + '</span><span>' + t(m.duration) + '</span></div></div>';
   }
-  return '<div class="k-row"><span class="k-lbl">يُشغَّل الآن</span><span class="k-sub" style="font-size:.95em">' + esc(m.app) + '</span></div>' +
+  return '<div class="k-row"><span class="k-lbl">يُشغَّل الآن</span><span class="k-sub" style="font-size:.95em">' + (partHidden(o, 'app') ? '' : esc(m.app)) + '</span></div>' +
     '<div style="display:flex;gap:.9em;align-items:center;min-width:0">' + (art ? '<div class="k-art" style="background-image:url(' + art + ');' + (m.art ? 'display:block' : '') + '"></div>' : '') +
     '<div style="min-width:0;flex:1"><div class="k-mid" style="white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3">' + esc(m.title) + '</div><div class="k-sub">' + esc(m.artist) + '</div></div></div>' + prog +
     '<div style="display:flex;justify-content:center;align-items:center;gap:1em;direction:ltr">' +
@@ -344,14 +426,14 @@ card('media', 'الموسيقى', function () {
     '<button class="mbtn big" aria-label="تشغيل أو إيقاف" onclick="nat(\'mediaCmd\',\'' + (m.playing ? 'pause' : 'play') + '\');later()">' + (m.playing ? MI.pause : MI.play) + '</button>' +
     '<button class="mbtn" aria-label="التالي" onclick="nat(\'mediaCmd\',\'next\');later()">' + MI.next + '</button></div>';
 });
-card('speed', 'عداد السرعة', function () {
+card('speed', 'عداد السرعة', function (o) {
   var t = natJSON('trip') || {}, v = t.gps ? Math.round(t.speed) : 0, max = 200;
   var lim = +prefs.speedLimit || 120, over = prefs.speedOn && v > lim;
   var a = -120 + 240 * Math.min(v, max) / max;
   function pt(deg, r){ var rad = (deg - 90) * Math.PI / 180; return (100 + r * Math.cos(rad)).toFixed(1) + ' ' + (105 + r * Math.sin(rad)).toFixed(1); }
   var arc = function (from, to, col, w){ var large = (to - from) > 180 ? 1 : 0; return '<path d="M' + pt(from, 80) + ' A80 80 0 ' + large + ' 1 ' + pt(to, 80) + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round"/>'; };
   var ticks = '';
-  for (var k = 0; k <= max; k += 20) { var dg = -120 + 240 * k / max; ticks += '<text x="' + pt(dg, 62).split(' ')[0] + '" y="' + (+pt(dg, 62).split(' ')[1] + 4) + '" fill="#9FB0CC" font-size="9" text-anchor="middle">' + k + '</text>'; }
+  if (!partHidden(o, 'ticks')) for (var k = 0; k <= max; k += 20) { var dg = -120 + 240 * k / max; ticks += '<text x="' + pt(dg, 62).split(' ')[0] + '" y="' + (+pt(dg, 62).split(' ')[1] + 4) + '" fill="#9FB0CC" font-size="9" text-anchor="middle">' + k + '</text>'; }
   var limDeg = -120 + 240 * Math.min(lim, max) / max;
   if (prefs.skin === 'red') {
     var pc = Math.min(v, max) / max, C = 2 * Math.PI * 70;
@@ -370,14 +452,14 @@ card('speed', 'عداد السرعة', function () {
     '<g transform="rotate(' + a + ' 100 105)"><path d="M100 30 L104 105 L96 105Z" fill="' + (over ? '#FF6B5A' : prefs.skin === 'gold' ? '#F5D58A' : fg) + '"/></g><circle cx="100" cy="105" r="7" fill="' + fg + '"/>' +
     '<text x="100" y="140" text-anchor="middle" fill="' + (over ? '#FF6B5A' : fg) + '" font-size="26" font-weight="700">' + v + '</text></svg>';
 });
-card('trip', 'الرحلة', function () {
+card('trip', 'الرحلة', function (o) {
   var t = natJSON('trip') || { km: 0, speed: 0, movingSec: 0 };
   var mins = Math.floor((t.movingSec || 0) / 60);
   return '<a href="trip.html" style="display:contents"><span class="k-lbl">الرحلة</span>' +
     '<div style="direction:ltr;text-align:right"><span class="k-big" style="font-size:3.6em">' + (t.km || 0).toFixed(1) + '</span><span class="k-sub"> كم</span></div>' +
-    '<div class="k-sub">مدة القيادة ' + Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0') + '</div></a>';
+    (partHidden(o, 'time') ? '<div></div>' : '<div class="k-sub">مدة القيادة ' + Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0') + '</div>') + '</a>';
 });
-card('qibla', 'القبلة', function () {
+card('qibla', 'القبلة', function (o) {
   var t = natJSON('trip');
   var lat = t && typeof t.lat === 'number' ? t.lat : LAT, lng = t && typeof t.lng === 'number' ? t.lng : LNG;
   var b = Math.round(qiblaBearing(lat, lng));
@@ -386,15 +468,15 @@ card('qibla', 'القبلة', function () {
     '<svg viewBox="0 0 100 100" style="height:100%;max-height:7.5em;flex:none" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>' +
     (rel === null ? '<text x="50" y="16" text-anchor="middle" fill="#9FB0CC" font-size="11">N</text>' : '<path d="M50 10 46 20h8z" fill="#9FB0CC"/>') +
     '<g transform="rotate(' + (rel !== null ? rel : b) + ' 50 50)"><path d="M50 14 60 52 50 46 40 52Z" fill="#E8C061"/></g></svg>' +
-    '<div><div class="k-big">' + b + '°</div><div class="k-sub">' + (rel === null ? 'من الشمال' : 'بالنسبة لاتجاهك') + '</div></div></div>';
+    '<div><div class="k-big">' + b + '°</div>' + (partHidden(o, 'txt') ? '' : '<div class="k-sub">' + (rel === null ? 'من الشمال' : 'بالنسبة لاتجاهك') + '</div>') + '</div></div>';
 });
-card('weather', 'الطقس', function () {
+card('weather', 'الطقس', function (o) {
   if (!prefs.weatherOn) return '<span class="k-lbl">الطقس</span><div class="k-sub">مُطفأ من الإعدادات</div><div></div>';
   var w = weatherData();
   if (!w.at) return '<span class="k-lbl">الطقس</span><div class="k-sub" style="white-space:normal">يحتاج إنترنت مرة (نقطة اتصال الجوال)</div><button class="k-btn" style="align-self:flex-start" onclick="nat(\'weatherRefresh\',LAT,LNG)">تحديث</button>';
-  return '<div class="k-row"><span class="k-lbl">الطقس</span><span class="k-sub" style="font-size:.95em">' + agoText(w.at) + '</span></div>' +
-    '<div class="k-row" style="align-items:flex-end"><div><div class="k-mid">' + (WMO[w.code] || '') + '</div><div class="k-sub">' +
-    (w.max != null ? 'العظمى ' + Math.round(w.max) + '° · الصغرى ' + Math.round(w.min) + '°' : '') + '</div></div>' +
+  return '<div class="k-row"><span class="k-lbl">الطقس</span><span class="k-sub" style="font-size:.95em">' + (partHidden(o, 'ago') ? '' : agoText(w.at)) + '</span></div>' +
+    '<div class="k-row" style="align-items:flex-end"><div><div class="k-mid">' + (weatherFx(w) === 'dust' ? 'غبار' : (WMO[w.code] || '')) + '</div><div class="k-sub">' +
+    (w.max != null && !partHidden(o, 'range') ? 'العظمى ' + Math.round(w.max) + '° · الصغرى ' + Math.round(w.min) + '°' : '') + '</div></div>' +
     '<span class="k-big" style="font-size:3.6em">' + Math.round(w.temp) + '°</span></div>';
 });
 card('apps', 'تطبيقاتي المفضلة', function () {
@@ -492,10 +574,12 @@ function buildPages(){
       cards = cards.slice(0, 3);
     }
     var wrap = document.createElement('div'); wrap.className = 'cards';
-    cards.forEach(function (c) {
+    cards.forEach(function (c, ci) {
       if (!CARDS[c.id]) return;
-      var el = document.createElement('div'); el.className = 'glass card ' + (c.size || 'm');
-      wrap.appendChild(el); cardEls.push({ el: el, id: c.id, html: '' });
+      var el = document.createElement('div');
+      el.className = 'glass card ' + (c.size || 'm') + (c.op ? ' op-' + c.op : '') + (c.align === 'c' ? ' al-c' : '');
+      el.dataset.pi = pi; el.dataset.ci = ci;
+      wrap.appendChild(el); cardEls.push({ el: el, id: c.id, opt: c, pi: pi, ci: ci, html: '' });
     });
     pg.appendChild(wrap);
     pagesEl.appendChild(pg);
@@ -516,13 +600,17 @@ var forceCards = false;
 function overflows(el){ return el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 2 || [].some.call(el.querySelectorAll('.k-huge,.k-big'), function (x) { return x.scrollWidth > x.clientWidth + 2; }); }
 function fitCard(c){
   var el = c.el;
-  if (!c.baseFs || c.fitN > 40) { el.style.fontSize = ''; c.baseFs = parseFloat(getComputedStyle(el).fontSize); c.fs = c.baseFs; c.fitN = 0; }
+  // حجم البطاقة ثابت؛ التكبير والتصغير يغيّر النص فقط، ولا يتجاوز مساحة البطاقة
+  if (!c.baseFs || c.fitN > 40) { el.style.fontSize = ''; c.baseFs = parseFloat(getComputedStyle(el).fontSize) * ((c.opt && +c.opt.ts) || 1) * (+prefs.textScale || 1); c.fs = c.baseFs; c.fitN = 0; }
   c.fitN++;
   el.style.fontSize = c.fs + 'px';
   var guard = 0;
   while (overflows(el) && c.fs > 7 && guard++ < 14) { c.fs = Math.max(7, c.fs * 0.9); el.style.fontSize = c.fs + 'px'; }
 }
 window.addEventListener('resize', function () { cardEls.forEach(function (c) { c.baseFs = 0; fitCard(c); }); });
+/* بعد اكتمال تحميل الخطوط تتغير المقاسات، فنعيد الملاءمة */
+function refitAll(){ cardEls.forEach(function (c) { c.baseFs = 0; fitCard(c); }); }
+try { if (document.fonts) { document.fonts.ready.then(refitAll); document.fonts.addEventListener('loadingdone', refitAll); } } catch (e) {}
 function renderCards(){
   // لا نعيد رسم البطاقات أثناء اللمس حتى لا تضيع الضغطة
   if (Date.now() - touchAt < 700) return;
@@ -530,10 +618,66 @@ function renderCards(){
   cardEls.forEach(function (c) {
     if (c.at && now - c.at < cardRate(c.id) * 1000 - 100 && !forceCards) return;
     c.at = now;
-    var h = '';
-    try { h = CARDS[c.id].render(); } catch (e) { h = '<span class="k-lbl">' + CARDS[c.id].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
+    var h = '', rid = c.id;
+    // بطاقة الموسيقى الفارغة تحل محلها بطاقة أخرى إن طُلب ذلك
+    if (rid === 'media' && prefs.hideEmpty && mediaEmpty() && CARDS[prefs.emptyAlt]) rid = prefs.emptyAlt;
+    if (c.rid !== rid) { c.rid = rid; c.baseFs = 0; }
+    _rcEl = c.el;
+    try { h = CARDS[rid].render(c.opt || {}); } catch (e) { h = '<span class="k-lbl">' + CARDS[rid].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
     if (h !== c.html) { c.el.innerHTML = h; c.html = h; fitCard(c); }
   });
+}
+
+function mediaEmpty(){ if (!HAS_NATIVE) return true; var m = natJSON('media'); return !m || m.access === false || !m.title; }
+
+/* ================= تحرير البطاقات بالضغط المطوّل ================= */
+var _lp = null, _lpBlock = false;
+function cardsLocked(o){ return !!prefs.cardsLocked || !!(o && o.lock); }
+document.addEventListener('pointerdown', function (e) {
+  var el = e.target.closest && e.target.closest('.card'); if (!el || !el.dataset.ci) return;
+  var x = e.clientX, y = e.clientY;
+  clearTimeout(_lp && _lp.t);
+  _lp = { x: x, y: y, el: el, t: setTimeout(function () { _lpBlock = true; onCardLongPress(el); }, 650) };
+}, true);
+document.addEventListener('pointermove', function (e) { if (_lp && (Math.abs(e.clientX - _lp.x) > 12 || Math.abs(e.clientY - _lp.y) > 12)) { clearTimeout(_lp.t); _lp = null; } }, true);
+['pointerup', 'pointercancel'].forEach(function (ev) { document.addEventListener(ev, function () { if (_lp) { clearTimeout(_lp.t); _lp = null; } }, true); });
+// الضغطة الطويلة لا تفتح محتوى البطاقة
+document.addEventListener('pointerdown', function () { _lpBlock = false; }, true);
+document.addEventListener('click', function (e) { if (_lpBlock) { _lpBlock = false; e.preventDefault(); e.stopPropagation(); } }, true);
+document.addEventListener('contextmenu', function (e) { if (e.target.closest && e.target.closest('.card')) e.preventDefault(); }, true);
+function onCardLongPress(el){
+  var pi = +el.dataset.pi, ci = +el.dataset.ci, c = (homePages()[pi] || [])[ci];
+  if (!c) return;
+  if (isDriving()) { toast('تحرير البطاقات متاح عند توقف السيارة'); return; }
+  if (cardsLocked(c)) {
+    toast(prefs.cardsLocked ? 'البطاقات مقفلة' : 'هذه البطاقة مقفلة', 'فتح القفل', function () {
+      requirePin(function () { var hm = JSON.parse(JSON.stringify(getHomes(prefs))); var cc = hm[prefs.layout][pi][ci]; if (cc) delete cc.lock; prefs.cardsLocked = false; prefs.homes = hm; savePrefs(prefs); _prefsCache = null; buildPages(); tick(); toast('فُتح القفل. اضغط مطولاً على البطاقة لتحريرها'); });
+    });
+    return;
+  }
+  loadEditor(function () { window.openCardEditor(pi, ci); });
+}
+/* محرر البطاقات يُحمَّل عند أول استخدام فقط (لا يستهلك ذاكرة قبل ذلك) */
+function loadEditor(cb){
+  if (window.openCardEditor) { cb(); return; }
+  var sc = document.createElement('script'); sc.src = 'editor.js'; sc.onload = cb; document.body.appendChild(sc);
+}
+
+/* ================= التبديل التلقائي بين تخطيط السفر والمدينة ================= */
+function autoProfileCheck(){
+  var ap = prefs.autoProfile || {}; if (!ap.on || (!ap.travel && !ap.city)) return;
+  var t = natJSON('trip'); if (!t || !t.gps || typeof t.lat !== 'number') return;
+  var home = CITIES[prefs.city]; if (!home) return;
+  var d = distKm(t.lat, t.lng, home.lat, home.lng);
+  var want = d > 60 ? ap.travel : d < 30 ? ap.city : null;
+  if (!want || want === prefs.activeProfile) return;
+  var pr = applyProfile(want);
+  if (pr) { window.onPageResume(); toast('تم التبديل إلى «' + pr.name + '»'); }
+}
+function cycleProfile(){
+  var l = loadProfiles(); if (!l.length) { toast('لا توجد تخطيطات محفوظة', 'حفظ من الإعدادات', function () { openPage('settings.html'); }); return; }
+  var i = 0; l.forEach(function (x, k) { if (x.id === prefs.activeProfile) i = k + 1; });
+  var pr = applyProfile(l[i % l.length].id); if (pr) { window.onPageResume(); toast('«' + pr.name + '»'); }
 }
 
 /* ================= الشريط العلوي: التذكيرات ================= */
@@ -635,6 +779,7 @@ function autoUpdateCheck(){
 setTimeout(autoUpdateCheck, 15000);
 setInterval(autoUpdateCheck, 10 * 60000);
 setInterval(function () { processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest(); }, 5000);
+setInterval(function () { if (!restOpen() && !document.getElementById('cardEd')) safe('profile', autoProfileCheck); }, 60000);
 setInterval(function () { if (!restOpen()) { applyPrefs('home', prefs); renderWeatherFx(); } pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 fitStage();
 </script>

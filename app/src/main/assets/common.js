@@ -96,6 +96,7 @@ var DEFAULT_PREFS = {
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
   safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false, weatherFx: true, accent: '',
+  clockStyle: 'digital', textScale: 1, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
   perf: 'auto', perfDetected: null, watchdog: true
 };
 function loadPrefs(){
@@ -948,6 +949,59 @@ function getHomes(p){
   var d = defaultHomes(p), h = p.homes || {}, out = {};
   Object.keys(d).forEach(function (k) { out[k] = (h[k] && h[k].length) ? h[k] : d[k]; });
   return out;
+}
+
+
+/* ================================================================
+   تخصيص البطاقات: أجزاء يمكن إخفاؤها، أشكال الساعة، حجم النص
+   ================================================================ */
+var CARD_PARTS = {
+  clock: [['greg', 'التاريخ الميلادي'], ['hijri', 'التاريخ الهجري'], ['ampm', 'ص / م']],
+  prayer: [['city', 'اسم المدينة'], ['img', 'الصورة'], ['count', 'العد التنازلي']],
+  times: [['city', 'اسم المدينة']],
+  media: [['art', 'الغلاف'], ['prog', 'شريط التقدم'], ['app', 'اسم التطبيق']],
+  weather: [['range', 'العظمى والصغرى'], ['ago', 'وقت التحديث']],
+  speed: [['ticks', 'الأرقام حول العداد']],
+  trip: [['time', 'مدة القيادة']],
+  qibla: [['txt', 'الوصف']]
+};
+var CLOCK_STYLES = [['digital', 'رقمية'], ['thin', 'رقمية نحيفة'], ['analog', 'بعقارب'], ['ring', 'حلقة الصلاة'], ['flip', 'أرقام تتقلب'], ['words', 'بالحروف'], ['dual', 'مع الصلاة القادمة']];
+var TEXT_SCALES = [[0.9, 'أصغر'], [1, 'عادي'], [1.15, 'كبير'], [1.3, 'كبير جداً']];
+function partHidden(o, k){ return !!(o && o.hide && o.hide[k]); }
+/* الوقت بالحروف: «العاشرة والنصف مساءً» (يُقرَّب لأقرب 5 دقائق) */
+var HOUR_WORDS = ['الثانية عشرة', 'الواحدة', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة', 'الحادية عشرة', 'الثانية عشرة'];
+function timeWords(d){
+  var h = d.getHours(), m = Math.round(d.getMinutes() / 5) * 5;
+  if (m === 60) { m = 0; h = (h + 1) % 24; }
+  var nh = (h + 1) % 24, useNext = m >= 40, hh = useNext ? nh : h;
+  var tail = { 0: 'تماماً', 5: 'وخمس دقائق', 10: 'وعشر دقائق', 15: 'والربع', 20: 'والثلث', 25: 'والنصف إلا خمس دقائق', 30: 'والنصف', 35: 'والنصف وخمس دقائق', 40: 'إلا ثلثاً', 45: 'إلا ربعاً', 50: 'إلا عشر دقائق', 55: 'إلا خمس دقائق' }[m];
+  var part = hh < 4 ? 'ليلاً' : hh < 6 ? 'فجراً' : hh < 11 ? 'صباحاً' : hh < 14 ? 'ظهراً' : hh < 17 ? 'عصراً' : hh < 20 ? 'مساءً' : 'ليلاً';
+  return { main: 'الساعة ' + HOUR_WORDS[hh % 12 === 0 ? 12 : hh % 12] + ' ' + tail, part: part };
+}
+/* رسالة قصيرة أسفل الشاشة مع زر اختياري */
+function toast(msg, btn, fn, ms){
+  var st = document.getElementById('stage') || document.body, old = document.getElementById('toast');
+  if (old) old.remove();
+  var t = document.createElement('div'); t.id = 'toast';
+  t.style.cssText = 'position:absolute;left:50%;bottom:170px;transform:translateX(-50%);z-index:90;background:rgba(8,14,28,.94);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:22px;padding:14px 22px;font-size:20px;display:flex;align-items:center;gap:16px;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:900px';
+  t.appendChild(document.createTextNode(msg));
+  if (btn) { var b = document.createElement('button'); b.textContent = btn; b.style.cssText = 'height:46px;padding:0 18px;border-radius:14px;border:none;background:#2F7BFF;color:#fff;font:inherit;font-size:18px'; b.onclick = function () { t.remove(); fn(); }; t.appendChild(b); }
+  st.appendChild(t);
+  setTimeout(function () { if (t.parentNode) t.remove(); }, ms || 4500);
+}
+
+/* ===== التخطيطات المحفوظة (سفر، مدينة، ليل، أو لكل سائق) ===== */
+var PROFILE_KEY = 'carlauncher.profiles';
+var PROFILE_FIELDS = ['layout', 'homes', 'dock', 'dockLabels', 'skin', 'theme', 'accent', 'clockStyle', 'textScale', 'font', 'clockFont', 'duaFont', 'statusIcons', 'favApps', 'weatherFx', 'hideEmpty', 'emptyAlt', 'restStyle'];
+function loadProfiles(){ return lsGet(PROFILE_KEY, []); }
+function saveProfiles(l){ lsSet(PROFILE_KEY, l); }
+function snapshotProfile(p){ var o = {}; PROFILE_FIELDS.forEach(function (k) { if (p[k] !== undefined) o[k] = JSON.parse(JSON.stringify(p[k])); }); return o; }
+function applyProfile(id){
+  var pr = loadProfiles().filter(function (x) { return x.id === id; })[0]; if (!pr) return false;
+  var p = loadPrefs();
+  Object.keys(pr.data || {}).forEach(function (k) { if (PROFILE_FIELDS.indexOf(k) >= 0) p[k] = pr.data[k]; });
+  p.activeProfile = id; savePrefs(p); _prefsCache = null;
+  return pr;
 }
 
 /* ===== الذاكرة ===== */
