@@ -31,7 +31,7 @@ var HAS_NATIVE = typeof window.Native !== 'undefined';
 window.addEventListener('error', function (e) {
   try { if (HAS_NATIVE && Native.logError) Native.logError((location.pathname.split('/').pop() || '') + ': ' + (e.message || '') + ' @' + (e.lineno || 0)); } catch (x) {}
 });
-var _natCache = {}, NAT_READS = { trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1 };
+var _natCache = {}, NAT_READS = { memKills: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
   if (!NAT_READS[fn]) _natCache = {}; // أي أمر (تشغيل، إيقاف...) يلغي القراءات المحفوظة
@@ -870,7 +870,16 @@ function memText(){
 }
 
 /* ===== وضع الأداء ===== */
-function perfOn(p){ p = p || loadPrefsCached(); return p.perf === 'on' || (p.perf === 'auto' && !!(p.perfDetected && p.perfDetected.on)); }
+var _memKills = null;
+function perfOn(p){
+  p = p || loadPrefsCached();
+  if (p.perf === 'on') return true;
+  if (p.perf !== 'auto') return false;
+  if (p.perfDetected && p.perfDetected.on) return true;
+  // إذا أغلق النظام محرك الصفحات لنقص الذاكرة خلال آخر 3 أيام، نخفف الواجهة تلقائياً
+  if (_memKills === null) _memKills = HAS_NATIVE ? (nat('memKills') || 0) : 0;
+  return _memKills > 0;
+}
 /* قياس سرعة الرسم (إطارات في الثانية) */
 function measureFps(ms, cb){
   var n = 0, t0 = 0;
@@ -890,3 +899,6 @@ function autoDetectPerf(){
     });
   }, 4000);
 }
+
+/* صورة مصغّرة للخلفيات المدمجة (أخف على الذاكرة في الإعدادات) */
+function thumb(p){ return /^(bg|skins)\//.test(p) ? 'thumbs/' + p.replace(/\//g, '_') : p; }

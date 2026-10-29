@@ -164,12 +164,20 @@ function galleryList(){
 }
 function startGallery(){
   if (gTimer) return;
+  // صورتان فقط في الذاكرة (الحالية والتالية) بدل تحميل كل الصور
   var g = $('gallery'), list = galleryList();
   g.innerHTML = '';
-  list.forEach(function (u, i) { var im = document.createElement('img'); im.src = u; im.alt = ''; im.style.opacity = i === 0 ? 1 : 0; g.appendChild(im); });
+  var a = document.createElement('img'), b = document.createElement('img');
+  a.alt = b.alt = ''; a.src = list[0]; a.style.opacity = 1; b.style.opacity = 0;
+  if (list.length > 1) b.src = list[1];
+  g.appendChild(a); g.appendChild(b);
+  var front = a, back = b;
   gTimer = setInterval(function () {
-    var ims = g.children; if (ims.length < 2) return;
-    ims[gIdx % ims.length].style.opacity = 0; gIdx++; ims[gIdx % ims.length].style.opacity = 1;
+    if (list.length < 2) return;
+    gIdx++;
+    back.style.opacity = 1; front.style.opacity = 0;
+    var t = front; front = back; back = t;
+    setTimeout(function () { back.src = list[(gIdx + 1) % list.length]; }, 1600);
   }, 12000);
 }
 function stopGallery(){ if (gTimer) { clearInterval(gTimer); gTimer = null; } }

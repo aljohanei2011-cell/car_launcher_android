@@ -25,6 +25,8 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     companion object { @Volatile var alive = false }
+    private var resumed = false
+    private var needRebuild = false
 
     private lateinit var webView: WebView
     private val base = "file:///android_asset/"
@@ -69,7 +71,8 @@ class MainActivity : AppCompatActivity() {
                 override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
                     CrashLog.add(this@MainActivity, "webview", "توقف محرك الصفحات" + (if (detail?.didCrash() == true) " (عطل)" else " (أغلقه النظام لنقص الذاكرة)"))
                     try { (view?.parent as? android.view.ViewGroup)?.removeView(view); view?.destroy() } catch (e: Exception) {}
-                    runOnUiThread { recreate() }
+                    // إن كانت الواجهة ظاهرة نعيد بناءها الآن، وإلا ننتظر حتى يعود المستخدم إليها
+                    if (resumed) runOnUiThread { recreate() } else needRebuild = true
                     return true
                 }
 
@@ -103,7 +106,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         // أولوية عالية لمحرك الصفحات حتى لا يُغلقه النظام عند ضغط الذاكرة
-        try { webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false) } catch (e: Exception) {}
+        // مهم وهو ظاهر، ويخفّ عن النظام عندما يكون تطبيق آخر في المقدمة
+        try { webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true) } catch (e: Exception) {}
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         webView.keepScreenOn = false
         setContentView(webView)
@@ -158,12 +162,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        resumed = false
         Watchdog.setForeground(this, false)
         try { webView.onPause(); webView.pauseTimers() } catch (e: Exception) {}
     }
 
     override fun onResume() {
         super.onResume()
+        resumed = true
+        if (needRebuild) { needRebuild = false; recreate(); return }
         Watchdog.setForeground(this, true)
         try { webView.resumeTimers(); webView.onResume() } catch (e: Exception) {}
         // تحديث الصفحة الحالية (مثلاً بعد منح الوصول للإشعارات)

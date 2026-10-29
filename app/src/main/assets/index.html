@@ -185,10 +185,14 @@ function openRest(q){
   var f = document.createElement('iframe');
   f.id = 'restFrame'; f.src = 'rest.html' + (q || '');
   document.getElementById('stage').appendChild(f);
+  // نخفي الرئيسية خلف الاستراحة حتى لا تستهلك الذاكرة والرسم
+  setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } }, 800);
 }
 window.closeRest = function () {
   var f = document.getElementById('restFrame');
   if (f) { try { f.src = 'about:blank'; } catch (e) {} f.remove(); }
+  document.getElementById('wrap').style.visibility = '';
+  var bg = document.getElementById('bg'); if (bg.dataset.src) { bg.src = bg.dataset.src; delete bg.dataset.src; }
   nat('keepOn', false);
   lastTouch = Date.now();
   forceCards = true; tick(); forceCards = false;

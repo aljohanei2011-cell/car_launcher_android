@@ -97,7 +97,7 @@ function bgTiles(parent, slot, cur, onPick, withAuto){
   }
   Object.keys(THEMES).forEach(function (k) {
     var b = el('button', 'tile' + (cur === k ? ' on' : ''), THEMES[k].label);
-    b.style.backgroundImage = "url('" + (slot === 'rest' ? THEMES[k].rest : THEMES[k].bg) + "')";
+    b.style.backgroundImage = "url('" + thumb(slot === 'rest' ? THEMES[k].rest : THEMES[k].bg) + "')";
     b.onclick = function () { onPick(k); };
     g.appendChild(b);
   });
@@ -134,7 +134,7 @@ function renderLook(){
   var sg = el('div', 'themes'); sg.style.gridTemplateColumns = 'repeat(3,minmax(0,1fr))';
   [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg']].forEach(function (x) {
     var b = el('button', 'tile' + ((prefs.skin || 'classic') === x[0] ? ' on' : ''), SKINS[x[0]].label);
-    b.style.backgroundImage = "url('" + x[1] + "')"; b.style.height = '110px'; b.style.fontSize = '19px';
+    b.style.backgroundImage = "url('" + thumb(x[1]) + "')"; b.style.height = '110px'; b.style.fontSize = '19px';
     b.onclick = function () { prefs.skin = x[0]; prefs.theme = SKINS[x[0]].theme; upd(); };
     sg.appendChild(b);
   });

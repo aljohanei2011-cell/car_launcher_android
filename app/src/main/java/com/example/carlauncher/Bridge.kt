@@ -396,4 +396,6 @@ class Bridge(private val act: MainActivity) {
             try { act.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + ctx.packageName))) } catch (e: Exception) {}
         }
     }
+
+    @JavascriptInterface fun memKills(): Int = CrashLog.memKills(ctx)
 }
