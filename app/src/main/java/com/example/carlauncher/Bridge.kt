@@ -339,6 +339,19 @@ class Bridge(private val act: MainActivity) {
         return false
     }
 
+
+    // ===== الأوامر الصوتية =====
+    @JavascriptInterface fun voiceCaps(): String = Voice.caps(ctx)
+    @JavascriptInterface fun voiceEnabled(): Boolean = Voice.enabled(ctx)
+    @JavascriptInterface fun setVoiceEnabled(on: Boolean) = Voice.setEnabled(ctx, on)
+    @JavascriptInterface fun voicePerm() = Voice.requestPermission(act)
+    @JavascriptInterface fun voiceListen(preferOffline: Boolean) = Voice.listen(ctx, preferOffline)
+    @JavascriptInterface fun voiceStop() = Voice.stop()
+    @JavascriptInterface fun voiceState(): String = Voice.stateJson()
+    @JavascriptInterface fun voiceWake(on: Boolean) = Voice.setWake(ctx, on)
+    @JavascriptInterface fun speak(text: String) = Voice.speak(ctx, text)
+    @JavascriptInterface fun ttsCheck() = Voice.checkTts(ctx)
+
     // ===== الإضاءة الليلية =====
     @JavascriptInterface fun canWriteSettings(): Boolean = Settings.System.canWrite(ctx)
     @JavascriptInterface fun openWriteSettings() {

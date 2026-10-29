@@ -13,6 +13,7 @@
     <!-- قراءة حالة البلوتوث فقط لأيقونة الشريط العلوي -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- تثبيت التحديثات والتطبيقات المرفوعة من الجوال (أندرويد يطلب تأكيدك في كل مرة) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- خفض إضاءة الشاشة ليلاً (اختياري، يُمنح من الإعدادات) -->
@@ -46,6 +47,13 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="wa.me" />
         </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <package android:name="com.google.android.googlequicksearchbox" />
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
     </queries>
@@ -72,6 +80,11 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- زر الأوامر الصوتية في الشاشة/المقود (اختياري: يظهر رفيق الطريق ضمن الخيارات) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

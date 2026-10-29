@@ -165,6 +165,7 @@ var IC = {
   prayer: '<svg viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10M4 6h2M19 21V10M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>',
   parking: '<svg viewBox="0 0 24 24" fill="none" stroke="#6FA8FF" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3" stroke-linecap="round"/></svg>',
   fuel: '<svg viewBox="0 0 24 24" fill="none" stroke="#5AD1A0" stroke-width="2" stroke-linecap="round"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M7 7h4"/></svg>',
+  voice: '<svg viewBox="0 0 24 24" fill="none" stroke="#FF8FB1" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
   profile: '<svg viewBox="0 0 24 24" fill="none" stroke="#7FD4FF" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
   maint: '<svg viewBox="0 0 24 24" fill="none" stroke="#9FB0CC" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>'
 };
@@ -183,6 +184,7 @@ var DOCK_ITEMS = {
   fuel: { label: 'الوقود', href: 'fuel.html' },
   maint: { label: 'الصيانة', href: 'maintenance.html' },
   profile: { label: 'التخطيط', go: function () { cycleProfile(); } },
+  voice: { label: 'أمر صوتي', go: function () { if (window.onVoiceKey) window.onVoiceKey(); else toast('فعّل الأوامر الصوتية من الإعدادات ▸ النظام', 'فتح', function () { openPage('settings.html'); }); } },
   settings: { label: 'الإعدادات', href: 'settings.html' }
 };
 var appCache = {};
@@ -206,7 +208,7 @@ function openPage(url){
   if (document.getElementById('restFrame')) return;
   var f = document.createElement('iframe');
   f.id = 'restFrame'; f.src = url;
-  _ovl = { rest: /^rest\.html/.test(url), digits: prefs.digits, h24: prefs.h24 };
+  _ovl = { rest: /^rest\.html/.test(url), digits: prefs.digits, h24: prefs.h24, voice: !!nat('voiceEnabled') };
   document.getElementById('stage').appendChild(f);
   // نخفي الرئيسية خلف النافذة حتى لا تستهلك الذاكرة والرسم
   setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); if (bg.getAttribute('src')) { bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } var wx = document.getElementById('wx'); if (wx) { wx.innerHTML = ''; _wxCur = null; } } }, 800);
@@ -221,7 +223,7 @@ window.closeRest = function () {
   lastTouch = Date.now();
   var np = loadPrefs();
   // تغيير الأرقام أو صيغة الساعة يحتاج إعادة رسم كاملة للنصوص
-  if (!o.rest && (np.digits !== o.digits || np.h24 !== o.h24)) { location.reload(); return; }
+  if (!o.rest && (np.digits !== o.digits || np.h24 !== o.h24 || !!nat('voiceEnabled') !== !!o.voice)) { location.reload(); return; }
   document.getElementById('wrap').style.visibility = '';
   var bg = document.getElementById('bg'); if (bg.dataset.src) { bg.src = bg.dataset.src; delete bg.dataset.src; }
   if (o.rest) { renderWeatherFx(); forceCards = true; tick(); forceCards = false; }
@@ -768,6 +770,10 @@ window.onPageResume = function () { var of = document.getElementById('restFrame'
 function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + name + ': ' + (e && e.message)); } }
 </script>
 <script src="drive.js"></script>
+<script>
+/* الأوامر الصوتية تُحمَّل فقط إذا فُعّلت على هذه الشاشة */
+if ((HAS_NATIVE && nat('voiceEnabled')) || lsGet('carlauncher.voiceTest', false)) { var _vs = document.createElement('script'); _vs.src = 'voice.js'; document.body.appendChild(_vs); }
+</script>
 <script>
 safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
 safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);

@@ -112,6 +112,8 @@ class MainActivity : AppCompatActivity() {
         webView.keepScreenOn = false
         setContentView(webView)
         webView.loadUrl(base + pageFrom(intent, "index.html"))
+        if (intent?.action == Intent.ACTION_VOICE_COMMAND && Voice.enabled(this))
+            webView.postDelayed({ webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null) }, 3000)
 
         if (!hasLocationPermission()) {
             ActivityCompat.requestPermissions(this, locationPermissions, locationRequestCode)
@@ -128,6 +130,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        // زر الأوامر الصوتية في الشاشة (إن اختير رفيق الطريق لها)
+        if (intent?.action == Intent.ACTION_VOICE_COMMAND) {
+            if (Voice.enabled(this)) { Voice.keySeen(this); webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null) }
+            return
+        }
         val p = intent?.getStringExtra("page")
         if (p != null) webView.loadUrl(base + pageFrom(intent, "index.html"))
         else if (intent?.hasCategory(Intent.CATEGORY_HOME) == true) webView.loadUrl(base + "index.html")
@@ -136,6 +143,7 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == locationRequestCode && hasLocationPermission()) TripService.start(this)
+        if (requestCode == 1002) webView.evaluateJavascript("window.onResumeNative && window.onResumeNative()", null)
     }
 
     /** إبقاء الشاشة تعمل (شاشة الاستراحة) حتى لا يقاطعها توفير الشاشة في الجهاز */
@@ -164,6 +172,7 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         resumed = false
         Watchdog.setForeground(this, false)
+        Voice.onForeground(false)
         try { webView.onPause(); webView.pauseTimers() } catch (e: Exception) {}
     }
 
@@ -172,6 +181,7 @@ class MainActivity : AppCompatActivity() {
         resumed = true
         if (needRebuild) { needRebuild = false; recreate(); return }
         Watchdog.setForeground(this, true)
+        Voice.onForeground(true)
         try { webView.resumeTimers(); webView.onResume() } catch (e: Exception) {}
         // تحديث الصفحة الحالية (مثلاً بعد منح الوصول للإشعارات)
         webView.evaluateJavascript("window.onResumeNative && window.onResumeNative()", null)
@@ -192,6 +202,19 @@ class MainActivity : AppCompatActivity() {
             View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         )
+    }
+
+    /** زر الأوامر الصوتية في المقود أو الشاشة (إن كانت الشاشة ترسله للتطبيقات) */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val voiceKeys = setOf(android.view.KeyEvent.KEYCODE_VOICE_ASSIST, android.view.KeyEvent.KEYCODE_SEARCH, android.view.KeyEvent.KEYCODE_ASSIST)
+        if (event.keyCode in voiceKeys && Voice.enabled(this)) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                Voice.keySeen(this)
+                webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null)
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     @Deprecated("Deprecated in Java")

@@ -39,6 +39,7 @@
       <button class="pbtn g" id="free">تحرير الذاكرة</button>
       <span class="pnote" id="msg"></span>
     </div>
+    <div class="pnote" id="voiceInfo" style="font-size:17px"></div>
   </div>
 </div>
 <script src="common.js"></script>
@@ -64,7 +65,12 @@ var s = natJSON('screen'); $('scr').textContent = s ? s.w + '×' + s.h : screen.
 $('toggle').onclick = function () { prefs.perf = perfOn(prefs) ? 'off' : 'on'; savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); info(); };
 $('remeasure').onclick = function () { prefs.perf = 'auto'; prefs.perfDetected = null; savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); $('msg').textContent = 'سيُعاد القياس عند فتح الرئيسية.'; info(); };
 $('free').onclick = function () { nat('freeRam'); $('msg').textContent = 'جارٍ التحرير…'; setTimeout(function () { var r = natJSON('ramResult') || {}; $('msg').textContent = 'تم تحرير ' + Math.round((r.freed || 0) / 1048576) + ' م.ب'; info(); }, 2600); };
-info(); setInterval(info, 3000); loop();
+function vinfo(){
+  if (!HAS_NATIVE) return;
+  var c = natJSON('voiceCaps') || {};
+  $('voiceInfo').innerHTML = 'الأوامر الصوتية: ' + (c.on ? 'مفعّلة' : 'مطفأة') + ' · خدمة الكلام ' + (c.recognizer ? '✓' : '✗') + ' · الميكروفون ' + (c.mic ? '✓' : '✗') + ' · النطق العربي ' + (c.tts === 'ok' ? '✓' : c.tts === 'unknown' ? '؟' : '✗') + ' · الاستماع الدائم ' + (c.wake ? 'يعمل' : 'متوقف') + ' — <a href="voice.html" style="text-decoration:underline">تجربة</a>';
+}
+info(); vinfo(); setInterval(info, 3000); loop();
 fitStage();
 </script>
 </body>

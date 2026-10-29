@@ -430,8 +430,61 @@ function confirmBox(text, onYes){
 }
 var UI_KEYS = ['clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'autoProfile', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
+/* ===== الأوامر الصوتية: فحص الشاشة ثم التفعيل ===== */
+function voiceChecks(c){
+  var rows = [
+    ['خدمة تحويل الكلام لنص', c.recognizer, c.recognizer ? 'متوفرة' : (c.google ? 'غير مفعّلة في الجهاز' : 'غير متوفرة: ثبّت تطبيق Google')],
+    ['الميكروفون', c.mic, c.mic ? 'موجود' : 'لا يوجد ميكروفون في الشاشة (جرّب ميكروفون بلوتوث)'],
+    ['إذن الميكروفون', c.perm, c.perm ? 'ممنوح' : 'يُطلب عند التفعيل'],
+    ['النطق العربي للرد بالصوت', c.tts === 'ok', c.tts === 'ok' ? 'متوفر' : c.tts === 'nolang' ? 'لا توجد لغة عربية في محرك النطق' : c.tts === 'missing' ? 'لا يوجد محرك نطق' : 'جارٍ الفحص…'],
+    ['زر الصوت في المقود', c.key, c.key ? 'تم اكتشافه' : 'يُكتشف عند ضغطه مرة والرئيسية ظاهرة'],
+    ['الذاكرة للاستماع الدائم', c.ramGb >= 3, (c.ramGb || '?') + ' جيجا' + (c.ramGb >= 3 ? ' (كافية)' : ' (الاستماع الدائم غير متاح)')]
+  ];
+  var g = el('div'); g.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:6px 18px;font-size:17px';
+  rows.forEach(function (r) {
+    g.appendChild(el('span', '', r[0]));
+    var v = el('span', '', (r[1] ? '✓ ' : '• ') + r[2]); v.style.color = r[1] ? '#5AD1A0' : '#F2C879'; g.appendChild(v);
+  });
+  return g;
+}
+function renderVoice(){
+  var s = section('الأوامر الصوتية', 'اختيارية ومطفأة افتراضياً. لا يُحمَّل منها شيء إلا إذا فعّلتها على هذه الشاشة، والتفعيل لا يُنقل مع النسخة الاحتياطية.');
+  if (!HAS_NATIVE) { s.appendChild(el('span', 'note', 'تعمل داخل التطبيق فقط.')); return; }
+  var c = natJSON('voiceCaps') || {};
+  if (c.tts === 'unknown' && !window._ttsAsked) { window._ttsAsked = true; nat('ttsCheck'); setTimeout(render, 2500); }
+  s.appendChild(voiceChecks(c));
+  var can = c.recognizer && c.mic;
+  var t = el('div', 'toggle'); t.appendChild(el('span', '', 'تفعيل الأوامر الصوتية على هذه الشاشة'));
+  var sw = el('button', 'sw' + (c.on ? ' on' : '')); sw.disabled = !can && !c.on; if (sw.disabled) sw.style.opacity = '.35';
+  sw.onclick = function () { if (!c.on && !c.perm) nat('voicePerm'); nat('setVoiceEnabled', !c.on); setTimeout(render, 300); };
+  t.appendChild(sw); s.appendChild(t);
+  if (!can) { s.appendChild(el('span', 'note', 'لا يمكن التفعيل: الشاشة لا تدعم تحويل الكلام لنص.')); return; }
+  if (!c.on) return;
+  s.appendChild(el('span', 'note', 'اسم المساعد (يُقال في أول الأمر اختيارياً، ويظهر في الردود):'));
+  var nm = el('input', 'txt'); nm.maxLength = 20; nm.value = prefs.voiceName || 'رفيق'; nm.placeholder = 'رفيق';
+  nm.onchange = function () { prefs.voiceName = nm.value.trim() || 'رفيق'; savePrefs(prefs); };
+  s.appendChild(nm);
+  var t2 = el('div', 'toggle'); t2.appendChild(el('span', '', 'الرد بالصوت'));
+  var sw2 = el('button', 'sw' + (prefs.voiceReply !== false && c.tts === 'ok' ? ' on' : '')); if (c.tts !== 'ok') { sw2.disabled = true; sw2.style.opacity = '.35'; }
+  sw2.onclick = function () { prefs.voiceReply = prefs.voiceReply === false; upd(); }; t2.appendChild(sw2); s.appendChild(t2);
+  s.appendChild(el('span', 'note', c.tts === 'ok' ? 'يُطفأ تلقائياً في وضع الأداء.' : 'غير متاح: ثبّت «خدمات النطق من Google» واللغة العربية من إعدادات الجهاز.'));
+  toggle(s, 'تفضيل العمل بدون إنترنت', 'voiceOffline', 'يحتاج تنزيل العربي من: إعدادات Google ▸ الصوت ▸ التعرف على الكلام بلا اتصال.');
+  var wk = c.ramGb >= 3 && !perfOn(prefs) && !(nat('memKills') > 0);
+  var t3 = el('div', 'toggle'); t3.appendChild(el('span', '', 'الاستماع الدائم بالاسم («يا ' + (prefs.voiceName || 'رفيق') + '…»)'));
+  var sw3 = el('button', 'sw' + (prefs.voiceWake && wk ? ' on' : '')); if (!wk) { sw3.disabled = true; sw3.style.opacity = '.35'; }
+  sw3.onclick = function () { prefs.voiceWake = !prefs.voiceWake; upd(); }; t3.appendChild(sw3); s.appendChild(t3);
+  s.appendChild(el('span', 'note', wk ? 'يعمل والرئيسية ظاهرة فقط، ويتوقف في وضع الأداء وعند تشغيل الموسيقى. قد تسمع صوت تنبيه خفيف مع كل استماع في بعض الأجهزة.' :
+    'غير متاح على هذه الشاشة: ' + (c.ramGb < 3 ? 'الذاكرة أقل من 3 جيجا' : perfOn(prefs) ? 'وضع الأداء مفعّل' : 'أغلق النظام الواجهة لنقص الذاكرة مؤخراً') + '. استخدم زر الميكروفون.'));
+  if (prefs.voiceWake && wk) toggle(s, 'إيقاف الاستماع الدائم أثناء تشغيل الموسيقى', 'wakePauseMusic');
+  var r = el('div', 'opts');
+  var h = el('a', 'opt sm', 'ماذا أقول؟ وتجربة الميكروفون'); h.href = 'voice.html'; h.style.cssText = 'display:flex;align-items:center'; r.appendChild(h);
+  s.appendChild(r);
+  s.appendChild(el('span', 'note', 'للاستخدام: زر الميكروفون أعلى الرئيسية، أو زر «أمر صوتي» في القائمة السفلية، أو زر الصوت في المقود إن كانت الشاشة ترسله.'));
+}
+
 function renderSystem(){
   var s;
+  renderVoice();
   s = section('');
   var ab = el('a', 'line'); ab.href = 'about.html';
   ab.appendChild(el('span', '', 'حول التطبيق'));
@@ -664,7 +717,7 @@ function renderHome(){
   s = section('القائمة السفلية', 'حتى 8 أزرار. زر الإعدادات ثابت دائماً.');
   var dock = (prefs.dock || []).slice();
   if (dock.indexOf('settings') < 0) dock.push('settings');
-  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', kids: 'الركاب', settings: 'الإعدادات' };
+  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', kids: 'الركاب', voice: 'أمر صوتي', settings: 'الإعدادات' };
   dock.forEach(function (id, i) {
     var row = el('div', 'line');
     row.appendChild(el('span', '', id.indexOf('app:') === 0 ? appLabel(id.slice(4)) : (DN[id] || id)));
