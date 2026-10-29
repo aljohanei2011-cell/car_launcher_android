@@ -84,7 +84,7 @@ function render(){
     d.innerHTML = '<div class="tx"><b>' + f[1] + (f[3] ? '<span class="w">يستهلك أكثر</span>' : '') + '</b><span>' + (f[2] || '') + '</span></div>';
     var b = document.createElement('button'); b.className = 'sw' + (on ? ' on' : ''); b.setAttribute('aria-label', f[1]);
     b.onclick = function () {
-      if (f[0] === 'voice') { if (!on) { location.href = 'settings.html'; try { sessionStorage.setItem('settings.tab', 'system'); } catch (e) {} return; } nat('setVoiceEnabled', false); render(); return; }
+      if (f[0] === 'voice') { if (!on) { try { sessionStorage.setItem('settings.tab', 'comm'); } catch (e) {} location.href = 'settings.html'; return; } nat('setVoiceEnabled', false); render(); return; }
       setP(f[0], !on); savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); render();
     };
     d.appendChild(b); g.appendChild(d);

@@ -6,41 +6,82 @@
 <title>الإعدادات</title>
 <link rel="stylesheet" href="common.css">
 <style>
-.top{display:flex;align-items:center;gap:16px;height:60px;padding:22px 40px 0}
-.title{font-size:28px;font-weight:600;margin:0}
-.tabs{display:flex;gap:10px;margin-right:auto}
-.tab{height:50px;padding:0 15px;font-size:17px !important;border-radius:26px;border:1px solid #2b4a80;background:rgba(19,37,74,.85);font-size:19px}
-.tab.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
-.body{flex:1;display:flex;flex-direction:column;gap:12px;padding:14px 40px 20px;box-sizing:border-box;min-height:0;overflow-y:auto}
-.section{padding:14px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
-.label{font-size:20px;font-weight:600}
-.opts{display:flex;gap:10px;flex-wrap:wrap}
-.opt{height:54px;padding:0 20px;border-radius:16px;background:#13254a;border:1px solid #23406f;font-size:18px}
+/* ===== الهيكل: قائمة جانبية + محتوى ===== */
+.wrap{flex-direction:row!important;gap:16px;padding:16px;box-sizing:border-box}
+.side{width:244px;flex:none;padding:14px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;overflow-y:auto;scrollbar-width:none;border-radius:24px}
+.side::-webkit-scrollbar{display:none}
+.side h1{font-size:23px;margin:2px 10px 10px;display:flex;align-items:center;gap:10px;font-weight:700}
+.side h1 svg{width:26px;height:26px}
+.nav{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 12px;border-radius:15px;font:inherit;font-size:17.5px;color:inherit;background:none;border:none;text-align:right;opacity:.86}
+.nav i{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(127,127,127,.14);flex:none}
+.nav i svg{width:19px;height:19px}
+.nav.on{background:var(--accent,#2F7BFF);color:#fff;font-weight:700;opacity:1;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.nav.on i{background:rgba(0,0,0,.18)}
+body.skin-gold .nav.on{background:linear-gradient(165deg,#b98a35,#7a5a1f)}
+body.skin-saudi .nav.on{background:linear-gradient(165deg,#1F8A4C,#0e5a32)}
+body.skin-ptime .nav.on{color:#10151f}
+.mainc{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;align-items:center;gap:10px;height:56px;flex:none}
+.top .icon-btn{width:56px;height:56px;flex:none}
+.sbox{flex:1;min-width:0;height:56px;border-radius:18px;display:flex;align-items:center;gap:10px;padding:0 16px;font:inherit;font-size:18px;color:inherit;opacity:.9;text-align:right}
+.sbox svg{width:22px;height:22px;flex:none}
+.qk{height:56px;padding:0 12px 0 14px;border-radius:18px;display:flex;align-items:center;gap:10px;font:inherit;font-size:16px;color:inherit;white-space:nowrap;flex:none}
+.qk b{width:42px;height:24px;border-radius:12px;background:#2a3a58;position:relative;display:inline-block;flex:none}
+.qk b::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:9px;background:#fff;transition:left .15s}
+.qk.on b{background:var(--accent,#2F7BFF)}.qk.on b::after{left:21px}
+.body{flex:1;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;min-height:0;overflow-y:auto;scrollbar-width:none;padding-bottom:16px}
+.body::-webkit-scrollbar{display:none}
+/* ===== البطاقات والصفوف ===== */
+.section{padding:16px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:11px;border-radius:24px}
+.label{font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px;color:var(--accent,#7FB8FF)}
+.label svg{width:22px;height:22px;flex:none}
+body.skin-ptime .label{color:var(--accent)}
+.opts{display:flex;gap:9px;flex-wrap:wrap}
+.opt{min-height:52px;padding:0 18px;border-radius:15px;background:#13254a;border:1px solid #23406f;font-size:17.5px;color:#fff}
 .opt.on{background:#1F5FD1;border:1.5px solid #6FA8FF;font-weight:700}
-.opt.sm{height:46px;font-size:16px;padding:0 16px}
+.opt.sm{min-height:46px;font-size:16px;padding:0 15px}
 .themes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .tile{height:84px;border-radius:16px;background-size:cover;background-position:center;border:3px solid transparent;position:relative;font-size:16px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);display:flex;align-items:flex-end;justify-content:center;padding:8px}
-.tile.on{border-color:#2F7BFF}
+.tile.on{border-color:var(--accent,#2F7BFF);box-shadow:0 0 0 3px rgba(255,255,255,.12)}
 .tile .x{position:absolute;top:6px;left:6px;width:30px;height:30px;border-radius:15px;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.4);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center}
 .tile.add{border:2px dashed #4b6ea8;background:rgba(19,37,74,.7);align-items:center;font-size:17px;text-shadow:none}
-.toggle{display:flex;justify-content:space-between;align-items:center;font-size:19px;gap:16px}
+.toggle{display:flex;justify-content:space-between;align-items:center;font-size:19px;gap:16px;min-height:52px;border-top:1px solid rgba(127,127,127,.18);padding-top:8px}
+.label + .toggle,.label + .note + .toggle{border-top:none;padding-top:0}
 .sw{width:64px;height:36px;border-radius:18px;background:#2a3a58;border:none;position:relative;flex:none}
-.sw.on{background:#2F7BFF}
+.sw.on{background:var(--accent,#2F7BFF)}
 .sw::after{content:'';position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:14px;background:#fff;transition:left .15s}
 .sw.on::after{left:32px}
-.note{font-size:15px;color:#9FB0CC}
-.txt{height:54px;width:360px;border-radius:16px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:20px;padding:0 16px;box-sizing:border-box}
-.line{display:flex;align-items:center;gap:14px;font-size:18px}
+.note{font-size:15px;color:#9FB0CC;line-height:1.5}
+.txt{height:54px;width:360px;max-width:100%;border-radius:16px;border:1px solid #23406f;background:#0e1c38;color:#fff;font:inherit;font-size:20px;padding:0 16px;box-sizing:border-box}
+.line{display:flex;align-items:center;gap:14px;font-size:18px;flex-wrap:wrap}
 .line .v{color:#9FD0FF}
 .prev i{display:block;background:#2b4a80;border-radius:4px;flex:1}
 .prev b{display:block;background:#4b6ea8;border-radius:3px;flex:1;height:100%}
 .opt:disabled{opacity:.35}
+.adv{display:none}.showAdv .adv{display:flex}
+.advBtn{align-self:stretch;min-height:54px;border-radius:18px;border:1px dashed rgba(127,127,127,.45);background:none;color:inherit;font:inherit;font-size:17px;opacity:.85}
+/* ===== نظرة عامة ===== */
+.ov4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.ovc{padding:14px 16px;border-radius:20px}.ovc span{font-size:14px;opacity:.75}.ovc b{display:block;font-size:24px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shc{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.shc a,.shc button{height:112px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font:inherit;font-size:18px;font-weight:600;color:inherit;border:1px solid rgba(127,127,127,.25);background:rgba(127,127,127,.08)}
+.shc svg{width:34px;height:34px}
+.att{display:flex;align-items:center;gap:14px;min-height:60px;border-top:1px solid rgba(127,127,127,.18);padding-top:8px}
+.att:first-of-type{border-top:none}
+.att .ai{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(242,200,121,.15);flex:none}.att .ai svg{width:22px;height:22px}
+.att .tx{flex:1}.att .tx b{display:block;font-size:18.5px}.att .tx span{font-size:14.5px;opacity:.75}
+.tag{font-size:12.5px;padding:3px 9px;border-radius:9px;margin-right:8px;vertical-align:2px;font-weight:600}
+.t1{background:rgba(242,200,121,.16);color:#F2C879}.t2{background:rgba(255,107,90,.15);color:#FF9A8A}.t3{background:rgba(90,209,160,.15);color:#6FE3B4}
+/* ===== البحث ===== */
 .srch{height:56px;width:100%;border-radius:18px;border:1.5px solid #2b4a80;background:#0e1c38;color:#fff;font:inherit;font-size:21px;padding:0 18px;box-sizing:border-box}
 .sres{display:flex;flex-direction:column;gap:8px}
 .sres button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;padding:12px 18px;border-radius:16px;border:1px solid #23406f;background:rgba(19,37,74,.85);color:#fff;font:inherit}
 .sres b{font-size:19px}.sres span{font-size:15px;color:#9FB0CC}
 .flash{animation:flash 1.6s ease-out}
 @keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--accent,#2F7BFF)}100%{box-shadow:0 0 0 0 transparent}}
+body.skin-light .opt,body.skin-light .sres button{color:#fff}
+body.skin-light .note{color:#4A5A70!important}
+body.perf .nav.on,body.perf .section{box-shadow:none!important}
 </style>
 </head>
 <body data-nodrive="1">
@@ -49,13 +90,15 @@
   <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.home');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}if(s)b.src=s;if(c)document.body.className+=' '+c;})();</script>
   <div class="shade"></div>
   <div class="wrap">
-    <div class="top">
-      <a class="icon-btn" href="index.html" aria-label="العودة للرئيسية"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
-      <h1 class="title">الإعدادات</h1>
-      <div class="tabs" id="tabs"></div>
-      <button class="icon-btn" id="srchBtn" aria-label="بحث في الإعدادات" onclick="openSearch()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
+    <nav class="side glass" id="side"></nav>
+    <div class="mainc">
+      <div class="top">
+        <a class="icon-btn" href="index.html" aria-label="العودة للرئيسية"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+        <button class="sbox glass" id="srchBtn" onclick="openSearch()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>ابحث في الإعدادات…</button>
+        <div id="quick" style="display:flex;gap:10px"></div>
+      </div>
+      <div class="body" id="body"></div>
     </div>
-    <div class="body" id="body"></div>
     <input type="file" id="logoFile" accept="image/*" style="display:none">
   </div>
 </div>
@@ -64,16 +107,59 @@
 <script>
 var prefs = loadPrefs();
 applyPrefs('home', prefs);
-var TABS = [['look', 'المظهر'], ['home', 'الواجهة'], ['restT', 'الاستراحة'], ['prayer', 'الصلاة والتنبيهات'], ['apps', 'التطبيقات'], ['system', 'النظام']];
-var tab = 'look', citySearch = '', pageIdx = 0;
-try { tab = sessionStorage.getItem('settings.tab') || 'look'; } catch (e) {}
+/* ===== الأقسام: كل قسم يجمع بطاقات من دوال الرسم حسب عنوانها ===== */
+var SI = {
+  overview: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  look: '<path d="M12 3a9 9 0 1 0 0 18c1.7 0 2-1.3 1.2-2.3-.8-1-.3-2.7 1.3-2.7H17a4 4 0 0 0 4-4c0-5-4-9-9-9z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
+  home: '<rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5h4"/>',
+  restT: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  prayer: '<path d="M3 21h18M5 21V10M4 6h2M19 21V10M18 6h2M8 21v-5a4 4 0 0 1 8 0v5"/><path d="M12 3c-2 1.5-3 3-3 5h6c0-2-1-3.5-3-5z"/>',
+  drive: '<path d="M5 17h14M3 13l2-6h14l2 6v5h-3v-2H6v2H3z"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
+  comm: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  car: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  worship: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
+  system: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+  warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/>',
+  check: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  update: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'
+};
+function svgI(k, col){ return '<svg viewBox="0 0 24 24" fill="none" stroke="' + (col || 'currentColor') + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (SI[k] || SI.overview) + '</svg>'; }
+var TABS = [['overview', 'نظرة عامة'], ['look', 'المظهر'], ['home', 'الواجهة والبطاقات'], ['clock', 'الساعة والخطوط'], ['restT', 'الاستراحة'], ['prayer', 'الصلاة'],
+  ['drive', 'القيادة'], ['comm', 'الاتصال والصوت'], ['car', 'السيارة'], ['worship', 'العبادة'], ['system', 'النظام والأدوات']];
+/* دوال الرسم لكل قسم (بالترتيب) */
+var CAT_FN = { look: ['renderLook'], home: ['renderHome'], clock: ['renderHome', 'renderLook'], restT: ['renderRest', 'renderLook'], prayer: ['renderPrayer'],
+  drive: ['renderPrayer', 'renderSystem'], comm: ['renderVoice', 'renderPrayer', 'renderApps'], car: ['renderApps'], worship: ['renderPrayer'], system: ['renderSystem'] };
+/* عنوان البطاقة ← القسم. «*» تعني خيارات متقدمة (مطوية) */
+var SEC_CAT = {
+  'الثيم': 'look', 'اسم السيارة أعلى الشاشة': 'look', 'خلفية الرئيسية': 'look', 'الوضع الليلي': 'look', 'وضوح البطاقات': 'look*',
+  'تصميم الواجهة': 'home', 'الصفحات والبطاقات': 'home', 'حجم النصوص وتحرير البطاقات': 'home', 'القائمة السفلية': 'home', 'التخطيطات المحفوظة': 'home*', 'أيقونات الحالة بجوار الساعة': 'home*',
+  'شكل الساعة': 'clock', 'الوقت والأرقام': 'clock', 'الخطوط': 'clock',
+  'نمط شاشة الاستراحة': 'restT', 'ما يظهر': 'restT', 'متى تعمل': 'restT', 'مدة بقائها': 'restT', 'خلفية الاستراحة': 'restT', 'الأدعية': 'restT*',
+  'المدينة (لمواقيت الصلاة)': 'prayer', 'تنبيه الصلاة': 'prayer', 'الصوت': 'prayer', 'تذكيرات': 'prayer',
+  'مساعد القيادة': 'drive', 'تنبيه السرعة': 'drive', 'تنبيه الاستراحة': 'drive', 'القيادة والإنترنت': 'drive', 'الإضاءة الليلية': 'drive', 'عند تشغيل السيارة': 'drive', 'رسالة الوصول': 'drive*',
+  'الأوامر الصوتية': 'comm', 'المكالمات والرسائل': 'comm', 'التطبيقات': 'comm', 'التحكم بالموسيقى من الرئيسية': 'comm', 'وضع الركاب': 'comm*',
+  'السيارة': 'car', 'تكلفة الوقود': 'car',
+  'العبادة': 'worship', 'دعاء السفر': 'worship',
+  'أدوات الشاشة': 'system', 'التحديث والنسخ الاحتياطي': 'system', 'الواجهة الافتراضية': 'system', 'الأداء': 'system', 'الرقم السري': 'system', 'حول التطبيق': 'system',
+  'الاستقرار': 'system*', 'الذاكرة (RAM)': 'system*', 'إعادة التعيين': 'system*'
+};
+var tab = 'overview', citySearch = '', pageIdx = 0;
+try { tab = sessionStorage.getItem('settings.tab') || 'overview'; } catch (e) {}
+if (tab === 'apps') tab = 'comm';
+if (!TABS.some(function (x) { return x[0] === tab; })) tab = 'overview';
 
 function upd(){ savePrefs(prefs); applyPrefs('home', prefs); render(); }
 function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 function section(title, note){
   var s = el('div', 'glass section');
-  if (title) s.appendChild(el('span', 'label', title));
+  if (title) { var lb = el('span', 'label'); lb.innerHTML = svgI(window._cat || tab); lb.appendChild(document.createTextNode(title)); s.appendChild(lb); }
   if (note) s.appendChild(el('span', 'note', note));
+  var c = SEC_CAT[title] || '', want = window._cat;
+  // أثناء رسم قسم: البطاقات التابعة لأقسام أخرى لا تُعرض
+  if (want && c.replace('*', '') !== want) return s;
+  if (c.indexOf('*') > 0) { s.classList.add('adv'); window._advN = (window._advN || 0) + 1; }
   (window._secTarget || document.getElementById('body')).appendChild(s);
   return s;
 }
@@ -217,7 +303,7 @@ function renderLook(){
   s = section('خلفية الاستراحة', 'يفضَّل صورة هادئة وداكنة ليُقرأ الدعاء بوضوح.');
   bgTiles(s, 'rest', prefs.restBg || 'auto', function (k) { prefs.restBg = k; upd(); }, true);
 
-  s = section('');
+  s = section('الوضع الليلي');
   toggle(s, 'الوضع الليلي التلقائي (من المغرب إلى الشروق)', 'autoNight');
   if (prefs.autoNight) {
     s.appendChild(el('span', 'note', 'خلفية الليل:'));
@@ -259,7 +345,7 @@ function renderLook(){
   var ub = el('a', 'opt sm', 'إضافة خط من الجوال'); ub.href = 'upload.html'; ub.style.cssText = 'display:inline-flex;align-items:center;text-decoration:none'; ro.appendChild(ub);
   s.appendChild(ro);
 
-  s = section('');
+  s = section('وضوح البطاقات');
   toggle(s, 'بطاقات مصمتة (بدون ضبابية)', 'solid', 'مفيد للأجهزة القديمة (Android 9) أو لتحسين الوضوح.');
 }
 
@@ -529,8 +615,7 @@ function renderSystem(){
   var gt = el('div', 'toggle'); gt.appendChild(el('span', '', 'وضع الضيف (لمن يقود سيارتك)'));
   var gsw = el('button', 'sw' + (prefs.guest ? ' on' : '')); gsw.onclick = function () { setGuest(!prefs.guest); prefs = loadPrefs(); render(); }; gt.appendChild(gsw); s.appendChild(gt);
   s.appendChild(el('span', 'note', 'يخفي الملاحظات والتذكيرات والمصاريف والوثائق وأسماء المتصلين والرسائل، ويقفل الإعدادات. إنهاؤه يطلب الرقم السري إن كان مفعّلاً. تجده أيضاً في اللوحة السريعة.'));
-  renderVoice();
-  s = section('');
+  s = section('حول التطبيق');
   var ab = el('a', 'line'); ab.href = 'about.html';
   ab.appendChild(el('span', '', 'حول التطبيق'));
   var vv = natJSON('version'); ab.appendChild(el('span', 'v', 'تطوير: عاصم الجهني' + (vv ? ' · الإصدار ' + vv.code : '')));
@@ -860,20 +945,19 @@ window.onPageBack = function () {
 };
 window.addEventListener('pagehide', saveScroll);
 /* ===== البحث في الإعدادات ===== */
-var TAB_FN = { look: 'renderLook', home: 'renderHome', restT: 'renderRest', prayer: 'renderPrayer', apps: 'renderApps', system: 'renderSystem' };
 function nrm(t){ return String(t || '').replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase(); }
 var _srchIdx = null;
 function buildIndex(){
   var idx = [];
   window._searching = true;
-  Object.keys(TAB_FN).forEach(function (t) {
-    var box = document.createElement('div'); window._secTarget = box;
-    try { window[TAB_FN[t]](); } catch (e) {}
-    window._secTarget = null;
+  Object.keys(CAT_FN).forEach(function (t) {
+    var box = document.createElement('div'); window._secTarget = box; window._cat = t;
+    try { CAT_FN[t].forEach(function (fn) { window[fn](); }); } catch (e) {}
+    window._secTarget = null; window._cat = null;
     [].forEach.call(box.children, function (sec, i) {
-      var title = (sec.querySelector('.label') || sec.querySelector('.toggle span') || sec.querySelector('span') || {}).textContent || '';
+      var title = (sec.querySelector('.label') || {}).textContent || '';
       var lines = []; [].forEach.call(sec.querySelectorAll('.label,.note,.toggle span,.opt,.line span'), function (e) { var x = e.textContent.trim(); if (x && lines.indexOf(x) < 0) lines.push(x); });
-      idx.push({ tab: t, i: i, title: title.trim(), lines: lines });
+      idx.push({ tab: t, i: i, title: title.trim(), lines: lines, adv: sec.classList.contains('adv') });
     });
   });
   return idx;
@@ -896,7 +980,7 @@ function openSearch(){
       if (!hit || n >= 30) return; n++;
       var tabName = (TABS.filter(function (x) { return x[0] === it.tab; })[0] || [])[1];
       var b = el('button'); b.appendChild(el('b', '', (it.title || hit).slice(0, 70))); b.appendChild(el('span', '', tabName + (hit !== it.title ? ' ▸ ' + hit.slice(0, 90) : '')));
-      b.onclick = function () { closeSearch(true); setTab(it.tab, true); var sec = document.getElementById('body').children[it.i]; if (sec) { sec.scrollIntoView({ block: 'start' }); sec.classList.add('flash'); } };
+      b.onclick = function () { closeSearch(true); if (it.adv) { try { sessionStorage.setItem('settings.adv.' + it.tab, '1'); } catch (e) {} } setTab(it.tab, true); var sec = document.getElementById('body').children[it.i]; if (sec) { sec.scrollIntoView({ block: 'start' }); sec.classList.add('flash'); } };
       res.appendChild(b);
     });
     if (!n) res.appendChild(el('span', 'note', 'لا توجد نتيجة'));
@@ -907,17 +991,78 @@ function closeSearch(noRender){ window._searching = false; _srchIdx = null; if (
 /* فتح الإعدادات من جديد (ليس رجوعاً من صفحة فرعية) يبدأ سجل تبويبات جديداً */
 (function () { var t = ''; try { var n = performance.getEntriesByType('navigation')[0]; t = n ? n.type : ''; } catch (e) {}
   if (t !== 'back_forward' && t !== 'reload' && (!IN_FRAME || _frameStack().length <= 1)) { try { sessionStorage.removeItem('settings.hist'); } catch (e) {} } })();
+function renderSide(){
+  var sd = document.getElementById('side'); sd.innerHTML = '<h1>' + svgI('system') + 'الإعدادات</h1>';
+  TABS.forEach(function (x) {
+    var b = el('button', 'nav' + (tab === x[0] ? ' on' : ''));
+    b.innerHTML = '<i>' + svgI(x[0]) + '</i>'; b.appendChild(document.createTextNode(x[1]));
+    b.onclick = function () { if (tab === x[0] && !window._searching) return; setTab(x[0], true); };
+    sd.appendChild(b);
+  });
+}
+function renderQuick(){
+  var q = document.getElementById('quick'); q.innerHTML = '';
+  [['الإضاءة الليلية', !!prefs.nightBright, function () { prefs.nightBright = !prefs.nightBright; upd(); }],
+   ['وضع الأداء', perfOn(prefs), function () { prefs.perf = perfOn(prefs) ? 'off' : 'on'; upd(); }],
+   ['الضيف', !!prefs.guest, function () { setGuest(!prefs.guest); prefs = loadPrefs(); render(); }]].forEach(function (x) {
+    var b = el('button', 'qk glass' + (x[1] ? ' on' : '')); b.appendChild(document.createTextNode(x[0])); b.appendChild(el('b'));
+    b.onclick = x[2]; q.appendChild(b);
+  });
+}
+function renderCat(cat){
+  window._cat = cat; window._advN = 0;
+  try { (CAT_FN[cat] || []).forEach(function (fn) { window[fn](); }); } finally { window._cat = null; }
+  if (window._advN) {
+    var body = document.getElementById('body'), open = body.classList.contains('showAdv');
+    var b = el('button', 'advBtn', (open ? '▾ إخفاء الخيارات المتقدمة' : '▸ خيارات متقدمة') + ' (' + window._advN + ')');
+    b.onclick = function () { body.classList.toggle('showAdv'); try { sessionStorage.setItem('settings.adv.' + cat, body.classList.contains('showAdv') ? '1' : ''); } catch (e) {} render(); };
+    body.appendChild(b);
+  }
+}
+/* ===== نظرة عامة ===== */
+function renderOverview(){
+  var body = document.getElementById('body');
+  var v = natJSON('version') || {}, ch = nat('updChannel') || 'stable', m = memText(), us = natJSON('updateState') || {};
+  var ov = el('div', 'ov4');
+  [['الإصدار', (v.name || '—') + ' <span class="tag ' + (ch === 'beta' ? 't1' : 't3') + '">' + (ch === 'beta' ? 'تجريبية' : 'ثابتة') + '</span>'],
+   ['الذاكرة', m ? m.pct + '% <span style="font-size:14px;opacity:.7">من ' + m.total + ' ج</span>' : '—'],
+   ['الثيم', (SKINS[prefs.skin || 'classic'] || SKINS.classic).label],
+   ['المدينة', esc0(cityLabel())]].forEach(function (x) { var c = el('div', 'ovc glass'); c.innerHTML = '<span>' + x[0] + '</span><b>' + x[1] + '</b>'; ov.appendChild(c); });
+  body.appendChild(ov);
+  var sc = section('اختصارات'); var g = el('div', 'shc');
+  [['look', 'تغيير الثيم', function () { setTab('look', true); }], ['home', 'تعديل البطاقات', function () { setTab('home', true); }], ['check', 'فحص شامل', 'check.html'], ['update', 'تحديث التطبيق', 'update.html']].forEach(function (x) {
+    var a = el(typeof x[2] === 'string' ? 'a' : 'button'); a.innerHTML = svgI(x[0]); a.appendChild(document.createTextNode(x[1]));
+    if (typeof x[2] === 'string') a.href = x[2]; else a.onclick = x[2];
+    g.appendChild(a);
+  });
+  sc.appendChild(g);
+  // ما يحتاج انتباهك
+  var items = [];
+  if (HAS_NATIVE) {
+    if (nat('isDefaultHome') === false) items.push(['رفيق الطريق ليس الواجهة الافتراضية', 'قد ترجع الشاشة لواجهتها الأصلية', 't2', 'مهم', 'إصلاح', function () { nat('makeDefaultHome'); }]);
+    if (!nat('hasLocation')) items.push(['إذن الموقع غير ممنوح', 'مطلوب للمواقيت بموقعك والرحلة والسرعة', 't2', 'مهم', 'السماح', function () { nat('askLocation'); }]);
+    var md = natJSON('media'); if (!md || md.access === false) items.push(['الوصول إلى الإشعارات', 'لعرض الموسيقى والمكالمات', 't1', 'مستحسن', 'تفعيل', function () { nat('openNotificationAccess'); }]);
+    if (prefs.nightBright && !nat('canWriteSettings')) items.push(['إذن تعديل السطوع', 'الإضاءة الليلية مفعّلة وتحتاجه', 't1', 'مطلوب', 'السماح', function () { nat('openWriteSettings'); }]);
+    if (prefs.watchdog !== false && !nat('canOverlay')) items.push(['إذن الظهور فوق التطبيقات', 'لإعادة فتح الواجهة إن أُغلقت', 't1', 'اختياري', 'السماح', function () { nat('openOverlaySettings'); }]);
+    if (us.phase === 'available') items.push(['يوجد تحديث جديد (' + us.latest + ')', 'اضغط للتحديث', 't3', 'جديد', 'تحديث', function () { location.href = 'update.html'; }]);
+    var k = nat('memKillsWeek'); if (k > 0 && !perfOn(prefs)) items.push(['أغلق النظام الواجهة ' + k + ' مرة هذا الأسبوع', 'وضع الأداء يخفف الحمل', 't1', 'ذاكرة', 'تفعيل وضع الأداء', function () { prefs.perf = 'on'; upd(); }]);
+  }
+  var at = section(items.length ? 'تحتاج انتباهك' : 'كل شيء جاهز ✓');
+  if (!items.length) at.appendChild(el('span', 'note', HAS_NATIVE ? 'لا توجد مشكلة. «فحص شامل» يعطيك التفاصيل.' : 'تعمل الفحوص داخل التطبيق.'));
+  items.forEach(function (x) {
+    var r = el('div', 'att'); r.innerHTML = '<div class="ai">' + svgI('warn', '#F2C879') + '</div><div class="tx"><b>' + x[0] + ' <span class="tag ' + x[2] + '">' + x[3] + '</span></b><span>' + x[1] + '</span></div>';
+    var b = el('button', 'opt sm on', x[4]); b.onclick = x[5]; r.appendChild(b); at.appendChild(r);
+  });
+}
+function esc0(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
 function render(){
   if (window._searching) return;
-  var t = document.getElementById('tabs'); t.innerHTML = '';
-  TABS.forEach(function (x) {
-    var b = el('button', 'tab' + (tab === x[0] ? ' on' : ''), x[1]);
-    b.onclick = function () { if (tab === x[0]) return; setTab(x[0], true); };
-    t.appendChild(b);
-  });
+  renderSide(); renderQuick();
   var body = document.getElementById('body'), y = body.scrollTop;
   body.innerHTML = '';
-  if (tab === 'prayer') renderPrayer(); else if (tab === 'apps') renderApps(); else if (tab === 'system') renderSystem(); else if (tab === 'home') renderHome(); else if (tab === 'restT') renderRest(); else renderLook();
+  var adv = ''; try { adv = sessionStorage.getItem('settings.adv.' + tab) || ''; } catch (e) {}
+  body.classList.toggle('showAdv', !!adv);
+  if (tab === 'overview') renderOverview(); else renderCat(tab);
   body.scrollTop = y;
 }
 document.getElementById('logoFile').onchange = function (e) {
