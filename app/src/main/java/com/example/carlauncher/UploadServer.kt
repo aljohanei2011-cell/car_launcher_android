@@ -147,6 +147,15 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                     event("sound", f.name)
                     ok(out, f.name)
                 }
+                // خط من الجوال (ttf / otf / woff / woff2) يبقى على الجهاز فقط
+                method == "POST" && path == "/font" -> {
+                    if (len <= 0 || len > 20L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
+                    val body = readN(inp, len.toInt())
+                    val name = Fonts.save(ctx, q["name"] ?: "font", body)
+                    if (name == null) { send(out, 400, "text/plain", "not a font".toByteArray()); return }
+                    event("font", name)
+                    ok(out, name)
+                }
                 // رمز GitHub للتحديث: يُلصق في الجوال بدلاً من كتابته على الشاشة
                 method == "POST" && path == "/token" -> {
                     if (len <= 0 || len > 4096) { send(out, 400, "text/plain", "bad".toByteArray()); return }
@@ -261,6 +270,41 @@ object Images {
         val a = JSONArray()
         dir(c).listFiles()?.sortedByDescending { it.lastModified() }?.forEach {
             a.put(JSONObject().put("name", it.name).put("slot", it.name.substringBefore('_')).put("url", "file://" + it.absolutePath))
+        }
+        return a.toString()
+    }
+
+    fun delete(c: Context, name: String) {
+        if (name.contains('/') || name.contains("..")) return
+        File(dir(c), name).delete()
+    }
+}
+
+/* خطوط يرفعها المستخدم من جواله: تُحفظ في ملفات التطبيق ولا تدخل في المستودع */
+object Fonts {
+    fun dir(c: Context) = File(c.filesDir, "fonts").apply { mkdirs() }
+
+    fun save(c: Context, rawName: String, data: ByteArray): String? {
+        if (data.size < 64) return null
+        fun at(i: Int, ch: Char) = data[i] == ch.code.toByte()
+        val ext = when {
+            data[0] == 0.toByte() && data[1] == 1.toByte() && data[2] == 0.toByte() && data[3] == 0.toByte() -> "ttf"
+            at(0, 't') && at(1, 'r') && at(2, 'u') && at(3, 'e') -> "ttf"
+            at(0, 'O') && at(1, 'T') && at(2, 'T') && at(3, 'O') -> "otf"
+            at(0, 'w') && at(1, 'O') && at(2, 'F') && at(3, 'F') -> "woff"
+            at(0, 'w') && at(1, 'O') && at(2, 'F') && at(3, '2') -> "woff2"
+            else -> return null
+        }
+        val base = rawName.substringBeforeLast('.').replace(Regex("[^A-Za-z0-9\\-]"), "-").replace(Regex("-+"), "-").trim('-').take(40).ifEmpty { "font" }
+        val name = base + "_" + System.currentTimeMillis() + "." + ext
+        File(dir(c), name).writeBytes(data)
+        return name
+    }
+
+    fun list(c: Context): String {
+        val a = JSONArray()
+        dir(c).listFiles()?.sortedBy { it.lastModified() }?.forEach {
+            a.put(JSONObject().put("file", it.name).put("name", it.name.substringBeforeLast('_').replace('-', ' ')).put("url", "file://" + it.absolutePath))
         }
         return a.toString()
     }

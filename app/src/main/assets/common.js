@@ -84,7 +84,7 @@ var DEFAULT_PREFS = {
   speedOn: false, speedLimit: 120, customSound: true,
   bootAction: 'none', pin: '', nightBright: false, nightPct: 30, reminders: true,
   /* العرض */
-  h24: false, digits: 'en', clockFont: '', duaFont: 'amiri', skin: 'classic',
+  h24: false, digits: 'en', clockFont: '', duaFont: 'alyamama', skin: 'classic',
   /* الواجهة: التصميم، الصفحات والبطاقات لكل تصميم، القائمة السفلية */
   layout: 'classic', homes: null,
   dock: ['maps', 'music', 'apps', 'rest', 'azkar', 'trip', 'settings'], dockLabels: true,
@@ -102,7 +102,8 @@ function loadPrefs(){
   try {
     var raw = localStorage.getItem(PREFS_KEY);
     var p = Object.assign({}, DEFAULT_PREFS, raw ? JSON.parse(raw) : {});
-    ['font', 'clockFont', 'duaFont'].forEach(function (k) { if (p[k] === 'hacen') p[k] = k === 'duaFont' ? 'amiri' : 'tajawal'; });
+    // الخطوط المحذوفة من التطبيق تُستبدل بالافتراضي (الخطوط المرفوعة u: تبقى)
+    ['font', 'clockFont', 'duaFont'].forEach(function (k) { if (p[k] && !FONTS[p[k]] && String(p[k]).indexOf('u:') !== 0) p[k] = k === 'duaFont' ? 'alyamama' : k === 'clockFont' ? '' : 'thmanyah'; });
     return p;
   } catch (e) { return Object.assign({}, DEFAULT_PREFS); }
 }
@@ -183,20 +184,34 @@ function themeBg(key, which){
 /* الخطوط: للواجهة، وللساعة والأرقام الكبيرة، وللأدعية */
 var FONTS = {
   thmanyah: { label: 'ثمانية سانس', css: "'Thmanyah'" },
-  tajawal:  { label: 'تجوال', css: "'Tajawal'" },
-  cairo:    { label: 'القاهرة', css: "'Cairo'" },
-  plex:     { label: 'بلكس عربي', css: "'PlexArabic'" },
-  reemkufi: { label: 'ريم كوفي', css: "'ReemKufi'" },
-  messiri:  { label: 'المسيري', css: "'ElMessiri'" },
-  lalezar:  { label: 'لاله زار', css: "'Lalezar'" },
-  ruqaa:    { label: 'رقعة عارف', css: "'ArefRuqaa'" },
-  mohammad: { label: 'محمد بولد آرت', css: "'MohammadBoldArt'" },
-  elgharib: { label: 'حياكم الله', css: "'ElgharibHayyakum'" },
-  komission:{ label: 'كوميشن', css: "'KOMission'" },
-  amiri:    { label: 'أميري (نسخ)', css: "'Amiri','Noto Naskh Arabic',serif" },
+  alyamama: { label: 'اليمامة', css: "'Alyamama'" },
   system:   { label: 'خط الجهاز', css: "'Noto Sans Arabic',Tahoma,'Segoe UI',Arial" }
 };
-function fontCss(key, fallback){ var f = FONTS[key] || FONTS[fallback] || FONTS.thmanyah; return f.css + ", 'Thmanyah', 'Noto Sans Arabic', Tahoma, sans-serif"; }
+/* خطوط المستخدم المرفوعة من الجوال (تبقى على الجهاز فقط). المفتاح: u:<اسم الملف> */
+var _ufonts = null;
+function userFonts(){
+  if (_ufonts) return _ufonts;
+  _ufonts = (natJSON('fonts') || []).map(function (f, i) { return { key: 'u:' + f.file, file: f.file, label: f.name || ('خطي ' + (i + 1)), fam: 'UF_' + f.file.replace(/[^A-Za-z0-9]/g, '_'), url: f.url }; });
+  if (_ufonts.length) {
+    var st = document.getElementById('userFontsCss') || document.createElement('style');
+    st.id = 'userFontsCss';
+    st.textContent = _ufonts.map(function (f) { return "@font-face{font-family:'" + f.fam + "';src:url('" + f.url + "');font-display:swap}"; }).join('\n');
+    (document.head || document.documentElement).appendChild(st);
+  }
+  return _ufonts;
+}
+function fontInfo(key){
+  if (!key) return null;
+  if (FONTS[key]) return FONTS[key];
+  if (key.indexOf('u:') === 0) { var u = userFonts(); for (var i = 0; i < u.length; i++) if (u[i].key === key) return { label: u[i].label, css: "'" + u[i].fam + "'" }; }
+  return null;
+}
+/* كل الخطوط المتاحة للاختيار: [مفتاح، الاسم، css، خط مرفوع؟] */
+function allFonts(){
+  return Object.keys(FONTS).map(function (k) { return [k, FONTS[k].label, FONTS[k].css, false]; })
+    .concat(userFonts().map(function (f) { return [f.key, f.label, "'" + f.fam + "'", true]; }));
+}
+function fontCss(key, fallback){ var f = fontInfo(key) || fontInfo(fallback) || FONTS.thmanyah; return f.css + ", 'Thmanyah', 'Noto Sans Arabic', Tahoma, sans-serif"; }
 function fontStack(p){ return fontCss(p.font, 'thmanyah'); }
 
 /* هل الوقت الآن ليل؟ (بين المغرب والشروق بتوقيت المدينة) */
@@ -228,7 +243,7 @@ function applyPrefs(bgKey, p){
   if (stage) {
     stage.style.fontFamily = fontStack(p);
     stage.style.setProperty('--font-clock', fontCss(p.clockFont || p.font, 'thmanyah'));
-    stage.style.setProperty('--font-dua', fontCss(p.duaFont || 'amiri', 'amiri'));
+    stage.style.setProperty('--font-dua', fontCss(p.duaFont || 'alyamama', 'alyamama'));
   }
   document.body.classList.toggle('solid', !!p.solid);
   document.body.classList.toggle('perf', perfOn(p));

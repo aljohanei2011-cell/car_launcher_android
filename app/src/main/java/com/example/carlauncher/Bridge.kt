@@ -152,6 +152,8 @@ class Bridge(private val act: MainActivity) {
 
     // ===== الصور =====
     @JavascriptInterface fun images(): String = Images.list(ctx)
+    @JavascriptInterface fun fonts(): String = Fonts.list(ctx)
+    @JavascriptInterface fun deleteFont(name: String) = Fonts.delete(ctx, name)
     @JavascriptInterface fun saveImage(slot: String, dataUrl: String): String = Images.saveDataUrl(ctx, slot, dataUrl) ?: ""
     @JavascriptInterface fun deleteImage(name: String) = Images.delete(ctx, name)
 
@@ -339,7 +341,7 @@ class Bridge(private val act: MainActivity) {
         listOf("launcher", "inbox", "weather").forEach { ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply() }
         if (all) {
             listOf("trip", "secure").forEach { ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply() }
-            listOf(Images.dir(ctx), Sounds.dir(ctx), Apks.dir(ctx)).forEach { d -> d.listFiles()?.forEach { it.delete() } }
+            listOf(Images.dir(ctx), Sounds.dir(ctx), Apks.dir(ctx), Fonts.dir(ctx)).forEach { d -> d.listFiles()?.forEach { it.delete() } }
             Backup.file(ctx).delete()
         }
     }

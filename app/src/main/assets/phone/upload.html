@@ -45,6 +45,7 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <button data-m="img" class="on">صورة</button>
   <button data-m="apk">تطبيق APK</button>
   <button data-m="snd">صوت التنبيه</button>
+  <button data-m="font">خط</button>
   <button data-m="note">ملاحظة</button>
   <button data-m="rem">تذكير</button>
   <button data-m="st">محطة راديو</button>
@@ -72,6 +73,13 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <label class="pick">اختر ملف APK<input id="apkFile" type="file" accept=".apk,application/vnd.android.package-archive" hidden></label>
   <div class="prog" id="apkProg"><div></div></div>
   <div class="msg" id="apkMsg"></div>
+</section>
+
+<section id="m-font">
+  <div class="box">أرسل خطاً عربياً (ttf أو otf أو woff2) ليظهر في الإعدادات ▸ المظهر ▸ الخطوط. يبقى على الشاشة فقط ولا يُنشر في أي مكان. تأكد أن ترخيص الخط يسمح لك باستخدامه.</div>
+  <label class="pick">اختر ملف الخط<input id="fontFile" type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden></label>
+  <div class="prog" id="fontProg"><div></div></div>
+  <div class="msg" id="fontMsg"></div>
 </section>
 
 <section id="m-snd">
@@ -255,6 +263,10 @@ document.getElementById('sndFile').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;
   var ext = (f.name.split('.').pop() || 'mp3').toLowerCase();
   sendFile('/sound?t=' + token + '&ext=' + encodeURIComponent(ext), f, 'sndProg', 'sndMsg', 'وصل صوت التنبيه ✓');
+};
+document.getElementById('fontFile').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  sendFile('/font?t=' + token + '&name=' + encodeURIComponent(f.name), f, 'fontProg', 'fontMsg', 'وصل الخط ✓ اختره من الإعدادات ▸ المظهر ▸ الخطوط.');
 };
 document.getElementById('bakFile').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;

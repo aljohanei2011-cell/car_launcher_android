@@ -193,16 +193,16 @@ function renderLook(){
     opts(s, nightOpts, prefs.nightTheme, function (k) { prefs.nightTheme = k; upd(); }, true);
   }
 
-  s = section('الخطوط', 'كل زر مكتوب بخطه. الخطوط المضافة مسؤولية ترخيصها عليك.');
+  s = section('الخطوط', 'كل زر مكتوب بخطه. يمكنك إضافة خطوطك من الجوال (إرسال من الجوال ▸ خط) وتبقى على هذا الجهاز فقط؛ مسؤولية ترخيصها عليك.');
   function fontRow(title, key, def, sample){
     s.appendChild(el('span', 'note', title));
     var o = el('div', 'opts');
     var cur = prefs[key] || def;
-    Object.keys(FONTS).forEach(function (k) {
-      if (key === 'font' && k === 'amiri') return;
+    allFonts().forEach(function (f) {
+      var k = f[0];
       var b = el('button', 'opt' + (cur === k ? ' on' : ''));
-      var t1 = el('span', '', sample || FONTS[k].label); t1.style.fontFamily = FONTS[k].css; b.appendChild(t1);
-      if (sample) { var t2 = el('span', '', ' · ' + FONTS[k].label); t2.style.cssText = 'font-size:14px;opacity:.7'; b.appendChild(t2); }
+      var t1 = el('span', '', sample || f[1]); t1.style.fontFamily = f[2]; b.appendChild(t1);
+      if (sample) { var t2 = el('span', '', ' · ' + f[1]); t2.style.cssText = 'font-size:14px;opacity:.7'; b.appendChild(t2); }
       b.onclick = function () { prefs[key] = k; upd(); };
       o.appendChild(b);
     });
@@ -210,7 +210,21 @@ function renderLook(){
   }
   fontRow('خط الواجهة:', 'font', 'thmanyah');
   fontRow('خط الساعة والأرقام الكبيرة:', 'clockFont', prefs.font, '12:45');
-  fontRow('خط الأدعية والأذكار:', 'duaFont', 'amiri', 'سبحان الله');
+  fontRow('خط الأدعية والأذكار:', 'duaFont', 'alyamama', 'سبحان الله');
+  var uf = userFonts();
+  s.appendChild(el('span', 'note', uf.length ? 'خطوطي المرفوعة:' : 'لا توجد خطوط مرفوعة بعد.'));
+  var ro = el('div', 'opts');
+  uf.forEach(function (f) {
+    var b = el('button', 'opt sm', 'حذف «' + f.label + '»');
+    b.onclick = function () {
+      nat('deleteFont', f.file);
+      ['font', 'clockFont', 'duaFont'].forEach(function (k) { if (prefs[k] === f.key) prefs[k] = k === 'duaFont' ? 'alyamama' : k === 'clockFont' ? '' : 'thmanyah'; });
+      _ufonts = null; upd();
+    };
+    ro.appendChild(b);
+  });
+  var ub = el('a', 'opt sm', 'إضافة خط من الجوال'); ub.href = 'upload.html'; ub.style.cssText = 'display:inline-flex;align-items:center;text-decoration:none'; ro.appendChild(ub);
+  s.appendChild(ro);
 
   s = section('');
   toggle(s, 'بطاقات مصمتة (بدون ضبابية)', 'solid', 'مفيد للأجهزة القديمة (Android 9) أو لتحسين الوضوح.');
@@ -614,7 +628,7 @@ document.getElementById('logoFile').onchange = function (e) {
     e.target.value = '';
   });
 };
-window.onPageResume = function () { _imgs = null; render(); };
+window.onPageResume = function () { _imgs = null; _ufonts = null; render(); };
 requirePin(render);
 fitStage();
 </script>

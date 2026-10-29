@@ -3,19 +3,7 @@
 @font-face{font-family:'Thmanyah';font-weight:500;src:url(fonts/thmanyah-sans-Medium.woff2) format('woff2')}
 @font-face{font-family:'Thmanyah';font-weight:700;src:url(fonts/thmanyah-sans-Bold.woff2) format('woff2')}
 @font-face{font-family:'Thmanyah';font-weight:900;src:url(fonts/thmanyah-sans-Black.woff2) format('woff2')}
-@font-face{font-family:'Tajawal';font-weight:400;src:url(fonts/tajawal-regular.ttf) format('truetype')}
-@font-face{font-family:'Tajawal';font-weight:700;src:url(fonts/tajawal-bold.ttf) format('truetype')}
-@font-face{font-family:'Cairo';font-weight:200 1000;src:url(fonts/cairo-var.ttf) format('truetype')}
-@font-face{font-family:'PlexArabic';font-weight:400;src:url(fonts/plexar-regular.ttf) format('truetype')}
-@font-face{font-family:'PlexArabic';font-weight:700;src:url(fonts/plexar-bold.ttf) format('truetype')}
-@font-face{font-family:'Amiri';src:url(fonts/amiri-regular.ttf) format('truetype')}
-@font-face{font-family:'ReemKufi';font-weight:400 700;src:url(fonts/reemkufi-var.ttf) format('truetype')}
-@font-face{font-family:'ElMessiri';font-weight:400 700;src:url(fonts/elmessiri-var.ttf) format('truetype')}
-@font-face{font-family:'ArefRuqaa';src:url(fonts/arefruqaa-regular.ttf) format('truetype')}
-@font-face{font-family:'Lalezar';src:url(fonts/lalezar-regular.ttf) format('truetype')}
-@font-face{font-family:'MohammadBoldArt';src:url(fonts/mohammad-bold-art.ttf) format('truetype');unicode-range:U+0000-0039,U+003B-FFFF}
-@font-face{font-family:'ElgharibHayyakum';src:url(fonts/elgharib-hayyakum.ttf) format('truetype')}
-@font-face{font-family:'KOMission';src:url(fonts/komission-black.otf) format('opentype')}
+@font-face{font-family:'Alyamama';src:url(fonts/alyamama-regular.ttf) format('truetype')}
 
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
 #stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;font-family:'Thmanyah','Noto Sans Arabic',Tahoma,sans-serif;color:#fff;overflow:hidden}
