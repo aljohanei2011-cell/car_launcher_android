@@ -96,7 +96,11 @@ function bgTiles(parent, slot, cur, onPick, withAuto){
     var a = el('button', 'tile add' + (cur === 'auto' ? ' on' : ''), 'تلقائي (حسب خلفية الرئيسية)');
     a.onclick = function () { onPick('auto'); }; g.appendChild(a);
   }
-  Object.keys(THEMES).forEach(function (k) {
+  // نعرض خلفيات الثيم الحالي فقط (أخف على الذاكرة)، والبقية بزر «كل الخلفيات»
+  var grp = function (k) { var m = k.match(/^(gold|red|saudi|light|ptime)_/); return m ? m[1] : 'classic'; };
+  var mine = prefs.skin || 'classic';
+  var keys = Object.keys(THEMES).filter(function (k) { return window._allBgs || grp(k) === mine || k === cur; });
+  keys.forEach(function (k) {
     var b = el('button', 'tile' + (cur === k ? ' on' : ''), THEMES[k].label);
     b.style.backgroundImage = "url('" + thumb(slot === 'rest' ? THEMES[k].rest : THEMES[k].bg) + "')";
     b.onclick = function () { onPick(k); };
@@ -121,6 +125,7 @@ function bgTiles(parent, slot, cur, onPick, withAuto){
   });
   var add = el('a', 'tile add', '+ من الجوال (باركود)'); add.href = 'upload.html';
   g.appendChild(add);
+  if (!window._allBgs) { var more = el('button', 'tile add', 'كل الخلفيات…'); more.onclick = function () { window._allBgs = true; render(); }; g.appendChild(more); }
   parent.appendChild(g);
 }
 function appLabel(pkg){
@@ -131,15 +136,36 @@ function appLabel(pkg){
 
 /* ===== تبويب المظهر ===== */
 function renderLook(){
-  var sk = section('الثيم', 'شكل البطاقات والألوان والزخارف. اختيار الثيم يضبط خلفيته المناسبة تلقائياً، ويمكنك تغيير الخلفية بعدها.');
+  var sk = section('الثيم', 'شكل البطاقات والألوان والزخارف. يتغير فوراً لتراه هنا قبل الرجوع للرئيسية، ويمكنك التراجع.');
   var sg = el('div', 'themes'); sg.style.gridTemplateColumns = 'repeat(3,minmax(0,1fr))';
-  [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg']].forEach(function (x) {
+  [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg'],
+   ['light', 'skins/light/bg_sky.jpg'], ['saudi', 'skins/saudi/bg_riyadh_night.jpg'], ['ptime', 'skins/ptime/bg_maghrib.jpg']].forEach(function (x) {
     var b = el('button', 'tile' + ((prefs.skin || 'classic') === x[0] ? ' on' : ''), SKINS[x[0]].label);
-    b.style.backgroundImage = "url('" + thumb(x[1]) + "')"; b.style.height = '110px'; b.style.fontSize = '19px';
-    b.onclick = function () { prefs.skin = x[0]; prefs.theme = SKINS[x[0]].theme; upd(); };
+    b.style.backgroundImage = "url('" + thumb(x[1]) + "')"; b.style.height = '100px'; b.style.fontSize = '19px';
+    b.onclick = function () {
+      if ((prefs.skin || 'classic') === x[0]) return;
+      window._undoSkin = { skin: prefs.skin || 'classic', theme: prefs.theme, accent: prefs.accent || '' };
+      prefs.skin = x[0]; prefs.theme = SKINS[x[0]].theme; upd();
+    };
     sg.appendChild(b);
   });
   sk.appendChild(sg);
+  if (window._undoSkin) {
+    var ub = el('button', 'opt sm', 'تراجع للثيم السابق («' + (SKINS[window._undoSkin.skin] || SKINS.classic).label + '»)');
+    ub.onclick = function () { var u = window._undoSkin; window._undoSkin = null; prefs.skin = u.skin; prefs.theme = u.theme; prefs.accent = u.accent; upd(); };
+    sk.appendChild(ub);
+  }
+  sk.appendChild(el('span', 'note', 'لون التمييز (العناوين والأزرار):'));
+  var ao = el('div', 'opts');
+  ACCENTS.forEach(function (a) {
+    var b = el('button', 'opt sm' + ((prefs.accent || '') === a[0] ? ' on' : ''));
+    if (a[0]) { var dot = el('span'); dot.style.cssText = 'display:inline-block;width:18px;height:18px;border-radius:9px;margin-left:8px;vertical-align:-3px;background:' + a[0]; b.appendChild(dot); }
+    b.appendChild(document.createTextNode(a[1]));
+    b.onclick = function () { prefs.accent = a[0]; upd(); };
+    ao.appendChild(b);
+  });
+  sk.appendChild(ao);
+  toggle(sk, 'تأثيرات الطقس على الخلفية (مطر، سحب، غبار، ضباب، حر)', 'weatherFx', 'تظهر حسب طقس موقعك عند توفر الإنترنت، وتتوقف تلقائياً في وضع الأداء. في الغبار والضباب تصبح البطاقات أوضح.');
   var s0 = section('الوقت والأرقام');
   opts(s0, [[false, '12 ساعة (ص/م)'], [true, '24 ساعة']], prefs.h24, function (k) { prefs.h24 = k; upd(); });
   opts(s0, [['en', 'أرقام 0123'], ['ar', 'أرقام ٠١٢٣']], prefs.digits, function (k) { prefs.digits = k; savePrefs(prefs); location.reload(); });

@@ -95,7 +95,7 @@ var DEFAULT_PREFS = {
   restStyle: 'classic', restShow: { dua: true, wird: true, remind: true, prayer: true, date: true },
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
-  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false,
+  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false, weatherFx: true, accent: '',
   perf: 'auto', perfDetected: null, watchdog: true
 };
 function loadPrefs(){
@@ -135,8 +135,34 @@ var THEMES = {
   red_sunset: { label: 'طريق الغروب', bg: 'skins/red/bg_sunset.jpg', rest: 'skins/red/bg_sunset.jpg' },
   red_day:    { label: 'طريق نهاري', bg: 'skins/red/bg_day.jpg', rest: 'skins/red/bg_day.jpg' },
   red_carbon: { label: 'كربون', bg: 'skins/red/bg_carbon.jpg', rest: 'skins/red/bg_carbon.jpg' },
-  red_silver: { label: 'ألمنيوم', bg: 'skins/red/bg_silver.jpg', rest: 'skins/red/bg_silver.jpg' }
+  red_silver: { label: 'ألمنيوم', bg: 'skins/red/bg_silver.jpg', rest: 'skins/red/bg_silver.jpg' },
+  saudi_auto:  { label: 'سعودي تلقائي (حسب الوقت)', auto: 'saudi', bg: 'skins/saudi/bg_riyadh_night.jpg', rest: 'skins/saudi/bg_riyadh_night.jpg' },
+  saudi_riyadh:{ label: 'الرياض ليلاً', bg: 'skins/saudi/bg_riyadh_night.jpg', rest: 'skins/saudi/bg_riyadh_night.jpg' },
+  saudi_alula: { label: 'العُلا', bg: 'skins/saudi/bg_alula_day.jpg', rest: 'skins/saudi/bg_alula_day.jpg' },
+  saudi_asir:  { label: 'عسير', bg: 'skins/saudi/bg_asir_fajr.jpg', rest: 'skins/saudi/bg_asir_fajr.jpg' },
+  saudi_dunes: { label: 'الربع الخالي', bg: 'skins/saudi/bg_desert_dusk.jpg', rest: 'skins/saudi/bg_desert_dusk.jpg' },
+  light_sky:   { label: 'سماء صافية', bg: 'skins/light/bg_sky.jpg', rest: 'skins/ptime/bg_isha.jpg' },
+  light_road:  { label: 'طريق مشمس', bg: 'skins/light/bg_road.jpg', rest: 'skins/ptime/bg_isha.jpg' },
+  light_abstract: { label: 'أبيض ناعم', bg: 'skins/light/bg_abstract.jpg', rest: 'skins/ptime/bg_isha.jpg' },
+  ptime_auto:  { label: 'حسب وقت الصلاة', auto: 'ptime', bg: 'skins/ptime/bg_isha.jpg', rest: 'skins/ptime/bg_isha.jpg' },
+  ptime_fajr:  { label: 'الفجر', bg: 'skins/ptime/bg_fajr.jpg', rest: 'skins/ptime/bg_fajr.jpg' },
+  ptime_duha:  { label: 'الضحى', bg: 'skins/ptime/bg_duha.jpg', rest: 'skins/ptime/bg_duha.jpg' },
+  ptime_dhuhr: { label: 'الظهر', bg: 'skins/ptime/bg_dhuhr.jpg', rest: 'skins/ptime/bg_dhuhr.jpg' },
+  ptime_asr:   { label: 'العصر', bg: 'skins/ptime/bg_asr.jpg', rest: 'skins/ptime/bg_asr.jpg' },
+  ptime_maghrib:{ label: 'المغرب', bg: 'skins/ptime/bg_maghrib.jpg', rest: 'skins/ptime/bg_maghrib.jpg' },
+  ptime_isha:  { label: 'العشاء', bg: 'skins/ptime/bg_isha.jpg', rest: 'skins/ptime/bg_isha.jpg' }
 };
+/* فترة اليوم حسب الصلاة: فجر، ضحى، ظهر، عصر، مغرب، عشاء */
+function prayerPeriod(d){
+  d = d || new Date();
+  var t = prayerTimes(d), now = riyadhMinutes(d);
+  if (now >= t.fajr && now < t.sunrise + 20) return 'fajr';
+  if (now >= t.sunrise + 20 && now < t.dhuhr) return 'duha';
+  if (now >= t.dhuhr && now < t.asr) return 'dhuhr';
+  if (now >= t.asr && now < t.maghrib - 20) return 'asr';
+  if (now >= t.maghrib - 20 && now < t.isha) return 'maghrib';
+  return 'isha';
+}
 /* الخلفية حسب وقت اليوم (فجر، نهار، مغرب، ليل) */
 function dayPeriod(d){
   d = d || new Date();
@@ -149,14 +175,34 @@ function dayPeriod(d){
 function autoBg(kind){
   var p = dayPeriod();
   if (kind === 'gold') return 'skins/gold/bg_' + p + '.jpg';
+  if (kind === 'ptime') return 'skins/ptime/bg_' + prayerPeriod() + '.jpg';
+  if (kind === 'saudi') return 'skins/saudi/bg_' + ({ fajr: 'asir_fajr', day: 'alula_day', dusk: 'desert_dusk', night: 'riyadh_night' })[p] + '.jpg';
   return 'skins/red/bg_' + (p === 'dusk' ? 'sunset' : p === 'night' ? 'night' : 'day') + '.jpg';
 }
 /* الثيمات: شكل البطاقات والألوان والزخارف */
 var SKINS = {
   classic: { label: 'الافتراضي', theme: 'mountain' },
   gold:    { label: 'ليلي ذهبي', theme: 'gold_auto' },
-  red:     { label: 'فضي أحمر', theme: 'red_auto' }
+  red:     { label: 'فضي أحمر', theme: 'red_auto' },
+  light:   { label: 'أبيض نهاري', theme: 'light_sky' },
+  saudi:   { label: 'سعودي', theme: 'saudi_auto' },
+  ptime:   { label: 'أوقات الصلاة', theme: 'ptime_auto' }
 };
+var SKIN_CLASSES = ['skin-gold', 'skin-red', 'skin-light', 'skin-saudi', 'skin-ptime', 'skinx'];
+/* ألوان التمييز التي يختارها المستخدم (فوق لون الثيم) */
+var ACCENTS = [['', 'لون الثيم'], ['#2BB673', 'أخضر'], ['#D9B65C', 'ذهبي'], ['#2F7BFF', 'أزرق'], ['#FF8A4C', 'برتقالي'], ['#FF5FA2', 'وردي'], ['#9B7BFF', 'بنفسجي'], ['#E8334A', 'أحمر']];
+/* نوع تأثير الطقس من بيانات الطقس */
+function weatherFx(w){
+  w = w || {};
+  if (!w.at || Date.now() - w.at > 3 * 3600000) return '';
+  var c = +w.code;
+  if (w.dust > 150 || w.pm10 > 300 || (w.vis != null && w.vis < 3000 && w.hum < 45 && w.wind > 20)) return 'dust';
+  if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95) return 'rain';
+  if (c === 45 || c === 48) return 'fog';
+  if (w.temp >= 44) return 'heat';
+  if (c === 2 || c === 3) return 'clouds';
+  return '';
+}
 
 /* صور المستخدم (من الجوال أو من الجهاز). الاسم: home_123.jpg / rest_123.jpg / logo_123.png */
 var _imgs = null;
@@ -247,12 +293,20 @@ function applyPrefs(bgKey, p){
   }
   document.body.classList.toggle('solid', !!p.solid);
   document.body.classList.toggle('perf', perfOn(p));
-  document.body.classList.remove('skin-gold', 'skin-red');
-  if (p.skin === 'gold' || p.skin === 'red') document.body.classList.add('skin-' + p.skin);
+  var B = document.body;
+  SKIN_CLASSES.forEach(function (c) { B.classList.remove(c); });
+  var sk = p.skin || 'classic';
+  // الأبيض النهاري لا يُطبَّق على شاشة الاستراحة (خلفيتها داكنة هادئة)
+  if (bgKey === 'rest' && sk === 'light') sk = 'classic';
+  if (sk !== 'classic' && SKINS[sk]) { B.classList.add('skin-' + sk); B.classList.add('skinx'); }
+  if (sk === 'ptime') B.setAttribute('data-period', prayerPeriod()); else B.removeAttribute('data-period');
+  B.classList.toggle('accent-custom', !!p.accent);
+  if (p.accent) { B.style.setProperty('--accent', p.accent); B.style.setProperty('--accent2', p.accent); }
+  else { B.style.removeProperty('--accent'); B.style.removeProperty('--accent2'); }
   renderBrand(p);
   /* حفظ الخلفية والأصناف لتُطبَّق فوراً عند فتح الصفحة التالية (بدون وميض الخلفية الافتراضية) */
   try { if (img) localStorage.setItem('carlauncher.bg.' + (bgKey === 'rest' ? 'rest' : 'home'), img.getAttribute('src') || '');
-        localStorage.setItem('carlauncher.bodycls', ['solid','perf','skin-gold','skin-red'].filter(function(c){ return document.body.classList.contains(c); }).join(' ')); } catch (e) {}
+        localStorage.setItem('carlauncher.bodycls', ['solid','perf'].concat(SKIN_CLASSES).filter(function(c){ return document.body.classList.contains(c); }).join(' ')); } catch (e) {}
 }
 
 /* ===== مواقيت الصلاة على الجهاز (بدون إنترنت) — طريقة أم القرى =====

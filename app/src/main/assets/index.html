@@ -100,6 +100,7 @@
   <img id="bg" alt="">
   <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.home');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}if(s)b.src=s;if(c)document.body.className+=' '+c;})();</script>
   <div class="shade"></div>
+  <div id="wx" aria-hidden="true"></div>
   <div class="boot" id="boot" onclick="this.style.display='none'">
     <div style="color:#F2C879;font-size:22px">دعاء الركوب</div>
     <div class="t">سبحان الذي سخّر لنا هذا وما كنا له مقرنين، وإنا إلى ربنا لمنقلبون</div>
@@ -190,7 +191,7 @@ function openPage(url){
   _ovl = { rest: /^rest\.html/.test(url), digits: prefs.digits, h24: prefs.h24 };
   document.getElementById('stage').appendChild(f);
   // نخفي الرئيسية خلف النافذة حتى لا تستهلك الذاكرة والرسم
-  setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); if (bg.getAttribute('src')) { bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } } }, 800);
+  setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); if (bg.getAttribute('src')) { bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } var wx = document.getElementById('wx'); if (wx) { wx.innerHTML = ''; _wxCur = null; } } }, 800);
 }
 window.openPage = openPage;
 function openRest(q){ openPage('rest.html' + (q || '')); }
@@ -205,7 +206,7 @@ window.closeRest = function () {
   if (!o.rest && (np.digits !== o.digits || np.h24 !== o.h24)) { location.reload(); return; }
   document.getElementById('wrap').style.visibility = '';
   var bg = document.getElementById('bg'); if (bg.dataset.src) { bg.src = bg.dataset.src; delete bg.dataset.src; }
-  if (o.rest) { forceCards = true; tick(); forceCards = false; }
+  if (o.rest) { renderWeatherFx(); forceCards = true; tick(); forceCards = false; }
   else { _imgs = null; window.onPageResume(); }
 };
 function restOpen(){ return !!document.getElementById('restFrame'); }
@@ -288,12 +289,18 @@ card('clock', 'الساعة', function () {
 function skinImg(kind, key){
   if (prefs.skin === 'gold') return kind === 'prayer' ? 'skins/gold/prayer_' + (key || 'isha') + '.jpg' : 'skins/gold/music.jpg';
   if (prefs.skin === 'red') return kind === 'prayer' ? 'skins/red/prayer.jpg' : kind === 'trip' ? 'skins/red/trip.jpg' : 'skins/red/music.jpg';
+  if (fancySkin() && kind === 'prayer') return 'skins/cards/prayer_' + (key || 'isha') + '.jpg';
   return '';
 }
+/* ثيم غير الافتراضي (بطاقات بصور وزخارف) */
+function fancySkin(){ return !!prefs.skin && prefs.skin !== 'classic' && !!SKINS[prefs.skin]; }
+function isLight(){ return prefs.skin === 'light'; }
+function fgCol(){ return isLight() ? '#13202f' : '#fff'; }
+function accentCol(def){ var v = ''; try { v = getComputedStyle(document.body).getPropertyValue('--accent').trim(); } catch (e) {} return v || def; }
 function pad2(x){ return (x < 10 ? '0' : '') + x; }
 card('prayer', 'الصلاة القادمة', function () {
   var d = new Date(), np = nextPrayer(d);
-  if (prefs.skin === 'gold' || prefs.skin === 'red') {
+  if (fancySkin()) {
     var left = Math.max(0, np.diff * 60 - d.getSeconds());
     return '<a href="prayer.html" style="display:contents"><div class="k-img" style="background-image:url(' + skinImg('prayer', np.key) + ')"></div>' +
       '<div style="text-align:center"><div class="k-sub">الصلاة القادمة</div><div class="k-mid" style="font-size:2.2em;color:var(--accent2)">صلاة ' + np.name + '</div>' +
@@ -355,12 +362,13 @@ card('speed', 'عداد السرعة', function () {
       '<circle cx="100" cy="100" r="70" fill="none" stroke="' + (over ? '#F02A48' : '#C8102E') + '" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + (C * pc).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(135 100 100)" style="filter:drop-shadow(0 0 4px #F02A48)"/>' +
       '<text x="100" y="108" text-anchor="middle" fill="#fff" font-size="44" font-weight="700">' + v + '</text><text x="100" y="132" text-anchor="middle" fill="#B7BEC5" font-size="12">كم/س</text></svg></div></div>';
   }
-  var main = prefs.skin === 'gold' ? (over ? '#FF6B5A' : 'url(#gg)') : (over ? '#FF6B5A' : '#5AB0FF');
+  var main = prefs.skin === 'gold' && !prefs.accent ? (over ? '#FF6B5A' : 'url(#gg)') : (over ? '#FF6B5A' : accentCol('#5AB0FF'));
+  var trackC = isLight() ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.15)', fg = fgCol();
   return '<div class="k-row"><span class="k-lbl">السرعة</span><span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span></div>' +
-    '<svg class="gauge" viewBox="0 0 200 150" aria-hidden="true"><defs><linearGradient id="gg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a6420"/><stop offset=".6" stop-color="#E6B85C"/><stop offset="1" stop-color="#F5D58A"/></linearGradient></defs>' + arc(-120, 120, 'rgba(255,255,255,.15)', 10) + arc(-120, a, main, 10) +
+    '<svg class="gauge" viewBox="0 0 200 150" aria-hidden="true"><defs><linearGradient id="gg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a6420"/><stop offset=".6" stop-color="#E6B85C"/><stop offset="1" stop-color="#F5D58A"/></linearGradient></defs>' + arc(-120, 120, trackC, 10) + arc(-120, a, main, 10) +
     (prefs.speedOn ? '<path d="M' + pt(limDeg, 70) + ' L' + pt(limDeg, 90) + '" stroke="#E8C061" stroke-width="3"/>' : '') + ticks +
-    '<g transform="rotate(' + a + ' 100 105)"><path d="M100 30 L104 105 L96 105Z" fill="' + (over ? '#FF6B5A' : prefs.skin === 'gold' ? '#F5D58A' : '#fff') + '"/></g><circle cx="100" cy="105" r="7" fill="#fff"/>' +
-    '<text x="100" y="140" text-anchor="middle" fill="' + (over ? '#FF6B5A' : '#fff') + '" font-size="26" font-weight="700">' + v + '</text></svg>';
+    '<g transform="rotate(' + a + ' 100 105)"><path d="M100 30 L104 105 L96 105Z" fill="' + (over ? '#FF6B5A' : prefs.skin === 'gold' ? '#F5D58A' : fg) + '"/></g><circle cx="100" cy="105" r="7" fill="' + fg + '"/>' +
+    '<text x="100" y="140" text-anchor="middle" fill="' + (over ? '#FF6B5A' : fg) + '" font-size="26" font-weight="700">' + v + '</text></svg>';
 });
 card('trip', 'الرحلة', function () {
   var t = natJSON('trip') || { km: 0, speed: 0, movingSec: 0 };
@@ -469,7 +477,7 @@ function later(){ setTimeout(function () { forceCards = true; tick(); forceCards
 var cardEls = [];
 /* كم ثانية بين تحديث كل بطاقة (الباقي كل 30 ثانية) */
 var CARD_RATE = { clock: 1, speed: 1, media: 2, trip: 2, qibla: 3, ram: 5, radio: 2, reminders: 5 };
-function cardRate(id){ if (id === 'prayer') return (prefs.skin === 'gold' || prefs.skin === 'red') ? 1 : 15; return CARD_RATE[id] || 30; }
+function cardRate(id){ if (id === 'prayer') return fancySkin() ? 1 : 15; return CARD_RATE[id] || 30; }
 function buildPages(){
   var stage = document.getElementById('stage');
   stage.classList.remove('L-classic', 'L-grid', 'L-side', 'L-minimal');
@@ -568,6 +576,17 @@ function bootAction(){
   else if (a === 'music') setTimeout(function () { nat('mediaKey', 'play'); }, 4000);
   else if (a === 'dua_music') { var o2 = document.getElementById('boot'); o2.style.display = 'flex'; setTimeout(function () { o2.style.display = 'none'; nat('mediaKey', 'play'); }, 8000); }
 }
+/* طبقة الطقس فوق الخلفية (مطر، سحب، غبار، ضباب، حر) — صورة واحدة صغيرة، وتتوقف في وضع الأداء */
+var _wxCur = null;
+function renderWeatherFx(){
+  var box = document.getElementById('wx'); if (!box) return;
+  var fx = (prefs.weatherFx && prefs.weatherOn && !isLight() && !document.body.classList.contains('perf')) ? weatherFx(weatherData()) : '';
+  document.body.classList.toggle('wx-heavy', fx === 'dust' || fx === 'fog');
+  if (fx === _wxCur) return;
+  _wxCur = fx;
+  box.className = fx ? 'fx-' + fx : '';
+  box.innerHTML = fx ? '<img alt="" src="skins/weather/' + fx + '.jpg">' : '';
+}
 function applyBrightness(){ if (prefs.nightBright) nat('applyNight', isNight(), +prefs.nightPct); else nat('applyNight', false, 100); }
 
 var lastTouch = Date.now(), touchAt = 0, stoppedSince = 0, movedSinceStop = false;
@@ -598,12 +617,12 @@ function tick(){
   }
   renderCards(); renderRemChip();
 }
-window.onPageResume = function () { var of = document.getElementById('restFrame'); if (of && _ovl && !_ovl.rest) { try { of.contentWindow.postMessage({ rafiq: 'resume' }, '*'); } catch (e) {} return; } forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
+window.onPageResume = function () { var of = document.getElementById('restFrame'); if (of && _ovl && !_ovl.rest) { try { of.contentWindow.postMessage({ rafiq: 'resume' }, '*'); } catch (e) {} return; } forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); _wxCur = null; renderWeatherFx(); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
 
 /* كل خطوة مستقلة: لو تعطلت واحدة تُسجَّل في سجل الأعطال وتكمل البقية، فلا تبقى الشاشة فارغة */
 function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + name + ': ' + (e && e.message)); } }
 safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
-safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale);
+safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
 setInterval(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
 setInterval(function () { if (!document.hidden) renderStatus(); }, 5000);
 autoDetectPerf();
@@ -616,7 +635,7 @@ function autoUpdateCheck(){
 setTimeout(autoUpdateCheck, 15000);
 setInterval(autoUpdateCheck, 10 * 60000);
 setInterval(function () { processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest(); }, 5000);
-setInterval(function () { if (!restOpen()) applyPrefs('home', prefs); pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
+setInterval(function () { if (!restOpen()) { applyPrefs('home', prefs); renderWeatherFx(); } pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 fitStage();
 </script>
 </body>

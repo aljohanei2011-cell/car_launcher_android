@@ -9,7 +9,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
 #stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;font-family:'Thmanyah','Noto Sans Arabic',Tahoma,sans-serif;color:#fff;overflow:hidden}
 #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,0) 45%,rgba(0,0,0,.55) 100%)}
-.wrap{position:relative;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
+.wrap{position:relative;z-index:2;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;color:inherit;cursor:pointer}
 
@@ -55,7 +55,7 @@ body.skin-gold .banner,body.skin-gold .chip{background:rgba(20,22,30,.75);border
 body.skin-gold #stage::before,body.skin-gold #stage::after{content:'';position:absolute;width:170px;height:170px;background:url(skins/gold/ornament.png) center/contain no-repeat;opacity:.4;pointer-events:none;z-index:0}
 body.skin-gold #stage::before{top:-24px;left:-24px;transform:scaleX(-1)}
 body.skin-gold #stage::after{bottom:-24px;right:-24px;transform:scaleY(-1)}
-body.skin-gold .wrap,body.skin-red .wrap{z-index:2}
+body.skinx .wrap{z-index:2}
 
 /* ===================== ثيم «فضي أحمر» ===================== */
 body.skin-red{--accent:#C8102E;--accent2:#F02A48}
@@ -79,7 +79,7 @@ body.skin-red #stage::after{bottom:-4px;left:-4px;transform:scaleY(-1)}
 
 /* صورة أعلى البطاقة (الصلاة/الموسيقى) في الثيمات */
 .k-img{display:none;border-radius:.9em;background-size:cover;background-position:center;flex:1;min-height:0;margin-bottom:.6em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-body.skin-gold .L-classic .k-img,body.skin-red .L-classic .k-img,body.skin-gold .L-side .k-img,body.skin-red .L-side .k-img{display:block}
+body.skinx .L-classic .k-img,body.skinx .L-side .k-img{display:block}
 .k-art{display:none;width:5.2em;height:5.2em;border-radius:.8em;background-size:cover;background-position:center;flex:none}
 body.skin-gold .k-art,body.skin-red .k-art{display:block}
 
@@ -111,6 +111,89 @@ body.skin-red .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:#C8102E!i
 body.perf .page{background:#0a0f1f!important}
 body.perf.skin-gold .page{background:#071426!important}
 body.perf.skin-red .page{background:#0b0c0e!important}
+
+
+/* ===================== ثيم «أبيض نهاري» ===================== */
+body.skin-light{--accent:#0A66C2;--accent2:#0A66C2}
+body.skin-light #stage{color:#13202f}
+body.skin-light .shade{background:linear-gradient(180deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,0) 45%,rgba(255,255,255,.3) 100%)}
+body.skin-light .glass{background:rgba(255,255,255,.74);border:1px solid rgba(255,255,255,.95);box-shadow:0 8px 24px rgba(30,50,80,.16)}
+body.skin-light.solid .glass,body.perf.skin-light .glass{background:#F3F6FA!important}
+body.skin-light .card,body.skin-light .dk{color:#13202f}
+body.skin-light .accent,body.skin-light .k-lbl,body.skin-light .label{color:var(--accent)!important}
+body.skin-light .sub,body.skin-light .k-sub,body.skin-light .note{color:#4A5A70!important}
+body.skin-light .k-li.on{background:rgba(10,102,194,.12);color:#0A3D75}
+body.skin-light .k-btn{background:#fff;border-color:#C5D3E6;color:#13202f}
+body.skin-light .mbtn{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.18)}
+body.skin-light .mbtn:not(.big) svg{filter:invert(1)}
+body.skin-light .mbtn.big{background:var(--accent);border-color:var(--accent)}
+body.skin-light .logo,body.skin-light .clockTop,body.skin-light .title{color:#13202f;text-shadow:none}
+body.skin-light .st{color:#13202f!important}
+body.skin-light .dots i{background:rgba(0,0,0,.2)}body.skin-light .dots i.on{background:#13202f}
+body.skin-light .dk:first-child{border:1.5px solid var(--accent)}
+body.skin-light :is(.opt,.tab,.icon-btn){color:#fff}
+body.skin-light .opt.on,body.skin-light .tab.on{background:var(--accent);border-color:var(--accent)}
+body.skin-light .page{color:#fff}
+body.skin-light .banner,body.skin-light .chip{background:rgba(255,255,255,.9);border-color:var(--accent);color:#0A3D75}
+
+/* ===================== ثيم «سعودي» ===================== */
+body.skin-saudi{--accent:#2BB673;--accent2:#D9B65C}
+body.skin-saudi .glass{background:linear-gradient(165deg,rgba(6,42,30,.80),rgba(4,24,18,.76));border:1px solid rgba(217,182,92,.38);box-shadow:inset 0 1px 0 rgba(217,182,92,.14),0 12px 30px rgba(0,0,0,.45)}
+body.skin-saudi.solid .glass,body.perf.skin-saudi .glass{background:#082A1F!important}
+body.skin-saudi .accent,body.skin-saudi .k-lbl,body.skin-saudi .label{color:#D9B65C!important}
+body.skin-saudi .sub,body.skin-saudi .k-sub{color:#BFD3C8}
+body.skin-saudi .k-li.on{background:rgba(43,182,115,.2);color:#E9F7EF}
+body.skin-saudi .mbtn{background:rgba(4,24,18,.6);border-color:rgba(217,182,92,.45)}
+body.skin-saudi .mbtn.big{background:#1F8A4C;border:2px solid #D9B65C;box-shadow:0 0 16px rgba(43,182,115,.35)}
+body.skin-saudi .dk:first-child{border-color:#D9B65C;background:linear-gradient(165deg,rgba(31,138,76,.65),rgba(6,42,30,.8))}
+body.skin-saudi .opt.on,body.skin-saudi .tab.on{background:#1F8A4C;border-color:#D9B65C}
+body.skin-saudi .banner,body.skin-saudi .chip{background:rgba(4,24,18,.8);border-color:#D9B65C;color:#F1E3B8}
+body.skin-saudi #stage::before{content:'';position:absolute;top:-10px;left:-14px;width:150px;height:150px;background:url(skins/saudi/palm.png) center/contain no-repeat;opacity:.38;pointer-events:none;z-index:0;transform:scaleX(-1)}
+body.skin-saudi #stage::after{content:'';position:absolute;left:0;right:0;bottom:0;height:12px;background:url(skins/saudi/sadu.png) repeat-x center/auto 12px;opacity:.85;pointer-events:none;z-index:3}
+body.skin-saudi .page{background:linear-gradient(rgba(4,22,16,.82),rgba(4,22,16,.92)),url(skins/saudi/bg_riyadh_night.jpg) center/cover!important}
+body.skin-saudi .page :is(.tile,.p,.box,.pcard,.it,.odo,.form,.card){background:linear-gradient(165deg,rgba(6,42,30,.86),rgba(4,24,18,.84))!important;border:1px solid rgba(217,182,92,.32)!important}
+body.skin-saudi .page :is(.lbl,.ph,.h){color:#D9B65C!important}
+body.skin-saudi .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:#1F8A4C!important;border-color:#D9B65C!important}
+body.perf.skin-saudi .page{background:#06201A!important}
+
+/* ===================== ثيم «أوقات الصلاة»: اللون يتغير مع كل صلاة ===================== */
+body.skin-ptime{--accent:#8FA8FF;--accent2:#C8D4FF}
+body.skin-ptime[data-period=fajr]{--accent:#F3A6C8;--accent2:#FFD6E8}
+body.skin-ptime[data-period=duha]{--accent:#7CC8FF;--accent2:#CDEBFF}
+body.skin-ptime[data-period=dhuhr]{--accent:#4FB3FF;--accent2:#BFE3FF}
+body.skin-ptime[data-period=asr]{--accent:#F2B33D;--accent2:#FFE2A3}
+body.skin-ptime[data-period=maghrib]{--accent:#FF8A4C;--accent2:#FFCFB0}
+body.skin-ptime .glass{background:rgba(10,16,30,.55);border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+body.skin-ptime .card.glass{border-top:2px solid var(--accent)}
+body.skin-ptime.solid .glass,body.perf.skin-ptime .glass{background:#0E1626!important}
+body.skin-ptime .accent,body.skin-ptime .k-lbl,body.skin-ptime .label{color:var(--accent)!important;transition:color 3s}
+body.skin-ptime .k-li.on{background:rgba(255,255,255,.12);color:var(--accent2)}
+body.skin-ptime .mbtn.big{background:var(--accent);border-color:var(--accent2)}
+body.skin-ptime .dk:first-child{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+body.skin-ptime .opt.on,body.skin-ptime .tab.on{background:var(--accent);border-color:var(--accent2);color:#10151f}
+body.skin-ptime .banner,body.skin-ptime .chip{background:rgba(10,16,30,.8);border-color:var(--accent);color:#fff}
+body.skin-ptime .page{background:#0B1222!important}
+body.skin-ptime .page :is(.lbl,.ph,.h){color:var(--accent)!important}
+
+/* لون تمييز يختاره المستخدم (يغلب لون الثيم) */
+body.accent-custom :is(.accent,.k-lbl,.label){color:var(--accent)!important}
+body.accent-custom .mbtn.big{background:var(--accent)!important;border-color:var(--accent)!important}
+body.accent-custom :is(.opt.on,.tab.on){background:var(--accent)!important;border-color:var(--accent)!important}
+body.accent-custom .dk:first-child{border-color:var(--accent)!important}
+body.accent-custom .k-li.on{color:#fff;background:rgba(255,255,255,.14)}
+
+/* ===================== طبقة الطقس ===================== */
+#wx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+#wx img{position:absolute;left:-4%;top:-4%;width:108%;height:108%;object-fit:cover;mix-blend-mode:screen;opacity:.55;will-change:transform}
+#wx.fx-clouds img{opacity:.45;animation:wxDrift 90s linear infinite alternate}
+#wx.fx-rain img{opacity:.5;animation:wxRain 1.1s linear infinite}
+#wx.fx-dust img{opacity:.6;animation:wxDrift 40s linear infinite alternate}
+#wx.fx-fog img{opacity:.55;animation:wxDrift 120s linear infinite alternate}
+#wx.fx-heat img{opacity:.35;top:-6%}
+@keyframes wxDrift{from{transform:translateX(-2.5%)}to{transform:translateX(2.5%)}}
+@keyframes wxRain{from{transform:translate(1%,-3%)}to{transform:translate(-1%,3%)}}
+body.wx-heavy .card.glass{background:rgba(8,14,26,.84)}
+body.perf #wx{display:none}
 
 /* شاشة الاستراحة فوق الرئيسية (بدون إعادة تحميل الرئيسية) */
 #restFrame{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;z-index:80;background:transparent}
