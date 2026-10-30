@@ -697,6 +697,16 @@ function renderSystem(){
   lm.appendChild(fr); s.appendChild(lm);
   toggle(s, 'تحرير تلقائي عند فتح شاشة الاستراحة', 'ramOnRest');
   toggle(s, 'تحرير تلقائي بعد تشغيل السيارة', 'ramOnBoot');
+  toggle(s, 'زر «إغلاق التطبيقات» بجوار الساعة', 'cleanBtn', 'ضغطة واحدة توقف التطبيقات الشغالة في الخلفية.');
+  if (!LITE && HAS_NATIVE) {
+    var on = nat('cleanAvail') === true, ca = el('div', 'line');
+    ca.appendChild(el('span', '', 'مسح قائمة التطبيقات الأخيرة مثل الجوال:'));
+    ca.appendChild(el('span', 'v', on ? 'مفعّل ✓' : 'غير مفعّل'));
+    var cb = el('button', 'opt sm' + (on ? '' : ' on'), on ? 'إعداد الإذن' : 'تفعيل الإذن'); cb.style.marginRight = 'auto';
+    cb.onclick = function () { nat('openA11y'); };
+    ca.appendChild(cb); s.appendChild(ca);
+    s.appendChild(el('span', 'note', 'من «إمكانية الوصول» اختر «رفيق الطريق — إغلاق التطبيقات» وفعّله. يفتح الزر قائمة الأخيرة ويضغط «مسح الكل» ثم يرجعك للواجهة. لا يقرأ أي محتوى. ملاحظة: يُغلق تطبيق الموسيقى أيضاً.'));
+  }
   s.appendChild(el('span', 'note', 'إضافة بطاقة «الذاكرة» للرئيسية من تبويب الواجهة.'));
 
   s = section('القيادة والإنترنت');

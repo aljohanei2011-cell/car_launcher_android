@@ -84,7 +84,7 @@ window.addEventListener('error', function (e) {
 });
 var _natCache = {}, NAT_READS = { autoBackups: 1, memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
 /* قراءات سريعة التغير: لا تُحفظ ولا تلغي المحفوظ */
-var NAT_FRESH = { voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1, isLite: 1 };
+var NAT_FRESH = { cleanAvail: 1, cleanResult: 1, voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1, isLite: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
   if (!NAT_READS[fn] && !NAT_FRESH[fn]) _natCache = {}; // أي أمر (تشغيل، إيقاف...) يلغي القراءات المحفوظة
@@ -133,7 +133,7 @@ var DEFAULT_PREFS = {
   restStyle: 'classic', restShow: { dua: true, wird: true, remind: true, prayer: true, date: true },
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
-  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false, weatherFx: true, accent: '',
+  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false, cleanBtn: true, weatherFx: true, accent: '',
   clockStyle: 'digital', textScale: 1,
   driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true,
   khatma: null, quranApp: '', kidsApp: '', fridayOn: true, fridayMin: 45, azkarAuto: true, occasions: true, arrive: { on: false, phone: '', name: '', text: 'وصلت الحمد لله ✓', place: 'البيت', lat: null, lng: null }, obdAuto: false,

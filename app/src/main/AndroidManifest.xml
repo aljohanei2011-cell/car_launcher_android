@@ -104,6 +104,20 @@
             </intent-filter>
         </service>
 
+        <!-- اختياري: مسح قائمة التطبيقات الأخيرة بضغطة واحدة (يُفعَّل من إمكانية الوصول) -->
+        <service
+            android:name=".CleanService"
+            android:exported="false"
+            android:label="@string/clean_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/clean_service" />
+        </service>
+
         <receiver
             android:name=".InstallReceiver"
             android:exported="false" />

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">رفيق الطريق</string>
+    <string name="clean_desc">يسمح لزر «إغلاق التطبيقات» في رفيق الطريق بمسح قائمة التطبيقات الأخيرة بضغطة واحدة. لا يقرأ أي محتوى ولا يرسل أي بيانات، ويعمل فقط عند الضغط على الزر.</string>
+    <string name="clean_label">رفيق الطريق — إغلاق التطبيقات</string>
 </resources>

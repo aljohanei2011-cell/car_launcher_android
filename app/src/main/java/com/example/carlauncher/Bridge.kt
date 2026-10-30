@@ -504,6 +504,19 @@ class Bridge(private val act: MainActivity) {
         }
     }
 
+    // ===== إغلاق التطبيقات بضغطة (مثل الجوال) =====
+    @JavascriptInterface fun cleanAvail(): Boolean = CleanService.enabled(ctx)
+    @JavascriptInterface fun cleanResult(): String = CleanService.result
+    /** يوقف تطبيقات الخلفية دائماً، ويمسح قائمة «الأخيرة» إن كانت الخدمة مفعّلة. يرجع true إذا سيمسح القائمة */
+    @JavascriptInterface fun cleanAll(): Boolean {
+        freeRam()
+        val s = CleanService.instance ?: return false
+        s.clearRecents(); return true
+    }
+    @JavascriptInterface fun openA11y() {
+        act.runOnUiThread { try { act.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } catch (e: Exception) {} }
+    }
+
     @JavascriptInterface fun keepOn(on: Boolean) = act.keepScreenOn(on)
 
     // ===== سجل الأعطال ومراقب الإغلاق =====

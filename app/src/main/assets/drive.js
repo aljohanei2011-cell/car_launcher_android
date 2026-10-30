@@ -229,7 +229,7 @@ function openQuickPanel(){
     '<button class="qpB" onclick="nat(\'openPanel\',\'internet\')">الإنترنت</button>' +
     '<button class="qpB" onclick="nat(\'openSystem\',\'gps\')">الموقع GPS</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openRest()">الاستراحة</button>' +
-    '<button class="qpB" onclick="nat(\'freeRam\');toast(\'جارٍ تحرير الذاكرة…\')">تحرير الذاكرة</button>' +
+    '<button class="qpB" onclick="cleanAll()">إغلاق التطبيقات</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openNearbySheet()">أقرب مكان</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();startEditPick()">تعديل البطاقات</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openPage(\'settings.html\')">الإعدادات</button>' +

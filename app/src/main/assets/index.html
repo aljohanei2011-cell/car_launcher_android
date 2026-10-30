@@ -285,6 +285,7 @@ function renderDock(){
 
 /* ================= أيقونات الحالة ================= */
 var SI = {
+  clean: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><path d="m14 14 6 6M20 14l-6 6"/></svg>',
   bt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>',
   wifi: function (lvl) {
     var c = function (i) { return lvl >= i ? 'currentColor' : 'rgba(255,255,255,.25)'; };
@@ -300,7 +301,30 @@ function renderStatus(){
   if (si.gps) html += '<button class="st' + (t.gps ? '' : ' off') + '" style="color:' + (t.gps ? '#5AD1A0' : '#fff') + '" onclick="nat(\'openSystem\',\'gps\')" aria-label="GPS ' + (t.gps ? 'متصل' : 'يبحث') + '">' + SI.gps + '</button>';
   if (si.wifi) html += '<button class="st' + (s.wifi ? '' : ' off') + '" style="color:' + (s.internet ? '#fff' : '#F2C879') + '" onclick="nat(\'openSystem\',\'wifi\')" aria-label="واي فاي">' + SI.wifi(s.wifi ? (s.wifiLevel == null ? 3 : s.wifiLevel) : -1) + '</button>';
   if (si.bt) html += '<button class="st' + (s.bt === 'connected' || s.bt === 'on' ? '' : ' off') + '" style="color:' + (s.bt === 'connected' ? '#6FA8FF' : '#fff') + '" onclick="nat(\'openSystem\',\'bt\')" aria-label="بلوتوث">' + SI.bt + '</button>';
+  if (prefs.cleanBtn !== false) html = '<button class="st" style="color:#fff" onclick="cleanAll()" aria-label="إغلاق التطبيقات">' + SI.clean + '</button>' + html;
   el.innerHTML = html;
+}
+/* زر «إغلاق التطبيقات»: يوقف تطبيقات الخلفية دائماً، ويمسح قائمة «الأخيرة» إن فُعّل إذن إمكانية الوصول */
+var _cleaning = false;
+function cleanAll(){
+  if (_cleaning) return;
+  if (!HAS_NATIVE) { toast('يعمل على الشاشة فقط'); return; }
+  _cleaning = true;
+  var full = !LITE && nat('cleanAll') === true;
+  if (LITE) nat('freeRam');
+  toast(full ? 'جارٍ إغلاق كل التطبيقات…' : 'جارٍ إغلاق تطبيقات الخلفية…');
+  setTimeout(function () {
+    _cleaning = false; _natCache = {};
+    var r = natJSON('ramResult') || {}, mb = Math.round((r.freed || 0) / 1048576);
+    var res = full ? nat('cleanResult') : '';
+    var msg = (full && res === 'done' ? 'أُغلقت كل التطبيقات ومُسحت القائمة' : 'أُغلقت تطبيقات الخلفية') + (mb > 0 ? ' وتحرر ' + mb + ' م.ب' : '');
+    if (full && res === 'notfound') msg += '. لم أجد زر «مسح الكل» في هذه الشاشة';
+    if (!full && !LITE && !lsGet('carlauncher.cleanHint', 0)) {
+      lsSet('carlauncher.cleanHint', 1);
+      toast(msg + '. لمسح قائمة التطبيقات الأخيرة أيضاً فعّل الإذن مرة واحدة', 'تفعيل', function () { nat('openA11y'); }, 10000);
+    } else toast(msg);
+    tick();
+  }, full ? 4500 : 2500);
 }
 
 /* ================= البطاقات ================= */
