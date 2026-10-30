@@ -37,7 +37,7 @@
     var el = document.querySelector('.card[data-pi="' + cur.pi + '"][data-ci="' + cur.ci + '"]');
     if (el) {
       el.classList.add('editing');
-      var pages = document.getElementById('pages'), pg = el.closest('.page');
+      var pages = document.getElementById('pages'), pg = el.closest('.hpage');
       if (pages && pg) pages.scrollLeft = pg.offsetLeft;
     }
   }

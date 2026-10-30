@@ -29,7 +29,7 @@
 .L-side #dock{order:-1}
 #pages{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
 #pages::-webkit-scrollbar{display:none}
-.page{flex:none;width:100%;height:100%;scroll-snap-align:start;box-sizing:border-box}
+.hpage{flex:none;width:100%;height:100%;scroll-snap-align:start;box-sizing:border-box}
 .dots{height:20px;display:flex;justify-content:center;align-items:center;gap:8px}
 .dots i{width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.35)}
 .dots i.on{width:22px;background:#fff}
@@ -44,7 +44,7 @@
 .L-minimal .card{flex:1}
 .minClock{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:1}
 .L-minimal .minClock{display:flex}
-.L-minimal .page{display:flex;flex-direction:column}
+.L-minimal .hpage{display:flex;flex-direction:column}
 
 /* حجم الخط داخل البطاقة يتبع حجمها والتصميم */
 .card{--fs:17px;font-size:var(--fs);padding:calc(var(--fs)*1.3) calc(var(--fs)*1.4);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:0;overflow:hidden;color:#fff;position:relative}
@@ -582,7 +582,7 @@ function buildPages(){
   var pages = homePages();
   if (prefs.layout === 'minimal') pages = pages.slice(0, 1);
   pages.forEach(function (cards, pi) {
-    var pg = document.createElement('div'); pg.className = 'page';
+    var pg = document.createElement('div'); pg.className = 'hpage';
     if (prefs.layout === 'minimal') {
       pg.innerHTML = '<div class="minClock" ondblclick="openRest()"><div class="sub" id="minDate" style="font-size:24px"></div><div id="minClock" class="font-clock" style="font-size:150px;font-weight:700;line-height:1;direction:ltr;font-variant-numeric:tabular-nums"></div><div class="sub" id="minPrayer" style="font-size:26px"></div></div>';
       cards = cards.slice(0, 3);
