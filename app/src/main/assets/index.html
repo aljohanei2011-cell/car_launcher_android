@@ -73,6 +73,8 @@
 .fav img{width:3.4em;height:3.4em;border-radius:.8em}
 .fav span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gauge{width:100%;flex:1;min-height:0}
+/* لا تحديد للنص ولا قائمة عند الضغط المطوّل (حتى يعمل تحرير البطاقات) */
+#stage{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* خيارات البطاقة: المحاذاة والشفافية */
 .card.al-c{text-align:center}.card.al-c .k-row{justify-content:center;gap:1em}
 .card.op-clear{background:rgba(0,0,0,.16)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-color:rgba(255,255,255,.18)!important;box-shadow:none!important}
@@ -646,20 +648,37 @@ function renderCards(){
 function mediaEmpty(){ if (!HAS_NATIVE) return true; var m = natJSON('media'); return !m || m.access === false || !m.title; }
 
 /* ================= تحرير البطاقات بالضغط المطوّل ================= */
-var _lp = null, _lpBlock = false;
+var _lp = null, _lpBlock = false, _editPick = false;
 function cardsLocked(o){ return !!prefs.cardsLocked || !!(o && o.lock); }
-document.addEventListener('pointerdown', function (e) {
-  var el = e.target.closest && e.target.closest('.card'); if (!el || !el.dataset.ci) return;
-  var x = e.clientX, y = e.clientY;
+/* الضغط المطوّل على بطاقة يفتح محررها.
+   على شاشات اللمس نتابع أحداث اللمس نفسها (تستمر حتى لو أوقف المتصفح أحداث المؤشر)،
+   ونقبل أيضاً حدث «القائمة» الذي يرسله أندرويد عند الضغط المطوّل */
+function lpStart(el, x, y){
   clearTimeout(_lp && _lp.t);
-  _lp = { x: x, y: y, el: el, t: setTimeout(function () { _lpBlock = true; onCardLongPress(el); }, 650) };
-}, true);
-document.addEventListener('pointermove', function (e) { if (_lp && (Math.abs(e.clientX - _lp.x) > 12 || Math.abs(e.clientY - _lp.y) > 12)) { clearTimeout(_lp.t); _lp = null; } }, true);
-['pointerup', 'pointercancel'].forEach(function (ev) { document.addEventListener(ev, function () { if (_lp) { clearTimeout(_lp.t); _lp = null; } }, true); });
-// الضغطة الطويلة لا تفتح محتوى البطاقة
+  _lp = { x: x, y: y, el: el, fired: false, t: setTimeout(function () { lpFire(); }, 600) };
+}
+function lpFire(){ if (!_lp || _lp.fired) return; _lp.fired = true; _lpBlock = true; var el = _lp.el; try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {} onCardLongPress(el); }
+function lpMove(x, y){ if (_lp && !_lp.fired && (Math.abs(x - _lp.x) > 14 || Math.abs(y - _lp.y) > 14)) { clearTimeout(_lp.t); _lp = null; } }
+function lpEnd(){ if (_lp) { clearTimeout(_lp.t); _lp = null; } }
+function cardOf(t){ var el = t && t.closest && t.closest('.card'); return el && el.dataset.ci ? el : null; }
+document.addEventListener('touchstart', function (e) { var el = cardOf(e.target); if (!el || e.touches.length > 1) return lpEnd(); var t = e.touches[0]; lpStart(el, t.clientX, t.clientY); }, { capture: true, passive: true });
+document.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) lpMove(t.clientX, t.clientY); }, { capture: true, passive: true });
+document.addEventListener('touchend', lpEnd, true);
+document.addEventListener('touchcancel', lpEnd, true);
+// الفأرة (المتصفح على الكمبيوتر)
+var _hasTouch = false; document.addEventListener('touchstart', function () { _hasTouch = true; }, { capture: true, passive: true });
+document.addEventListener('pointerdown', function (e) { if (_hasTouch || e.pointerType === 'touch') return; var el = cardOf(e.target); if (el) lpStart(el, e.clientX, e.clientY); }, true);
+document.addEventListener('pointermove', function (e) { if (!_hasTouch && e.pointerType !== 'touch') lpMove(e.clientX, e.clientY); }, true);
+document.addEventListener('pointerup', function (e) { if (!_hasTouch && e.pointerType !== 'touch') lpEnd(); }, true);
 document.addEventListener('pointerdown', function () { _lpBlock = false; }, true);
-document.addEventListener('click', function (e) { if (_lpBlock) { _lpBlock = false; e.preventDefault(); e.stopPropagation(); } }, true);
-document.addEventListener('contextmenu', function (e) { if (e.target.closest && e.target.closest('.card')) e.preventDefault(); }, true);
+// الضغطة الطويلة لا تفتح محتوى البطاقة، ووضع «اختيار بطاقة للتعديل» يفتح المحرر بضغطة عادية
+document.addEventListener('click', function (e) {
+  if (_lpBlock) { _lpBlock = false; e.preventDefault(); e.stopPropagation(); return; }
+  if (_editPick) { var el = cardOf(e.target); if (el) { e.preventDefault(); e.stopPropagation(); _editPick = false; onCardLongPress(el); } }
+}, true);
+document.addEventListener('contextmenu', function (e) { var el = cardOf(e.target); if (el) { e.preventDefault(); if (_lp && _lp.el === el) lpFire(); else { _lp = { el: el, fired: false, t: 0 }; lpFire(); } } }, true);
+/* بديل للضغط المطوّل: «تعديل البطاقات» من اللوحة السريعة ثم اضغط البطاقة */
+function startEditPick(){ _editPick = true; toast('اضغط على البطاقة التي تريد تعديلها', 'إلغاء', function () { _editPick = false; }, 8000); setTimeout(function () { _editPick = false; }, 9000); }
 function onCardLongPress(el){
   var pi = +el.dataset.pi, ci = +el.dataset.ci, c = (homePages()[pi] || [])[ci];
   if (!c) return;

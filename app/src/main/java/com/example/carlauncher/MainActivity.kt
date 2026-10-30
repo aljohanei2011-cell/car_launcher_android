@@ -109,6 +109,10 @@ class MainActivity : AppCompatActivity() {
         // مهم وهو ظاهر، ويخفّ عن النظام عندما يكون تطبيق آخر في المقدمة
         try { webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true) } catch (e: Exception) {}
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        // نوقف الضغط المطوّل الافتراضي (تحديد النص) حتى تصل الضغطة المطوّلة للواجهة (تحرير البطاقات)
+        webView.setOnLongClickListener { true }
+        webView.isLongClickable = false
+        webView.isHapticFeedbackEnabled = false
         webView.keepScreenOn = false
         setContentView(webView)
         webView.loadUrl(base + pageFrom(intent, "index.html"))

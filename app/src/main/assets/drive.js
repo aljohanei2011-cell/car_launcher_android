@@ -231,6 +231,7 @@ function openQuickPanel(){
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openRest()">الاستراحة</button>' +
     '<button class="qpB" onclick="nat(\'freeRam\');toast(\'جارٍ تحرير الذاكرة…\')">تحرير الذاكرة</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openNearbySheet()">أقرب مكان</button>' +
+    '<button class="qpB" onclick="document.getElementById(\'qp\').remove();startEditPick()">تعديل البطاقات</button>' +
     '<button class="qpB" onclick="document.getElementById(\'qp\').remove();openPage(\'settings.html\')">الإعدادات</button>' +
     '<button class="qpB' + (prefs.guest ? ' on' : '') + '" onclick="document.getElementById(\'qp\').remove();toggleGuest()">وضع الضيف</button>' +
     '</div><div class="note" style="text-align:center;font-size:15px;opacity:.7">اسحب للأعلى أو اضغط خارج اللوحة للإغلاق</div></div>';
