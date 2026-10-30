@@ -1,14 +1,20 @@
 /* ملف مشترك لكل صفحات التطبيق: التحجيم، المواقيت، الإعدادات، الجسر مع النظام */
 
-/* ===== التحجيم: scale = min(W/1280, H/720) ===== */
-/* بدون أي سكربت تظهر الصفحة صحيحة على 1280×720؛ هنا نكبّر أو نصغّر للمقاسات الأخرى ونوسّطها */
+/* ===== التحجيم: التصميم على 1280×720 ويُكبَّر أو يُصغَّر لأي شاشة =====
+   الشاشات العريضة (مثل 1920×720) أو الأطول (16:10) تتمدد الواجهة فيها لتملأ الشاشة بدل الأشرطة السوداء */
 function fitStage(){
   var el = document.getElementById('stage');
   if (!el) return;
   var W = window.innerWidth, H = window.innerHeight;
   if (!W || !H) return;
-  var s = Math.min(W / 1280, H / 720);
-  var tx = Math.round((W - 1280 * s) / 2), ty = Math.round((H - 720 * s) / 2);
+  var stretch = true;
+  try { var pp = JSON.parse(localStorage.getItem('carlauncher.prefs') || '{}'); stretch = pp.stretch !== false; } catch (e) {}
+  var r = W / H, base = 1280 / 720, sw = 1280, sh = 720;
+  if (stretch && r > base + 0.02) sw = Math.min(Math.round(720 * r), Math.round(1280 * 1.45));
+  else if (stretch && r < base - 0.02) sh = Math.min(Math.round(1280 / r), Math.round(720 * 1.3));
+  el.style.width = sw + 'px'; el.style.height = sh + 'px';
+  var s = Math.min(W / sw, H / sh);
+  var tx = Math.round((W - sw * s) / 2), ty = Math.round((H - sh * s) / 2);
   el.style.transform = (s === 1 && !tx && !ty) ? 'none' : 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
 }
 window.addEventListener('resize', fitStage);
@@ -76,7 +82,7 @@ var HAS_NATIVE = typeof window.Native !== 'undefined';
 window.addEventListener('error', function (e) {
   try { if (HAS_NATIVE && Native.logError) Native.logError((location.pathname.split('/').pop() || '') + ': ' + (e.message || '') + ' @' + (e.lineno || 0)); } catch (x) {}
 });
-var _natCache = {}, NAT_READS = { memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
+var _natCache = {}, NAT_READS = { autoBackups: 1, memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
 /* قراءات سريعة التغير: لا تُحفظ ولا تلغي المحفوظ */
 var NAT_FRESH = { voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1, isLite: 1 };
 function nat(fn){
@@ -131,7 +137,7 @@ var DEFAULT_PREFS = {
   clockStyle: 'digital', textScale: 1,
   driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true,
   khatma: null, quranApp: '', kidsApp: '', fridayOn: true, fridayMin: 45, azkarAuto: true, occasions: true, arrive: { on: false, phone: '', name: '', text: 'وصلت الحمد لله ✓', place: 'البيت', lat: null, lng: null }, obdAuto: false,
-  miqat: true, guest: false, fuelPrice: 2.33, kmpl: null,
+  stretch: true, miqat: true, guest: false, fuelPrice: 2.33, kmpl: null,
   voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
   perf: 'auto', perfDetected: null, watchdog: true
 };

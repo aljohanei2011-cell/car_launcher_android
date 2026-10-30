@@ -63,6 +63,13 @@ else {
   document.getElementById('addr').textContent = url;
   // نسخة احتياطية جاهزة للتحميل من الجوال
   nat('backupPrepare', webBackupJSON());
+  // للأمان: تُغلق الخدمة بعد 10 دقائق بدون استخدام، والرمز يتغير مع كل فتح
+  var idleChk = setInterval(function () {
+    if (nat('serverRunning') === false) {
+      clearInterval(idleChk);
+      showError('أُغلق الإرسال من الجوال تلقائياً للأمان بعد 10 دقائق بدون استخدام.<br><button style="margin-top:16px;height:56px;padding:0 24px;border-radius:16px;border:1px solid #6FA8FF;background:#1F5FD1;color:#fff;font:inherit;font-size:19px" onclick="location.reload()">فتح من جديد (رمز جديد)</button>');
+    }
+  }, 15000);
   var seen = nat('uploadCount') || 0;
   var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «تثبيت تطبيقات مرفوعة».', sound: 'وصل صوت التنبيه ✓', font: 'وصل الخط ✓ تجده في الإعدادات ▸ المظهر ▸ الخطوط.', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', station: 'وصلت محطة الراديو ✓', expense: 'وصل المصروف ✓' };
   setInterval(function () {

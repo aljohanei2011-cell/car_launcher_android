@@ -11,3 +11,8 @@ captures/
 *.keystore
 *.jks
 signing/
+
+# صور الاختبارات
+shots3/
+vid/
+p[0-9]*/

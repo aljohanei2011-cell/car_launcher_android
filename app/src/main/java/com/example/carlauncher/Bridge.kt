@@ -173,6 +173,10 @@ class Bridge(private val act: MainActivity) {
     }
 
     @JavascriptInterface fun serverStop() { server?.stop(); server = null }
+    @JavascriptInterface fun autoBackup(webJson: String): Boolean = Backup.autoSave(ctx, webJson)
+    @JavascriptInterface fun autoBackups(): String = Backup.autoList(ctx)
+    @JavascriptInterface fun autoRestore(name: String): Boolean = Backup.autoRestore(ctx, name)
+    @JavascriptInterface fun serverRunning(): Boolean = server?.isRunning == true
     @JavascriptInterface fun uploadCount(): Int = server?.uploads ?: 0
     @JavascriptInterface fun uploadLast(): String {
         val s = server ?: return "{}"

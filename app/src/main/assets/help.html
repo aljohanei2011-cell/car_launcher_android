@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>المساعدة</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.tabs2{display:flex;gap:10px}
+.tabs2 button{height:50px;padding:0 20px;border-radius:16px;border:1px solid #23406f;background:#13254a;color:#fff;font:inherit;font-size:18px}
+.tabs2 button.on{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
+.scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start}
+.scroll::-webkit-scrollbar{display:none}
+.h{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:14px 18px}
+.h b{display:block;font-size:19px;color:var(--accent,#7FB8FF);margin-bottom:6px}
+.h span{display:block;font-size:16.5px;line-height:1.75;color:#D3DCEA}
+.ck{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:17px;line-height:1.5;text-align:right;color:#fff;font-family:inherit}
+.ck i{width:30px;height:30px;border-radius:9px;border:2px solid #4b6ea8;flex:none;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700}
+.ck.ok i{background:#1FA35A;border-color:#1FA35A}.ck.bad i{background:#B23B3B;border-color:#B23B3B}
+.ck small{display:block;color:#9FB0CC;font-size:14px}
+.prog{font-size:18px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">المساعدة</span>
+      <div class="tabs2" style="margin-right:20px"><button id="tg" class="on">دليل الاستخدام</button><button id="tc">قائمة التجربة</button><button id="tn">ما الجديد</button></div>
+      <span class="prog" id="prog" style="margin-right:auto"></span>
+    </div>
+    <div class="scroll" id="c"></div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(i){ return document.getElementById(i); }
+var GUIDE = [
+  ['الرئيسية والبطاقات', 'اسحب يميناً أو يساراً بين صفحات البطاقات. اضغط على البطاقة لفتحها، واضغط مطولاً عليها لتحريرها: حجم النص، وما يظهر، والمكان، والنوع، والقفل.'],
+  ['اللوحة السريعة', 'اسحب من أعلى الشاشة للأسفل: السطوع، والصوت، والواي فاي، والبلوتوث، والاستراحة، وتحرير الذاكرة، ووضع الضيف.'],
+  ['شاشة الاستراحة', 'زر «الاستراحة» في القائمة، أو الضغط مرتين على الساعة. تعمل تلقائياً عند التوقف أو عدم اللمس حسب إعدادك. «الرئيسية» يرجعك فوراً.'],
+  ['الإرسال من الجوال', 'افتح «الإرسال من الجوال» وامسح الباركود بجوالك (نفس الشبكة أو نقطة اتصال الجوال). ترسل صوراً، وتطبيقات، وخطوطاً، وملاحظات، وتذكيرات، ومصاريف، ونسخاً احتياطية. يُغلق تلقائياً بعد 10 دقائق بدون استخدام.'],
+  ['التحديث', 'الإعدادات ▸ تحديث التطبيق. القناة «الثابتة» تصلها الإصدارات بعد يومين، و«التجريبية» فوراً. اختر شاشة واحدة تجريبية تتأكد عليها قبل البقية.'],
+  ['النسخة الخفيفة', 'للشاشات الضعيفة: بدون صور الثيمات والأوامر الصوتية وOBD. التحويل من صفحة التحديث، وتبقى إعداداتك.'],
+  ['نقل الإعدادات لشاشة أخرى', 'خذ نسخة من الشاشة الأولى إلى جوالك، ثم في الشاشة الثانية استعد «الواجهة والمظهر فقط» أو «كل شيء».'],
+  ['الأوامر الصوتية', 'فعّلها من الإعدادات ▸ الاتصال والصوت. اضغط زر الميكروفون وقل: «ملاحظة …»، «ذكرني بعد ساعة …»، «أقرب مسجد»، «كم باقي على الصلاة». قل «وش أقول؟» للأمثلة.'],
+  ['وضع الضيف', 'من اللوحة السريعة أو الإعدادات. يخفي الملاحظات والمصاريف والرسائل ويقفل الإعدادات. ضع رقماً سرياً ليكون إنهاؤه بالرقم.'],
+  ['إذا علّقت الشاشة أو رجعت للواجهة الأصلية', 'اجعل رفيق الطريق الواجهة الافتراضية (نظرة عامة ▸ تحتاج انتباهك). فعّل وضع الأداء، أو جرّب النسخة الخفيفة. إن تعذّر فتح الواجهة 3 مرات يظهر «وضع الأمان» لإصلاحها.'],
+  ['فحص شامل', 'الإعدادات ▸ النظام والأدوات ▸ فحص شامل. يعرض ما يعمل وما ينقص، ومع كل مشكلة زر إصلاح.'],
+  ['الخصوصية', 'كل بياناتك على الشاشة فقط. لا يجمع التطبيق أي بيانات ولا يرسلها لأي جهة. الإنترنت يُستخدم للطقس والتحديث فقط، وخدمة الكلام (إن فعّلتها) من Google.']
+];
+var CHECK = [
+  ['التشغيل', 'شغّل السيارة: تفتح الواجهة تلقائياً بدون رجوع للواجهة الأصلية'],
+  ['الساعة والتاريخ', 'الوقت والتاريخ الهجري والميلادي صحيحة'],
+  ['مواقيت الصلاة', 'الصلاة القادمة وعدّها التنازلي صحيح لمدينتك'],
+  ['تنبيه الصلاة', 'يصل التنبيه قبل الصلاة وعند دخولها (والخرائط مفتوحة)'],
+  ['الموسيقى', 'يظهر اسم المقطع، وأزرار التشغيل والتالي تعمل'],
+  ['الخرائط', 'زر الخرائط يفتح تطبيقك، والرجوع يعيدك للواجهة'],
+  ['البطاقات', 'الضغط المطوّل يفتح المحرر، وتكبير النص لا يكبّر البطاقة'],
+  ['اللوحة السريعة', 'السحب من الأعلى يفتحها، والسطوع والصوت يتغيران'],
+  ['الاستراحة', 'تفتح وتغلق بسرعة، والرجوع منها بدون تعليق أو خلفية مؤقتة'],
+  ['الإعدادات', 'التنقل بين الأقسام سريع، وزر الرجوع يعيدك للقسم السابق'],
+  ['الإرسال من الجوال', 'الباركود يفتح الصفحة في الجوال، ووصلت صورة أو ملاحظة'],
+  ['الطقس', 'يظهر الطقس عند توفر الإنترنت'],
+  ['GPS والرحلة', 'السرعة والمسافة تتحدث أثناء القيادة'],
+  ['التحديث', 'البحث عن تحديث يعمل، والتثبيت يعيدك للتطبيق بإعداداتك'],
+  ['الثبات', 'بعد يوم كامل: «فحص شامل» يعرض صفر إغلاق للواجهة'],
+  ['الأوامر الصوتية (إن فعّلتها)', '«ملاحظة …» تُحفظ، و«أقرب مسجد» يفتح الخرائط'],
+  ['وضع الضيف', 'يخفي الملاحظات ويقفل الإعدادات، وإنهاؤه يعمل']
+];
+var NEWS = [
+  ['3.0 — النسخة النهائية', 'دليل استخدام وقائمة تجربة، وصفحة «ما الجديد»، ووضع الأمان، ونسخ احتياطية تلقائية داخل الشاشة، وإغلاق الإرسال من الجوال تلقائياً للأمان، وملء الشاشات العريضة والطويلة، وسجل قياسات الأداء.'],
+  ['النسخة الخفيفة', 'ملف أخف للشاشات الضعيفة، والتحويل بين النسختين من صفحة التحديث.'],
+  ['الإعدادات الجديدة', 'قائمة جانبية بـ 11 قسماً، ونظرة عامة، وبحث، ومفاتيح سريعة، وخيارات متقدمة مطوية.'],
+  ['أدوات الشاشات المتعددة', 'فحص شامل، وصفحة المزايا، ومعالج الإعداد، وقناتا تحديث، ونقل الواجهة فقط بين الشاشات.'],
+  ['السعودية', 'تنبيه المواقيت للحج والعمرة، وتكلفة الوقود، ووضع الضيف، ووضع رمضان، وتذكير الجمعة.'],
+  ['الأوامر الصوتية', 'ملاحظات وتذكيرات ومصاريف وملاحة وموسيقى بالصوت، باسم مساعد تختاره.'],
+  ['الثيمات والساعات', 'ستة ثيمات منها السعودي وأوقات الصلاة، وتأثيرات الطقس، وسبعة أشكال للساعة.']
+];
+var mode = (location.search.match(/m=(\w+)/) || [])[1] || 'guide';
+var CK_KEY = 'carlauncher.fieldtest';
+function render(){
+  $('tg').className = mode === 'guide' ? 'on' : ''; $('tc').className = mode === 'check' ? 'on' : ''; $('tn').className = mode === 'news' ? 'on' : '';
+  var c = $('c'); c.innerHTML = ''; $('prog').textContent = '';
+  if (mode === 'guide' || mode === 'news') {
+    (mode === 'guide' ? GUIDE : NEWS).forEach(function (g) { var d = document.createElement('div'); d.className = 'h'; d.innerHTML = '<b></b><span></span>'; d.firstChild.textContent = g[0]; d.lastChild.textContent = g[1]; c.appendChild(d); });
+    return;
+  }
+  var st = lsGet(CK_KEY, {}), ok = 0, bad = 0;
+  CHECK.forEach(function (x, i) {
+    var v = st[i] || '';
+    if (v === 'ok') ok++; if (v === 'bad') bad++;
+    var b = document.createElement('button'); b.className = 'ck ' + v;
+    b.innerHTML = '<i>' + (v === 'ok' ? '✓' : v === 'bad' ? '✗' : '') + '</i><span><b></b><small></small></span>';
+    b.querySelector('b').textContent = x[0]; b.querySelector('small').textContent = x[1];
+    b.onclick = function () { st[i] = v === '' ? 'ok' : v === 'ok' ? 'bad' : ''; lsSet(CK_KEY, st); render(); };
+    c.appendChild(b);
+  });
+  $('prog').innerHTML = '<span style="color:#5AD1A0">✓ ' + ok + '</span> · <span style="color:#FF8A80">✗ ' + bad + '</span> من ' + CHECK.length + ' — اضغط البند: ✓ ثم ✗ ثم فارغ';
+}
+$('tg').onclick = function () { mode = 'guide'; render(); };
+$('tc').onclick = function () { mode = 'check'; render(); };
+$('tn').onclick = function () { mode = 'news'; render(); };
+render();
+fitStage();
+</script>
+</body>
+</html>

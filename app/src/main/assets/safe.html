@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>وضع الأمان</title>
+<style>
+/* صفحة مستقلة تماماً (بدون الملفات المشتركة) حتى تعمل حتى لو تعطل غيرها */
+html,body{margin:0;height:100%;background:#0a0f1f;color:#fff;font-family:'Noto Sans Arabic',Tahoma,sans-serif}
+.w{max-width:1100px;margin:0 auto;padding:30px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-size:32px;color:#F2C879}
+p{margin:0;font-size:19px;color:#C3D1E8;line-height:1.6}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+button{height:60px;padding:0 24px;border-radius:16px;border:1px solid #2b4a80;background:#13254a;color:#fff;font:inherit;font-size:19px}
+button.p{background:#1F5FD1;border-color:#6FA8FF;font-weight:700}
+.box{background:#111a33;border:1px solid #222c4d;border-radius:18px;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.msg{font-size:18px;color:#5AD1A0;min-height:26px}
+pre{white-space:pre-wrap;direction:ltr;text-align:left;font-size:13px;color:#9FB0CC;max-height:220px;overflow:auto;margin:0}
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>وضع الأمان</h1>
+  <p>تعذّر فتح الواجهة عدة مرات متتالية. غالباً السبب إعداد تالف أو نقص في الذاكرة. اختر حلاً، وبياناتك (الملاحظات والتذكيرات والرحلات) تبقى ما لم تختر الاستعادة.</p>
+  <div class="row">
+    <button class="p" onclick="go()">المحاولة مرة أخرى</button>
+    <button onclick="resetUi()">إعادة الواجهة للوضع الافتراضي</button>
+    <button onclick="location.href='update.html?switch=lite'">التحويل للنسخة الخفيفة</button>
+  </div>
+  <div class="box"><b style="font-size:20px">النسخ الاحتياطية التلقائية</b><div class="row" id="baks"></div></div>
+  <div class="msg" id="msg"></div>
+  <div class="box"><b style="font-size:18px">آخر الأعطال المسجلة</b><pre id="log"></pre></div>
+</div>
+<script>
+var N = typeof window.Native !== 'undefined' ? window.Native : null;
+function $(i){ return document.getElementById(i); }
+function go(){ try { localStorage.setItem('carlauncher.bootTry', '0'); } catch (e) {} location.replace('index.html'); }
+function resetUi(){
+  try {
+    var p = JSON.parse(localStorage.getItem('carlauncher.prefs') || '{}');
+    // نبقي المدينة والرقم السري وتنبيهات الصلاة، ونعيد الشكل كله
+    var keep = {}; ['city', 'pin', 'adhan', 'preMin', 'sound', 'customSound', 'digits', 'h24'].forEach(function (k) { if (p[k] !== undefined) keep[k] = p[k]; });
+    localStorage.setItem('carlauncher.prefs', JSON.stringify(keep));
+    ['carlauncher.bodycls', 'carlauncher.bg.home', 'carlauncher.bg.rest', 'carlauncher.appcache'].forEach(function (k) { localStorage.removeItem(k); });
+  } catch (e) {}
+  $('msg').textContent = 'أُعيدت الواجهة للوضع الافتراضي ✓';
+  setTimeout(go, 900);
+}
+function restore(name){
+  if (!N) return;
+  $('msg').textContent = 'جارٍ الاستعادة…';
+  if (!N.autoRestore(name)) { $('msg').textContent = 'تعذّرت الاستعادة من هذه النسخة'; return; }
+  try {
+    var r = N.pendingRestore(); var o = JSON.parse(r);
+    Object.keys(localStorage).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.removeItem(k); });
+    Object.keys(o).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.setItem(k, o[k]); });
+  } catch (e) {}
+  $('msg').textContent = 'استُعيدت النسخة ✓';
+  setTimeout(go, 900);
+}
+(function () {
+  var list = []; try { list = JSON.parse(N ? N.autoBackups() : '[]'); } catch (e) {}
+  $('baks').innerHTML = list.length ? '' : '<p>لا توجد نسخ تلقائية بعد.</p>';
+  list.forEach(function (b) {
+    var d = new Date(b.at), btn = document.createElement('button');
+    btn.textContent = 'استعادة نسخة ' + d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+    btn.onclick = function () { restore(b.name); };
+    $('baks').appendChild(btn);
+  });
+  try { var lg = N ? N.crashLog() : ''; $('log').textContent = (lg || 'لا يوجد').split('\n\n').slice(-6).reverse().join('\n\n'); } catch (e) {}
+  try { localStorage.setItem('carlauncher.bootTry', '0'); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -40,6 +40,7 @@
       <span class="pnote" id="msg"></span>
     </div>
     <div class="pnote" id="voiceInfo" style="font-size:17px"></div>
+    <div class="pnote" id="hist" style="font-size:16px;line-height:1.8"></div>
   </div>
 </div>
 <script src="common.js"></script>
@@ -70,6 +71,20 @@ function vinfo(){
   var c = natJSON('voiceCaps') || {};
   $('voiceInfo').innerHTML = 'الأوامر الصوتية: ' + (c.on ? 'مفعّلة' : 'مطفأة') + ' · خدمة الكلام ' + (c.recognizer ? '✓' : '✗') + ' · الميكروفون ' + (c.mic ? '✓' : '✗') + ' · النطق العربي ' + (c.tts === 'ok' ? '✓' : c.tts === 'unknown' ? '؟' : '✗') + ' · الاستماع الدائم ' + (c.wake ? 'يعمل' : 'متوقف') + ' — <a href="voice.html" style="text-decoration:underline">تجربة</a>';
 }
+/* سجل القياسات: للمقارنة بين الإصدارات والنسختين على نفس الشاشة */
+var HK = 'carlauncher.perfhist';
+function renderHist(){
+  var h = lsGet(HK, []);
+  $('hist').innerHTML = h.length ? '<b>آخر القياسات:</b><br>' + h.slice().reverse().map(function (x) {
+    return fmt({ day: 'numeric', month: 'short' }, 'ar-u-nu-latn', new Date(x.at)) + ' · إصدار ' + x.v + (x.lite ? ' خفيفة' : '') + ' · ' + x.fps + ' إطار/ث · الذاكرة ' + x.ram + '%' + (x.start ? ' · فتح الرئيسية ' + (x.start / 1000).toFixed(1) + ' ث' : '');
+  }).join('<br>') : '';
+}
+measureFps(2500, function (f) {
+  var m = memText(), v = natJSON('version') || {};
+  var h = lsGet(HK, []); h.push({ at: Date.now(), v: v.code || 0, lite: LITE, fps: f, ram: m ? m.pct : 0, start: +(lsGet('carlauncher.startMs', 0)) || 0 });
+  lsSet(HK, h.slice(-8)); renderHist();
+});
+renderHist();
 info(); vinfo(); setInterval(info, 3000); loop();
 fitStage();
 </script>

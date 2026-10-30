@@ -31,10 +31,13 @@
       <div class="info">
         <span class="chipi">واجهة سيارة عربية تعمل بدون إنترنت</span>
         <span class="chipi">مواقيت الصلاة بطريقة أم القرى</span>
-        <span class="chipi">Android 9 – 16</span>
+        <span class="chipi">Android 9 فما فوق</span>
         <span class="chipi" id="screen"></span>
       </div>
-      <div class="pnote" style="margin-top:14px">الخطوط والخلفيات المضمّنة لأصحابها، وتُستخدم وفق تراخيصها.</div>
+      <div class="pnote" style="margin-top:14px;max-width:900px;line-height:1.8;text-align:center">
+        <b>الخصوصية:</b> كل بياناتك على هذه الشاشة فقط. التطبيق لا يجمع أي بيانات ولا يرسلها لأي جهة. الإنترنت يُستخدم لجلب الطقس والتحديثات فقط، والأوامر الصوتية (إن فعّلتها) تستخدم خدمة الكلام في جهازك.<br>
+        <b>التراخيص:</b> خط «ثمانية سانس» وخط «اليمامة» (رخصة SIL OFL). صور الثيمات مولّدة خصيصاً للتطبيق. أسماء الماركات تظهر نصاً فقط بدون شعارات، وهي ملك أصحابها. الخطوط التي ترفعها أنت تبقى على شاشتك ومسؤولية ترخيصها عليك.
+      </div>
     </div>
   </div>
 </div>
@@ -43,7 +46,7 @@
 var prefs = loadPrefs(); applyPrefs('home', prefs);
 document.body.style.background = '#0a0f1f';
 var v = natJSON('version');
-document.getElementById('ver').textContent = 'الإصدار ' + (v ? v.code : '—');
+document.getElementById('ver').textContent = 'الإصدار ' + (v ? String(v.name).replace('-lite', '') + (v.lite ? ' · النسخة الخفيفة' : ' · النسخة الكاملة') : '—');
 var s = natJSON('screen');
 document.getElementById('screen').textContent = 'الشاشة ' + (s ? s.w + '×' + s.h : window.screen.width + '×' + window.screen.height);
 fitStage();

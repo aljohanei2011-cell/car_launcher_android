@@ -133,7 +133,7 @@ var CAT_FN = { look: ['renderLook'], home: ['renderHome'], clock: ['renderHome',
   drive: ['renderPrayer', 'renderSystem'], comm: ['renderVoice', 'renderPrayer', 'renderApps'], car: ['renderApps'], worship: ['renderPrayer'], system: ['renderSystem'] };
 /* عنوان البطاقة ← القسم. «*» تعني خيارات متقدمة (مطوية) */
 var SEC_CAT = {
-  'الثيم': 'look', 'اسم السيارة أعلى الشاشة': 'look', 'خلفية الرئيسية': 'look', 'الوضع الليلي': 'look', 'وضوح البطاقات': 'look*',
+  'الثيم': 'look', 'اسم السيارة أعلى الشاشة': 'look', 'خلفية الرئيسية': 'look', 'الوضع الليلي': 'look', 'وضوح البطاقات': 'look',
   'تصميم الواجهة': 'home', 'الصفحات والبطاقات': 'home', 'حجم النصوص وتحرير البطاقات': 'home', 'القائمة السفلية': 'home', 'التخطيطات المحفوظة': 'home*', 'أيقونات الحالة بجوار الساعة': 'home*',
   'شكل الساعة': 'clock', 'الوقت والأرقام': 'clock', 'الخطوط': 'clock',
   'نمط شاشة الاستراحة': 'restT', 'ما يظهر': 'restT', 'متى تعمل': 'restT', 'مدة بقائها': 'restT', 'خلفية الاستراحة': 'restT', 'الأدعية': 'restT*',
@@ -142,7 +142,7 @@ var SEC_CAT = {
   'الأوامر الصوتية': 'comm', 'المكالمات والرسائل': 'comm', 'التطبيقات': 'comm', 'التحكم بالموسيقى من الرئيسية': 'comm', 'وضع الركاب': 'comm*',
   'السيارة': 'car', 'تكلفة الوقود': 'car',
   'العبادة': 'worship', 'دعاء السفر': 'worship',
-  'أدوات الشاشة': 'system', 'التحديث والنسخ الاحتياطي': 'system', 'الواجهة الافتراضية': 'system', 'الأداء': 'system', 'الرقم السري': 'system', 'حول التطبيق': 'system',
+  'أدوات الشاشة': 'system', 'النسخ الاحتياطية التلقائية': 'system*', 'التحديث والنسخ الاحتياطي': 'system', 'الواجهة الافتراضية': 'system', 'الأداء': 'system', 'الرقم السري': 'system', 'حول التطبيق': 'system',
   'الاستقرار': 'system*', 'الذاكرة (RAM)': 'system*', 'إعادة التعيين': 'system*'
 };
 var LITE_HIDE = { 'الثيم': 1, 'الأوامر الصوتية': 1, 'المكالمات والرسائل': 1, 'مساعد القيادة': 1 };
@@ -350,6 +350,9 @@ function renderLook(){
 
   s = section('وضوح البطاقات');
   toggle(s, 'بطاقات مصمتة (بدون ضبابية)', 'solid', 'مفيد للأجهزة القديمة (Android 9) أو لتحسين الوضوح.');
+  var st0 = el('div', 'toggle'); st0.appendChild(el('span', '', 'ملء الشاشات العريضة والطويلة'));
+  var sws = el('button', 'sw' + (prefs.stretch !== false ? ' on' : '')); sws.onclick = function () { prefs.stretch = prefs.stretch === false; savePrefs(prefs); fitStage(); render(); }; st0.appendChild(sws); s.appendChild(st0);
+  s.appendChild(el('span', 'note', 'على الشاشات غير 16:9 (مثل 1920×720 أو 1280×800) تتمدد الواجهة بدل الأشرطة السوداء. أطفئه إن ظهر شكل غير مناسب.'));
 }
 
 /* ===== تبويب الصلاة والتنبيهات ===== */
@@ -609,7 +612,7 @@ function renderVoice(){
 function renderSystem(){
   var s = section('أدوات الشاشة');
   var tl = el('div', 'opts');
-  [['check.html', 'فحص شامل للشاشة'], ['features.html', 'المزايا (تشغيل وإطفاء)'], ['wizard.html', 'معالج الإعداد'], ['transfer', 'نقل الإعدادات لشاشة أخرى']].forEach(function (x) {
+  [['check.html', 'فحص شامل للشاشة'], ['features.html', 'المزايا (تشغيل وإطفاء)'], ['help.html', 'المساعدة وقائمة التجربة'], ['wizard.html', 'معالج الإعداد'], ['transfer', 'نقل الإعدادات لشاشة أخرى']].forEach(function (x) {
     var a = el('a', 'opt', x[1]); a.href = x[0] === 'transfer' ? 'javascript:void(0)' : x[0]; a.style.cssText = 'display:flex;align-items:center';
     if (x[0] === 'transfer') a.onclick = showTransfer;
     tl.appendChild(a);
@@ -723,6 +726,18 @@ function renderSystem(){
     sp.onclick = function () { if (/^[0-9]{4,8}$/.test(pi.value)) { prefs.pin = pinHash(pi.value); try { sessionStorage.setItem('carlauncher.unlocked', '1'); } catch (e) {} upd(); } };
     lp.appendChild(pi); lp.appendChild(sp); s.appendChild(lp);
   }
+
+  s = section('النسخ الاحتياطية التلقائية', 'تُحفظ داخل الشاشة كل أسبوع وعند كل تحديث (آخر 3 نسخ). تفيد إذا تلفت الإعدادات. للنقل لشاشة أخرى استخدم الإرسال من الجوال.');
+  var ab0 = natJSON('autoBackups') || [];
+  if (!HAS_NATIVE) s.appendChild(el('span', 'note', 'داخل التطبيق فقط.'));
+  ab0.forEach(function (b) {
+    var l = el('div', 'line'); l.appendChild(el('span', '', fmt({ weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }, 'ar-u-nu-latn', new Date(b.at))));
+    l.appendChild(el('span', 'v', Math.round(b.size / 1024) + ' ك.ب'));
+    var rb0 = el('button', 'opt sm', 'استعادة'); rb0.style.marginRight = 'auto';
+    rb0.onclick = function () { confirmBox('استعادة هذه النسخة؟ ستحل محل الإعدادات والبيانات الحالية.', function () { if (nat('autoRestore', b.name)) { applyPendingRestore(); goHome(true); } }); };
+    l.appendChild(rb0); s.appendChild(l);
+  });
+  if (HAS_NATIVE) { var nb0 = el('button', 'opt sm', 'نسخة الآن'); nb0.style.alignSelf = 'flex-start'; nb0.onclick = function () { nb0.textContent = nat('autoBackup', webBackupJSON()) ? 'حُفظت ✓' : 'تعذّر الحفظ'; lsSet('carlauncher.autobak', { at: Date.now(), v: (natJSON('version') || {}).code || 0 }); setTimeout(render, 1200); }; s.appendChild(nb0); }
 
   s = section('التحديث والنسخ الاحتياطي');
   var ver = natJSON('version');

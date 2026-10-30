@@ -56,12 +56,22 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
     @Volatile private var running = false
     private var server: ServerSocket? = null
     private val startedAt = System.currentTimeMillis()
+    /** يُغلق تلقائياً بعد 10 دقائق بدون أي طلب (أمان: لا يبقى مفتوحاً إن نُسيت الصفحة) */
+    @Volatile private var lastActivity = System.currentTimeMillis()
+    private val IDLE_MS = 10 * 60_000L
 
     fun start(): Boolean {
         if (running) return true
         return try {
             val s = ServerSocket(PORT)
             server = s; running = true
+            lastActivity = System.currentTimeMillis()
+            thread(isDaemon = true, name = "upload-idle") {
+                while (running) {
+                    try { Thread.sleep(30_000) } catch (e: Exception) {}
+                    if (running && System.currentTimeMillis() - lastActivity > IDLE_MS) stop()
+                }
+            }
             thread(isDaemon = true, name = "upload-server") {
                 while (running) {
                     try {
@@ -84,6 +94,7 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
     val isRunning get() = running
 
     private fun handle(sock: Socket) {
+        lastActivity = System.currentTimeMillis()
         sock.use { c ->
             c.soTimeout = 60_000
             val inp = BufferedInputStream(c.getInputStream())

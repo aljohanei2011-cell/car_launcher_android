@@ -17,7 +17,7 @@ android {
         // في GitHub Actions يُؤخذ من رقم البناء، فيزيد مع كل تحديث
         val code = (System.getenv("VERSION_CODE") ?: "2").toInt().coerceAtLeast(2)
         versionCode = code
-        versionName = "2.$code"
+        versionName = "3.0.$code"
         // مكان الإصدارات التي يتحقق منها زر «تحديث التطبيق»
         buildConfigField("String", "UPDATE_REPO", "\"aljohanei2011-cell/car_launcher_android\"")
     }

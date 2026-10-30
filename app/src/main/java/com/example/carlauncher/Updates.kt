@@ -305,7 +305,7 @@ object Backup {
         return a
     }
 
-    fun prepare(c: Context, webJson: String): Boolean = try {
+    private fun build(c: Context, webJson: String): String {
         val o = JSONObject()
         o.put("app", "rafiq").put("v", 1).put("created", System.currentTimeMillis()).put("version", BuildConfig.VERSION_CODE)
         o.put("web", JSONObject(webJson))
@@ -313,9 +313,31 @@ object Backup {
         o.put("prefs", sp)
         o.put("images", filesB64(Images.dir(c)))
         o.put("sounds", filesB64(Sounds.dir(c)))
-        file(c).writeText(o.toString())
+        return o.toString()
+    }
+
+    fun prepare(c: Context, webJson: String): Boolean = try { file(c).writeText(build(c, webJson)); true } catch (e: Exception) { false }
+
+    // ===== نسخ احتياطية تلقائية داخل الشاشة (أسبوعياً، آخر 3 نسخ) =====
+    fun autoDir(c: Context) = File(c.filesDir, "autobak").apply { mkdirs() }
+    fun autoSave(c: Context, webJson: String): Boolean = try {
+        val name = "auto-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date()) + ".json"
+        File(autoDir(c), name).writeText(build(c, webJson))
+        autoDir(c).listFiles()?.filter { it.name.startsWith("auto-") }?.sortedByDescending { it.name }?.drop(3)?.forEach { it.delete() }
         true
     } catch (e: Exception) { false }
+    fun autoList(c: Context): String {
+        val a = JSONArray()
+        autoDir(c).listFiles()?.filter { it.name.startsWith("auto-") }?.sortedByDescending { it.name }?.forEach {
+            a.put(JSONObject().put("name", it.name).put("at", it.lastModified()).put("size", it.length()))
+        }
+        return a.toString()
+    }
+    fun autoRestore(c: Context, name: String): Boolean {
+        if (name.contains('/') || name.contains("..")) return false
+        val f = File(autoDir(c), name); if (!f.exists()) return false
+        return restore(c, f)
+    }
 
     /** uiOnly: الواجهة والمظهر فقط (للنقل بين الشاشات) — لا يمس الرحلات والتنبيهات والأصوات */
     fun restore(c: Context, f: File, uiOnly: Boolean = false): Boolean = try {
