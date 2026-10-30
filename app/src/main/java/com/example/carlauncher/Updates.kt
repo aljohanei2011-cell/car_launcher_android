@@ -170,7 +170,7 @@ object Updater {
         else -> "خطأ من GitHub ($code)"
     }
 
-    /** قناة التحديث لهذه الشاشة: beta (كل إصدار فوراً) أو stable (الإصدار بعد مرور يومين على نشره دون سحبه) */
+    /** قناة التحديث لهذه الشاشة: beta (كل إصدار فوراً) أو stable (الإصدار بعد مرور يومين على نشره دون سحبه، وإصدار «إصلاح عاجل» فوراً) */
     fun channel(c: Context): String = sp(c).getString("channel", "stable") ?: "stable"
     fun setChannel(c: Context, ch: String) { sp(c).edit().putString("channel", if (ch == "beta") "beta" else "stable").apply() }
     private const val STABLE_DELAY_MS = 48L * 3600_000L
@@ -214,7 +214,8 @@ object Updater {
                     val n = r.optString("tag_name").removePrefix("v").toIntOrNull() ?: continue
                     if (pickApk(r.optJSONArray("assets") ?: JSONArray(), wantLite) == null) continue
                     if (n > newestN) { newestN = n; newest = r }
-                    val ok = beta || (!r.optBoolean("prerelease") && now - parseTime(r.optString("published_at")) >= STABLE_DELAY_MS)
+                    val hot = r.optString("body").contains("إصلاح عاجل") || r.optString("name").contains("إصلاح عاجل")
+                    val ok = beta || (!r.optBoolean("prerelease") && (hot || now - parseTime(r.optString("published_at")) >= STABLE_DELAY_MS))
                     if (ok && n > bestN) { bestN = n; best = r }
                 }
                 // إصدار أحدث لم يصل للقناة الثابتة بعد

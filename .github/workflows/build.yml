@@ -75,6 +75,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           MSG="$(git log -1 --pretty=%s)"
+          # إصدار الإصلاح يصل لكل الشاشات فوراً (حتى القناة الثابتة)
+          case "$MSG" in *إصلاح*|*اصلاح*|*عاجل*) MSG="⚡ إصلاح عاجل — $MSG" ;; esac
           gh release create "v${{ github.run_number }}" out/*.apk \
             --title "رفيق الطريق — الإصدار ${{ github.run_number }}" \
             --notes "$MSG" --latest

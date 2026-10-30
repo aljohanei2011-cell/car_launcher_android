@@ -128,7 +128,7 @@ if (swq && (swq === 'lite') !== LITE) setTimeout(function () { $('edSw').textCon
 function renderCh(){
   var ch = nat('updChannel') || 'stable';
   $('chS').className = 'btn' + (ch === 'stable' ? '' : ' g'); $('chB').className = 'btn' + (ch === 'beta' ? '' : ' g');
-  $('chNote').textContent = ch === 'beta' ? 'تجريبية: كل إصدار يصلك فور نشره. مناسبة لشاشة التجربة.' : 'ثابتة: الإصدار يصلك بعد يومين من نشره إذا لم تظهر فيه مشكلة. مناسبة لباقي الشاشات.';
+  $('chNote').textContent = ch === 'beta' ? 'تجريبية: كل إصدار يصلك فور نشره. مناسبة لشاشة التجربة.' : 'ثابتة: الإصدارات الكبيرة تصلك بعد يومين، وإصدارات «الإصلاح العاجل» تصلك فوراً. مناسبة لباقي الشاشات.';
 }
 $('chS').onclick = function () { nat('setUpdChannel', 'stable'); renderCh(); nat('updateCheck'); poll(); };
 $('chB').onclick = function () { nat('setUpdChannel', 'beta'); renderCh(); nat('updateCheck'); poll(); };

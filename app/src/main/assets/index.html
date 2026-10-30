@@ -813,13 +813,24 @@ safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe
 setInterval(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
 setInterval(function () { if (!document.hidden) renderStatus(); }, 5000);
 autoDetectPerf();
-/* البحث عن تحديث بهدوء كل 6 ساعات عند توفر الإنترنت */
-function autoUpdateCheck(){
+/* البحث عن تحديث بهدوء: عند تشغيل الشاشة ثم كل ساعة عند توفر الإنترنت، وتنبيه مرة لكل إصدار جديد */
+function autoUpdateCheck(boot){
   if (!HAS_NATIVE) return;
   var s = natJSON('status') || {}, last = +(lsGet('carlauncher.updChecked', 0));
-  if (s.internet && Date.now() - last > 6 * 3600000) { lsSet('carlauncher.updChecked', Date.now()); nat('updateCheck'); setTimeout(renderBanner, 8000); }
+  if (!s.internet) return;
+  if (!boot && Date.now() - last < 3600000) return;
+  lsSet('carlauncher.updChecked', Date.now()); nat('updateCheck');
+  setTimeout(function () {
+    _natCache = {}; renderBanner();
+    var us = natJSON('updateState');
+    if (us && us.phase === 'available' && +lsGet('carlauncher.updToast', 0) !== us.latest && !isDriving()) {
+      lsSet('carlauncher.updToast', us.latest);
+      toast('يوجد تحديث جديد (الإصدار ' + us.latest + ')', 'تثبيت', function () { openPage('update.html'); }, 12000);
+    }
+  }, 8000);
 }
-setTimeout(autoUpdateCheck, 15000);
+setTimeout(function () { autoUpdateCheck(true); }, 15000);
+setInterval(function () { if (!document.hidden) autoUpdateCheck(false); }, 10 * 60000);
 setInterval(autoUpdateCheck, 10 * 60000);
 setInterval(function () { processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest(); }, 5000);
 setInterval(function () { if (!restOpen() && !document.getElementById('cardEd')) safe('profile', autoProfileCheck); }, 60000);
