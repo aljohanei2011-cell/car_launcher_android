@@ -522,6 +522,21 @@ class Bridge(private val act: MainActivity) {
     // ===== سجل الأعطال ومراقب الإغلاق =====
     @JavascriptInterface fun logError(msg: String) = CrashLog.add(ctx, "page", msg)
     @JavascriptInterface fun crashLog(): String = CrashLog.read(ctx)
+
+    // ===== التنبيهات الزجاجية وسجل الأحداث =====
+    @JavascriptInterface fun alertsTake(): String = Alerts.take()
+    @JavascriptInterface fun events(): String = Events.read(ctx)
+    @JavascriptInterface fun eventsClear() = Events.clear(ctx)
+    @JavascriptInterface fun logEvent(msg: String) = Events.add(ctx, msg.take(160))
+    @JavascriptInterface fun setRestOpen(open: Boolean) { RestGuard.restOpen = open }
+
+    // ===== المباريات =====
+    @JavascriptInterface fun matchesConfig(): String = Matches.config(ctx).toString()
+    @JavascriptInterface fun setMatchesConfig(json: String) = Matches.setConfig(ctx, json)
+    @JavascriptInterface fun matchesState(): String = Matches.state(ctx)
+    @JavascriptInterface fun matchesTeams(league: String): String = Matches.teams(ctx, league)
+    @JavascriptInterface fun matchesTeamsFetch(league: String) = Matches.fetchTeams(ctx, league)
+    @JavascriptInterface fun matchesRefresh() { Matches.setConfig(ctx, Matches.config(ctx).toString()); Matches.tick(ctx) }
     @JavascriptInterface fun clearCrashLog() = CrashLog.clear(ctx)
     @JavascriptInterface fun canOverlay(): Boolean = Watchdog.canOverlay(ctx)
     @JavascriptInterface fun openOverlaySettings() {

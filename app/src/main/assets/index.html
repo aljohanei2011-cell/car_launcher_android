@@ -13,6 +13,10 @@
 .status{display:flex;align-items:center;gap:12px}
 .st{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:none;border:none;padding:0}
 .st svg{width:26px;height:26px}
+/* أحجام أيقونات الشريط العلوي: مساحة اللمس أكبر من الأيقونة */
+.status.sz-m{gap:18px}.status.sz-m .st{width:56px;height:52px;border-radius:16px;background:rgba(255,255,255,.07)}.status.sz-m .st svg{width:30px;height:30px}
+.status.sz-l{gap:22px}.status.sz-l .st{width:70px;height:60px;border-radius:18px;background:rgba(255,255,255,.09)}.status.sz-l .st svg{width:36px;height:36px}
+
 .st.off{opacity:.35}
 .clockTop{font-size:26px;font-weight:600;direction:ltr;font-variant-numeric:tabular-nums;white-space:nowrap}
 .chip{display:flex;align-items:center;gap:10px;height:44px;padding:0 8px 0 16px;border-radius:22px;background:rgba(232,192,97,.18);border:1.5px solid rgba(232,192,97,.7);color:#FFE6A8;font-size:17px;max-width:300px}
@@ -129,7 +133,7 @@ body.skin-light .flip .fl{background:rgba(255,255,255,.75)}
       <div class="right"><div class="logo" id="brand" aria-label="اسم السيارة"></div></div>
       <div class="center"><a class="banner" id="banner" href="maintenance.html"></a></div>
       <div class="left">
-        <span class="clockTop" id="clockTop" ondblclick="openRest()"></span>
+        <span class="clockTop" id="clockTop"></span>
         <div class="status" id="status"></div>
         <div id="remChip"></div>
       </div>
@@ -217,6 +221,7 @@ function openPage(url){
   var f = document.createElement('iframe');
   f.id = 'restFrame'; f.src = url;
   _ovl = { rest: /^rest\.html/.test(url), digits: prefs.digits, h24: prefs.h24, voice: !!nat('voiceEnabled') };
+  if (_ovl.rest) { nat('setRestOpen', true); lsSet('carlauncher.restWanted', Date.now()); nat('logEvent', 'فتح الاستراحة' + (/auto=1/.test(url) ? ' تلقائياً' : '')); }
   document.getElementById('stage').appendChild(f);
   // نخفي الرئيسية خلف النافذة حتى لا تستهلك الذاكرة والرسم
   setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); if (bg.getAttribute('src')) { bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } var wx = document.getElementById('wx'); if (wx) { wx.innerHTML = ''; _wxCur = null; } } }, 800);
@@ -227,6 +232,7 @@ window.closeRest = function () {
   var f = document.getElementById('restFrame');
   if (f) { try { f.src = 'about:blank'; } catch (e) {} f.remove(); }
   var o = _ovl || {}; _ovl = null;
+  if (o.rest) { nat('setRestOpen', false); lsSet('carlauncher.restWanted', 0); nat('logEvent', 'خروج من الاستراحة'); }
   nat('keepOn', false);
   lastTouch = Date.now();
   var np = loadPrefs();
@@ -295,14 +301,28 @@ var SI = {
 };
 function renderStatus(){
   var el = document.getElementById('status'), si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
-  if (!HAS_NATIVE) { el.innerHTML = si.bt ? '<span class="st off" style="color:#fff">' + SI.bt + '</span>' : ''; return; }
-  var s = natJSON('status') || {}, t = natJSON('trip') || {};
+  var tb = Object.assign({}, DEFAULT_PREFS.topBar, prefs.topBar || {});
+  el.className = 'status sz-' + (tb.size || 'm');
+  // المكان: بجوار الساعة، أو في الطرف الآخر بجوار اسم السيارة (بعيداً عن الساعة)
+  var host = tb.place === 'brand' ? document.querySelector('.top .right') : document.querySelector('.top .left');
+  if (host && el.parentNode !== host) { if (tb.place === 'brand') host.appendChild(el); else host.insertBefore(el, document.getElementById('remChip')); }
+  var order = (tb.order || DEFAULT_PREFS.topBar.order).slice();
+  ['clean', 'gps', 'wifi', 'bt'].forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
+  var s = HAS_NATIVE ? (natJSON('status') || {}) : {}, t = HAS_NATIVE ? (natJSON('trip') || {}) : {};
+  var B = {
+    clean: function () { return prefs.cleanBtn !== false ? '<button class="st" style="color:#fff" onclick="cleanAsk()" aria-label="إغلاق التطبيقات">' + SI.clean + '</button>' : ''; },
+    gps: function () { return si.gps ? '<button class="st' + (t.gps ? '' : ' off') + '" style="color:' + (t.gps ? '#5AD1A0' : '#fff') + '" onclick="nat(\'openSystem\',\'gps\')" aria-label="GPS ' + (t.gps ? 'متصل' : 'يبحث') + '">' + SI.gps + '</button>' : ''; },
+    wifi: function () { return si.wifi ? '<button class="st' + (s.wifi ? '' : ' off') + '" style="color:' + (s.internet ? '#fff' : '#F2C879') + '" onclick="nat(\'openSystem\',\'wifi\')" aria-label="واي فاي">' + SI.wifi(s.wifi ? (s.wifiLevel == null ? 3 : s.wifiLevel) : -1) + '</button>' : ''; },
+    bt: function () { return si.bt ? '<button class="st' + (s.bt === 'connected' || s.bt === 'on' ? '' : ' off') + '" style="color:' + (s.bt === 'connected' ? '#6FA8FF' : '#fff') + '" onclick="nat(\'openSystem\',\'bt\')" aria-label="بلوتوث">' + SI.bt + '</button>' : ''; }
+  };
   var html = '';
-  if (si.gps) html += '<button class="st' + (t.gps ? '' : ' off') + '" style="color:' + (t.gps ? '#5AD1A0' : '#fff') + '" onclick="nat(\'openSystem\',\'gps\')" aria-label="GPS ' + (t.gps ? 'متصل' : 'يبحث') + '">' + SI.gps + '</button>';
-  if (si.wifi) html += '<button class="st' + (s.wifi ? '' : ' off') + '" style="color:' + (s.internet ? '#fff' : '#F2C879') + '" onclick="nat(\'openSystem\',\'wifi\')" aria-label="واي فاي">' + SI.wifi(s.wifi ? (s.wifiLevel == null ? 3 : s.wifiLevel) : -1) + '</button>';
-  if (si.bt) html += '<button class="st' + (s.bt === 'connected' || s.bt === 'on' ? '' : ' off') + '" style="color:' + (s.bt === 'connected' ? '#6FA8FF' : '#fff') + '" onclick="nat(\'openSystem\',\'bt\')" aria-label="بلوتوث">' + SI.bt + '</button>';
-  if (prefs.cleanBtn !== false) html = '<button class="st" style="color:#fff" onclick="cleanAll()" aria-label="إغلاق التطبيقات">' + SI.clean + '</button>' + html;
-  el.innerHTML = html;
+  order.forEach(function (k) { if (B[k]) html += B[k](); });
+  if (el._h !== html) { el.innerHTML = html; el._h = html; }
+}
+/* الضغط على زر الإغلاق يطلب تأكيداً (يمنع الضغط الخطأ) */
+function cleanAsk(){
+  glassAlert({ type: 'drive', title: 'إغلاق كل التطبيقات؟', sub: 'يُغلق ما يعمل في الخلفية' + (!LITE && nat('cleanAvail') === true ? ' ويمسح قائمة الأخيرة' : ''), pos: 'tc',
+    buttons: [['إغلاق', cleanAll], ['إلغاء', null]], ms: 7000 });
 }
 /* زر «إغلاق التطبيقات»: يوقف تطبيقات الخلفية دائماً، ويمسح قائمة «الأخيرة» إن فُعّل إذن إمكانية الوصول */
 var _cleaning = false;
@@ -514,6 +534,26 @@ card('weather', 'الطقس', function (o) {
     (w.max != null && !partHidden(o, 'range') ? 'العظمى ' + Math.round(w.max) + '° · الصغرى ' + Math.round(w.min) + '°' : '') + '</div></div>' +
     '<span class="k-big" style="font-size:3.6em">' + Math.round(w.temp) + '°</span></div>';
 });
+/* ===== المباريات ===== */
+function teamBadge(t, big){
+  var col = t.color ? '#' + t.color.replace('#', '') : '#3a5a8a', sz = big ? '2.6em' : '2.1em';
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:.25em;min-width:0;flex:1"><span style="width:' + sz + ';height:' + sz + ';border-radius:50%;background:' + col + ';border:2px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)">' + esc((t.ar || t.name || '?').replace(/^ال/, '').charAt(0)) + '</span><span style="font-size:.95em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">' + esc(t.ar || t.name) + '</span></div>';
+}
+card('matches', 'المباريات', function (o) {
+  var m = matchesData(), ids = (m.cfg.teams || []).map(function (t) { return t.id; });
+  var head = '<a href="matches.html" class="k-row" style="color:inherit;text-decoration:none"><span class="k-lbl">المباريات</span>';
+  if (!HAS_NATIVE || !m.cfg.on || !ids.length) return head + '</a><div class="k-sub" style="white-space:normal;flex:1">اختر فريقك لتظهر مبارياته ونتائجه هنا</div><a class="k-btn" style="align-self:flex-start" href="matches.html">اختيار الفريق</a>';
+  var e = m.live || m.next || m.last;
+  if (!e) return head + '</a><div class="k-sub" style="white-space:normal;flex:1">' + (m.st.error ? 'يحتاج إنترنت لتحميل المواعيد' : m.st.at ? 'لا توجد مباراة خلال 3 أسابيع' : 'جارٍ تحميل المواعيد…') + '</div>';
+  var mid, pill;
+  function sc(sz){ return '<div class="k-big" style="font-size:' + sz + ';display:flex;gap:.25em;white-space:nowrap;direction:rtl"><span>' + esc(e.home.score || '0') + '</span><span style="opacity:.6">-</span><span>' + esc(e.away.score || '0') + '</span></div>'; }
+  if (e.state === 'in') { mid = sc('2.6em'); pill = '<span style="background:rgba(255,80,80,.25);color:#FF9A9A;border-radius:10px;padding:.15em .6em;font-size:.85em">● مباشر ' + esc(e.clock || '') + '</span>'; }
+  else if (e.state === 'pre') { mid = '<div style="text-align:center"><div class="k-mid" style="font-size:1.5em;white-space:nowrap">' + fmt({ hour: 'numeric', minute: '2-digit' }, 'ar-u-nu-latn', new Date(e.date)) + '</div><div class="k-sub">' + esc(matchWhen(e.date).split(' ')[0]) + '</div></div>'; pill = '<span class="k-sub">' + esc(leagueName(e.league)) + (e.tv ? ' · ' + esc(e.tv) : '') + '</span>'; }
+  else { var r = matchResult(e, ids); mid = sc('2.4em'); pill = '<span style="color:' + r[1] + ';font-size:.9em">' + r[0] + (m.next ? '<span class="k-sub"> · القادمة: ' + esc(matchWhen(m.next.date)) + '</span>' : '') + '</span>'; }
+  return head + (e.state === 'in' ? '<span style="width:.6em;height:.6em;border-radius:50%;background:#FF5A5A"></span>' : '') + '</a>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:.6em;flex:1;min-height:0">' + teamBadge(e.home) + mid + teamBadge(e.away) + '</div>' +
+    '<div style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + pill + '</div>';
+});
 card('apps', 'تطبيقاتي المفضلة', function () {
   var fav = (prefs.favApps || []).slice(0, 6);
   if (!fav.length) return '<span class="k-lbl">تطبيقاتي</span><div class="k-sub">اختر تطبيقاتك المفضلة</div><a class="k-btn" style="align-self:flex-start" href="apps.html?pick=fav">اختيار</a>';
@@ -522,9 +562,11 @@ card('apps', 'تطبيقاتي المفضلة', function () {
   return h + '</div>';
 });
 card('notes', 'الملاحظات', function () {
-  var n = loadNotes();
-  return '<a href="notes.html" style="display:contents"><div class="k-row"><span class="k-lbl">ملاحظاتي</span><span class="k-sub" style="font-size:.95em">' + n.length + '</span></div>' +
-    '<div class="k-clamp" style="flex:1;margin-top:.5em">' + (n.length ? esc(n[0].text) : '<span style="color:#9FB0CC">لا توجد ملاحظات. اضغط لإضافة ملاحظة.</span>') + '</div></a>';
+  var n = sortedNotes(), f = n[0], cat = f ? NOTE_CATS[noteCat(f)] : null;
+  var body = !n.length ? '<span style="color:#9FB0CC">لا توجد ملاحظات. اضغط لإضافة ملاحظة.</span>' :
+    (f.list ? noteLines(f).slice(0, 4).map(function (x, i) { var ck = (f.checked || []).indexOf(i) >= 0; return '<div style="' + (ck ? 'text-decoration:line-through;opacity:.55' : '') + '">' + (ck ? '☑ ' : '☐ ') + esc(x) + '</div>'; }).join('') : esc(f.text));
+  return '<a href="notes.html" style="display:contents"><div class="k-row"><span class="k-lbl">ملاحظاتي</span><span class="k-sub" style="font-size:.95em">' + (f && f.pin ? '📌 ' : '') + n.length + '</span></div>' +
+    '<div class="k-clamp" style="flex:1;margin-top:.5em;' + (cat ? 'border-right:.25em solid ' + cat[1] + ';padding-right:.6em' : '') + '">' + body + '</div></a>';
 });
 card('reminders', 'تذكيراتي', function () {
   var a = activeReminders(), all = loadRems().filter(function (r) { return !r.done; });
@@ -856,9 +898,55 @@ function autoUpdateCheck(boot){
 setTimeout(function () { autoUpdateCheck(true); }, 15000);
 setInterval(function () { if (!document.hidden) autoUpdateCheck(false); }, 10 * 60000);
 setInterval(autoUpdateCheck, 10 * 60000);
-setInterval(function () { processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest(); }, 5000);
+setInterval(function () {
+  var before = loadNotes().length;
+  processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest();
+  var notes = loadNotes();
+  if (notes.length > before) glassAlert({ type: 'note', title: 'ملاحظة جديدة من جوالك', sub: notes[0].text.split('\n')[0], page: 'notes.html', buttons: [['فتح', function () { openPage('notes.html'); }]] });
+  remAlerts();
+}, 5000);
+/* ===== التنبيهات الزجاجية ===== */
+/* التذكير عند وقته: مرة لكل موعد، مع التأجيل. الشريحة بجوار الساعة تبقى حتى «تم» */
+var _remShown = lsGet('carlauncher.remShown', {});
+function remAlerts(){
+  var a = activeReminders(), day = todayStr(), changed = false;
+  a.forEach(function (r) {
+    var k = r.id + ':' + (r.kind === 'once' ? (r.snoozeUntil || 0) : day + (r.snoozeUntil || ''));
+    if (_remShown[k]) return;
+    _remShown[k] = Date.now(); changed = true;
+    glassAlert({ type: 'rem', title: r.text, sub: 'تذكير' + (r.kind === 'place' ? ' عند المكان' : ''), sticky: true,
+      buttons: [['10 د', function () { snoozeReminder(r.id, 10); renderRemChip(); }], ['ساعة', function () { snoozeReminder(r.id, 60); renderRemChip(); }], ['تم', function () { dismissReminder(r.id); renderRemChip(); tick(); }]] });
+    if (prefs.alertSpeak && nat('voiceEnabled')) nat('speak', 'تذكير: ' + r.text);
+  });
+  if (changed) {
+    var cut = Date.now() - 3 * 86400000; Object.keys(_remShown).forEach(function (k) { if (_remShown[k] < cut) delete _remShown[k]; });
+    lsSet('carlauncher.remShown', _remShown);
+  }
+}
+/* ما وصل من الخدمة: صلاة، مباريات، قيادة، أو تأجيل/إنهاء تذكير من فوق الخرائط */
+function nativeAlerts(){
+  if (!HAS_NATIVE) return;
+  var list = []; try { list = JSON.parse(nat('alertsTake') || '[]'); } catch (e) {}
+  list.forEach(function (o) {
+    if (o.type === 'rem') {
+      if (!o.done && !o.snooze) return; // التذكيرات تعرضها الواجهة بنفسها
+      var txt = o.sub || o.title, rr = loadRems().filter(function (r) { return r.text === txt && !r.done; })[0];
+      if (rr) { if (o.done) dismissReminder(rr.id); else { var l = loadRems(); l.forEach(function (r) { if (r.id === rr.id) r.snoozeUntil = o.snooze; }); saveRems(l); } renderRemChip(); }
+      return;
+    }
+    glassAlert({ type: o.type, title: o.title, sub: o.sub, page: o.page && o.page !== 'index.html' ? o.page : '' });
+    if (o.type === 'match') tick();
+  });
+}
+setInterval(function () { if (!document.hidden) nativeAlerts(); }, 2000);
+/* «ابقَ في الاستراحة»: إذا أُغلقت الواجهة والاستراحة مفتوحة، نرجع لها عند إعادة التشغيل */
+setTimeout(function () {
+  var w = +lsGet('carlauncher.restWanted', 0);
+  if (w && prefs.stayRest !== false && Date.now() - w < 3 * 3600000 && !restOpen()) { nat('logEvent', 'رجوع للاستراحة بعد إغلاق الواجهة'); openRest('?auto=1'); }
+  else if (w) lsSet('carlauncher.restWanted', 0);
+}, 1200);
 setInterval(function () { if (!restOpen() && !document.getElementById('cardEd')) safe('profile', autoProfileCheck); }, 60000);
-setInterval(function () { if (!restOpen()) { applyPrefs('home', prefs); renderWeatherFx(); } pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
+setInterval(function () { if (_ovl && _ovl.rest) lsSet('carlauncher.restWanted', Date.now()); if (!restOpen()) { applyPrefs('home', prefs); renderWeatherFx(); } pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 /* الواجهة فُتحت بنجاح: نصفّر عداد وضع الأمان، ونأخذ نسخة احتياطية تلقائية أسبوعياً وعند تغيّر الإصدار */
 var BOOT_T0 = window.BOOT_T0 || 0;
 try { lsSet('carlauncher.startMs', Math.round(performance.now())); } catch (e) {}

@@ -120,26 +120,28 @@ var SI = {
   car: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
   worship: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
   system: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  alerts: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/>',
   check: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
   update: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'
 };
 function svgI(k, col){ return '<svg viewBox="0 0 24 24" fill="none" stroke="' + (col || 'currentColor') + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (SI[k] || SI.overview) + '</svg>'; }
-var TABS = [['overview', 'نظرة عامة'], ['look', 'المظهر'], ['home', 'الواجهة والبطاقات'], ['clock', 'الساعة والخطوط'], ['restT', 'الاستراحة'], ['prayer', 'الصلاة'],
+var TABS = [['overview', 'نظرة عامة'], ['look', 'المظهر'], ['home', 'الواجهة والبطاقات'], ['clock', 'الساعة والخطوط'], ['restT', 'الاستراحة'], ['prayer', 'الصلاة'], ['alerts', 'التنبيهات والمباريات'],
   ['drive', 'القيادة'], ['comm', 'الاتصال والصوت'], ['car', 'السيارة'], ['worship', 'العبادة'], ['system', 'النظام والأدوات']];
 /* دوال الرسم لكل قسم (بالترتيب) */
-var CAT_FN = { look: ['renderLook'], home: ['renderHome'], clock: ['renderHome', 'renderLook'], restT: ['renderRest', 'renderLook'], prayer: ['renderPrayer'],
+var CAT_FN = { look: ['renderLook'], home: ['renderHome'], clock: ['renderHome', 'renderLook'], restT: ['renderRest', 'renderLook'], prayer: ['renderPrayer'], alerts: ['renderAlerts'],
   drive: ['renderPrayer', 'renderSystem'], comm: ['renderVoice', 'renderPrayer', 'renderApps'], car: ['renderApps'], worship: ['renderPrayer'], system: ['renderSystem'] };
 /* عنوان البطاقة ← القسم. «*» تعني خيارات متقدمة (مطوية) */
 var SEC_CAT = {
   'الثيم': 'look', 'اسم السيارة أعلى الشاشة': 'look', 'خلفية الرئيسية': 'look', 'الوضع الليلي': 'look', 'وضوح البطاقات': 'look',
-  'تصميم الواجهة': 'home', 'الصفحات والبطاقات': 'home', 'حجم النصوص وتحرير البطاقات': 'home', 'القائمة السفلية': 'home', 'التخطيطات المحفوظة': 'home*', 'أيقونات الحالة بجوار الساعة': 'home*',
+  'تصميم الواجهة': 'home', 'الصفحات والبطاقات': 'home', 'حجم النصوص وتحرير البطاقات': 'home', 'القائمة السفلية': 'home', 'التخطيطات المحفوظة': 'home*', 'الشريط العلوي (الأيقونات)': 'home',
   'شكل الساعة': 'clock', 'الوقت والأرقام': 'clock', 'الخطوط': 'clock',
   'نمط شاشة الاستراحة': 'restT', 'ما يظهر': 'restT', 'متى تعمل': 'restT', 'مدة بقائها': 'restT', 'خلفية الاستراحة': 'restT', 'الأدعية': 'restT*',
   'المدينة (لمواقيت الصلاة)': 'prayer', 'تنبيه الصلاة': 'prayer', 'الصوت': 'prayer', 'تذكيرات': 'prayer',
   'مساعد القيادة': 'drive', 'تنبيه السرعة': 'drive', 'تنبيه الاستراحة': 'drive', 'القيادة والإنترنت': 'drive', 'الإضاءة الليلية': 'drive', 'عند تشغيل السيارة': 'drive', 'رسالة الوصول': 'drive*',
   'الأوامر الصوتية': 'comm', 'المكالمات والرسائل': 'comm', 'التطبيقات': 'comm', 'التحكم بالموسيقى من الرئيسية': 'comm', 'وضع الركاب': 'comm*',
+  'شكل التنبيهات ومكانها': 'alerts', 'مكان كل نوع': 'alerts*', 'الظهور فوق الخرائط': 'alerts', 'المباريات': 'alerts', 'سجل الأحداث': 'system*',
   'السيارة': 'car', 'تكلفة الوقود': 'car',
   'العبادة': 'worship', 'دعاء السفر': 'worship',
   'أدوات الشاشة': 'system', 'النسخ الاحتياطية التلقائية': 'system*', 'التحديث والنسخ الاحتياطي': 'system', 'الواجهة الافتراضية': 'system', 'الأداء': 'system', 'الرقم السري': 'system', 'حول التطبيق': 'system',
@@ -658,6 +660,9 @@ function renderSystem(){
   rr.appendChild(r1); rr.appendChild(r2); rr.appendChild(r3); s.appendChild(rr);
   var bk = el('a', 'opt sm', 'أخذ نسخة احتياطية أولاً (من الجوال)'); bk.href = 'upload.html'; bk.style.display = 'flex'; bk.style.alignItems = 'center'; bk.style.alignSelf = 'flex-start'; s.appendChild(bk);
 
+  s = section('سجل الأحداث', 'متى ظهرت الواجهة واختفت، وما الذي فُتح فوقها، ولماذا خرجت الاستراحة. يساعد على معرفة سبب أي مشكلة.');
+  var ev = el('a', 'opt sm on', 'عرض سجل الأحداث'); ev.href = 'events.html'; ev.style.display = 'flex'; ev.style.alignItems = 'center'; ev.style.alignSelf = 'flex-start'; s.appendChild(ev);
+
   s = section('الاستقرار');
   toggle(s, 'إعادة فتح الواجهة تلقائياً إذا أغلقها الجهاز', 'watchdog', 'إذا أغلقت الشاشة رفيق الطريق لتوفير الذاكرة وهو ظاهر، يعود وحده.');
   if (prefs.watchdog !== false && HAS_NATIVE && !nat('canOverlay')) {
@@ -697,7 +702,7 @@ function renderSystem(){
   lm.appendChild(fr); s.appendChild(lm);
   toggle(s, 'تحرير تلقائي عند فتح شاشة الاستراحة', 'ramOnRest');
   toggle(s, 'تحرير تلقائي بعد تشغيل السيارة', 'ramOnBoot');
-  toggle(s, 'زر «إغلاق التطبيقات» بجوار الساعة', 'cleanBtn', 'ضغطة واحدة توقف التطبيقات الشغالة في الخلفية.');
+  toggle(s, 'زر «إغلاق التطبيقات» بجوار الساعة', 'cleanBtn', 'يطلب تأكيداً ثم يوقف التطبيقات الشغالة في الخلفية.');
   if (!LITE && HAS_NATIVE) {
     var on = nat('cleanAvail') === true, ca = el('div', 'line');
     ca.appendChild(el('span', '', 'مسح قائمة التطبيقات الأخيرة مثل الجوال:'));
@@ -898,13 +903,66 @@ function renderHome(){
   }
   toggle(s, 'إظهار أسماء الأزرار', 'dockLabels');
 
-  s = section('أيقونات الحالة بجوار الساعة', 'تعرض الحالة الحقيقية، والضغط عليها يفتح إعدادها في الشاشة.');
+  s = section('الشريط العلوي (الأيقونات)', 'كبّر الأيقونات وأبعدها عن بعض حتى لا تضغط أيقونة بدل أخرى.');
+  var tb = Object.assign({}, DEFAULT_PREFS.topBar, prefs.topBar || {});
+  function setTb(){ prefs.topBar = tb; upd(); }
+  s.appendChild(el('span', 'note', 'الحجم:'));
+  opts(s, [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']], tb.size, function (k) { tb.size = k; setTb(); }, true);
+  s.appendChild(el('span', 'note', 'المكان:'));
+  opts(s, [['clock', 'بجوار الساعة'], ['brand', 'بجوار اسم السيارة (بعيداً عن الساعة)']], tb.place, function (k) { tb.place = k; setTb(); }, true);
   var si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
-  var so = el('div', 'opts');
-  [['bt', 'البلوتوث'], ['wifi', 'الواي فاي'], ['gps', 'GPS']].forEach(function (x) {
-    var b = el('button', 'opt sm' + (si[x[0]] ? ' on' : ''), x[1]); b.onclick = function () { si[x[0]] = !si[x[0]]; prefs.statusIcons = si; upd(); }; so.appendChild(b);
+  var TBN = { clean: 'إغلاق التطبيقات', gps: 'GPS', wifi: 'الواي فاي', bt: 'البلوتوث' };
+  var order = (tb.order || []).slice(); Object.keys(TBN).forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
+  s.appendChild(el('span', 'note', 'الترتيب والإظهار (الأول هو الأقرب للساعة):'));
+  order.forEach(function (k, i) {
+    var row = el('div', 'line'); row.appendChild(el('span', '', TBN[k]));
+    var o = el('div', 'opts'); o.style.marginRight = 'auto';
+    var shown = k === 'clean' ? prefs.cleanBtn !== false : si[k];
+    var sh = el('button', 'opt sm' + (shown ? ' on' : ''), shown ? 'ظاهرة' : 'مخفية');
+    sh.onclick = function () { if (k === 'clean') prefs.cleanBtn = !shown; else { si[k] = !shown; prefs.statusIcons = si; } upd(); };
+    var up = el('button', 'opt sm', '▲'); up.disabled = i === 0; up.onclick = function () { order.splice(i - 1, 0, order.splice(i, 1)[0]); tb.order = order; setTb(); };
+    var dn = el('button', 'opt sm', '▼'); dn.disabled = i === order.length - 1; dn.onclick = function () { order.splice(i + 1, 0, order.splice(i, 1)[0]); tb.order = order; setTb(); };
+    o.appendChild(sh); o.appendChild(up); o.appendChild(dn); row.appendChild(o); s.appendChild(row);
   });
-  s.appendChild(so);
+}
+
+/* ===== التنبيهات والمباريات ===== */
+function renderAlerts(){
+  var s = section('شكل التنبيهات ومكانها', 'تنبيهات التذكير والملاحظات والمباريات والصلاة تظهر بتصميم زجاجي خفيف.');
+  s.appendChild(el('span', 'note', 'المكان:'));
+  opts(s, Object.keys(ALERT_POS).map(function (k) { return [k, ALERT_POS[k]]; }), prefs.alertPos || 'tc', function (k) { prefs.alertPos = k; upd(); preview('rem'); }, true);
+  s.appendChild(el('span', 'note', 'مدة الظهور:'));
+  opts(s, [[4, '4 ثوانٍ'], [6, '6 ثوانٍ'], [10, '10 ثوانٍ'], [15, '15 ثانية']], +prefs.alertSec || 6, function (k) { prefs.alertSec = k; upd(); }, true);
+  if (!LITE) toggle(s, 'قراءة التذكير بالصوت', 'alertSpeak', 'يحتاج تفعيل الأوامر الصوتية.');
+  var pr = el('div', 'opts');
+  [['rem', 'معاينة تذكير'], ['note', 'ملاحظة'], ['match', 'مباراة'], ['prayer', 'صلاة']].forEach(function (x) { var b = el('button', 'opt sm', x[1]); b.onclick = function () { preview(x[0]); }; pr.appendChild(b); });
+  s.appendChild(pr);
+  if (LITE || prefs.perf === 'on') s.appendChild(el('span', 'note', 'وضع الأداء مفعّل: التنبيه شبه شفاف بدون ضبابية (أخف على الشاشة).'));
+
+  s = section('مكان كل نوع', 'اتركه «مثل العام» أو اختر مكاناً خاصاً لكل نوع.');
+  var pt = Object.assign({}, prefs.alertPosT || {});
+  [['rem', 'التذكير'], ['note', 'الملاحظات'], ['match', 'المباريات'], ['prayer', 'الصلاة']].forEach(function (x) {
+    s.appendChild(el('span', 'note', x[1] + ':'));
+    opts(s, [['', 'مثل العام']].concat(Object.keys(ALERT_POS).map(function (k) { return [k, ALERT_POS[k]]; })), pt[x[0]] || '', function (k) { pt[x[0]] = k; prefs.alertPosT = pt; upd(); preview(x[0]); }, true);
+  });
+
+  s = section('الظهور فوق الخرائط', 'والخرائط أو تطبيق آخر مفتوح: تنبيه زجاجي صغير فوقه لا يغطي الخريطة، ويختفي وحده.');
+  toggle(s, 'التنبيه الزجاجي فوق التطبيقات', 'glassOverlay', 'إذا أطفأته يظهر كإشعار عادي من النظام.');
+  if (HAS_NATIVE && !nat('canOverlay')) {
+    var ov = el('button', 'opt sm on', 'السماح بالظهور فوق التطبيقات'); ov.onclick = function () { nat('openOverlaySettings'); };
+    s.appendChild(ov); s.appendChild(el('span', 'note', 'بدون هذا الإذن يظهر التنبيه كإشعار عادي.'));
+  }
+
+  s = section('المباريات', 'مواعيد فريقك ونتائجه مباشرة، وتنبيهات تختارها: قبل المباراة، البداية، الأهداف، النهاية.');
+  var m = matchesData();
+  s.appendChild(el('span', 'note', m.cfg.on && (m.cfg.teams || []).length ? 'فريقك: ' + m.cfg.teams.map(function (t) { return t.ar || t.name; }).join('، ') : 'لم تختر فريقاً بعد.'));
+  var mb = el('a', 'opt sm on', 'إعداد المباريات والفريق'); mb.href = 'matches.html'; mb.style.display = 'flex'; mb.style.alignItems = 'center'; mb.style.alignSelf = 'flex-start';
+  s.appendChild(mb);
+  s.appendChild(el('span', 'note', 'لإضافة بطاقة المباريات للرئيسية: اضغط مطولاً على أي بطاقة ▸ النوع ▸ المباريات.'));
+}
+function preview(type){
+  var X = { rem: ['مرّ على محطة البنزين', 'تذكير'], note: ['ملاحظة جديدة من جوالك', 'خبز، حليب، ماء'], match: ['هدف للهلال (67\')', 'الهلال 2، النصر 1'], prayer: ['صلاة العشاء بعد 10 دقائق', 'استعد للصلاة'] }[type];
+  glassAlert({ type: type, title: X[0], sub: X[1], buttons: type === 'rem' ? [['10 د', null], ['تم', null]] : [['تم', null]] });
 }
 
 /* ===== تبويب الاستراحة ===== */
@@ -929,10 +987,11 @@ function renderRest(){
     s.appendChild(el('span', 'note', prefs.restAuto === 'stopped' ? 'بعد توقف السيارة (GPS) لمدة:' : 'بعد عدم اللمس لمدة:'));
     opts(s, [[2, 'دقيقتان'], [5, '5 دقائق'], [10, '10 دقائق'], [15, '15 دقيقة']], prefs.restAutoMin, function (k) { prefs.restAutoMin = k; upd(); }, true);
   }
-  s.appendChild(el('span', 'note', 'تلميح: الضغط مرتين على الساعة في الرئيسية يفتح الاستراحة مباشرة.'));
+  s.appendChild(el('span', 'note', 'تلميح: الضغط مرتين على بطاقة الساعة في الرئيسية يفتح الاستراحة مباشرة.'));
 
   s = section('مدة بقائها');
   opts(s, [[0, 'حتى أخرج منها'], [5, '5 دقائق'], [15, '15 دقيقة'], [30, '30 دقيقة']], prefs.restReturn, function (k) { prefs.restReturn = k; upd(); }, true);
+  toggle(s, 'ابقَ في الاستراحة', 'stayRest', 'إذا أخرجها النظام بدون لمس منك (أو أُغلقت الواجهة) ترجع لها تلقائياً. مع إذن «إغلاق التطبيقات» تعود حتى لو ظهرت قائمة التطبيقات الأخيرة.');
 
   s = section('الأدعية', 'اضغط على الدعاء لإخفائه أو إظهاره، وأضف أدعيتك.');
   var hidden = (prefs.hiddenDuas || []).slice();

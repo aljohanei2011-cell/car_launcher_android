@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>المباريات</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="page.css">
+<style>
+.scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:12px}
+.scroll::-webkit-scrollbar{display:none}
+.lbl{font-size:16px;color:#9FB0CC;min-width:150px}
+.mt{display:flex;align-items:center;gap:12px;border-radius:16px;background:#0f172d;border:1px solid #1d2747;padding:12px 16px;font-size:18px}
+.mt.live{border-color:#FF6B6B;background:#2a1420}
+.mt .tm{flex:1;display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden}
+.mt .sc{font-size:22px;font-weight:700;min-width:76px;display:flex;justify-content:center;gap:6px}
+.mt .w{font-size:14px;color:#9FB0CC;min-width:130px;text-align:left}
+.dot{width:26px;height:26px;border-radius:50%;flex:none;border:1.5px solid rgba(255,255,255,.5)}
+.teams{display:flex;flex-wrap:wrap;gap:8px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page">
+    <div class="ptop">
+      <a class="icon-btn" href="index.html" aria-label="الرئيسية" style="width:48px;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5"/></svg></a>
+      <span class="ptitle">المباريات</span>
+      <button class="pbtn g" id="refresh" style="margin-right:auto">تحديث الآن</button>
+      <button class="pbtn" id="onoff"></button>
+    </div>
+    <div class="pcols" style="grid-template-columns:1fr 1.15fr">
+      <div class="pcard"><span class="ph">مباريات فريقك</span><div class="plist" id="list"></div><span class="pnote" id="src"></span></div>
+      <div class="pcard"><div class="scroll" id="cfg"></div></div>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var prefs = loadPrefs(); applyPrefs('home', prefs);
+document.body.style.background = '#0a0f1f';
+function $(i){ return document.getElementById(i); }
+function el(t, c, x){ var e = document.createElement(t); if (c) e.className = c; if (x !== undefined) e.textContent = x; return e; }
+var DEF = { on: false, teams: [], leagues: ['ksa.1'], pre: 30, start: true, goal: true, goalAll: false, end: true, sound: true, speak: false };
+var cfg = DEF; try { cfg = Object.assign({}, DEF, JSON.parse(nat('matchesConfig') || '{}')); } catch (e) {}
+var pickLeague = 'ksa.1', teamsCache = {};
+function save(){ nat('setMatchesConfig', JSON.stringify(cfg)); renderCfg(); }
+function row(label){ var r = el('div', 'prow'); if (label) r.appendChild(el('span', 'lbl', label)); return r; }
+function chip(r, txt, on, fn){ var b = el('button', 'pbtn sm' + (on ? ' on' : ' g'), txt); b.onclick = fn; r.appendChild(b); return b; }
+
+function loadTeams(lg){
+  var raw = nat('matchesTeams', lg), d = null;
+  try { d = raw ? JSON.parse(raw) : null; } catch (e) {}
+  if (!d || (!d.teams && Date.now() - (d.at || 0) > 60000) || (d.teams && Date.now() - d.at > 7 * 86400000)) {
+    if (!teamsCache[lg + '_req']) { teamsCache[lg + '_req'] = 1; nat('matchesTeamsFetch', lg); setTimeout(function () { teamsCache[lg + '_req'] = 0; renderCfg(); }, 3500); }
+  }
+  return d;
+}
+
+function renderCfg(){
+  var c = $('cfg'); c.innerHTML = '';
+  $('onoff').textContent = cfg.on ? 'مفعّلة ✓' : 'تفعيل المباريات';
+  $('onoff').className = 'pbtn' + (cfg.on ? '' : ' g');
+  if (!HAS_NATIVE) c.appendChild(el('div', 'pnote', 'تعمل على الشاشة فقط.'));
+
+  c.appendChild(el('span', 'ph', 'فريقك (حتى فريقين)'));
+  var mine = row('');
+  if (!cfg.teams.length) mine.appendChild(el('span', 'pnote', 'لم تختر فريقاً بعد.'));
+  cfg.teams.forEach(function (t) { chip(mine, (t.ar || t.name) + ' ✕', true, function () { cfg.teams = cfg.teams.filter(function (x) { return x.id !== t.id; }); save(); }); });
+  c.appendChild(mine);
+  var lr = row('اختر من:');
+  MATCH_LEAGUES.forEach(function (l) { chip(lr, l[1], pickLeague === l[0], function () { pickLeague = l[0]; renderCfg(); }); });
+  c.appendChild(lr);
+  var d = loadTeams(pickLeague), tw = el('div', 'teams');
+  if (!d || (!d.teams && !d.error)) tw.appendChild(el('span', 'pnote', 'جارٍ تحميل الفرق… (يحتاج إنترنت)'));
+  else if (d.error && !d.teams) tw.appendChild(el('span', 'pnote', 'تعذّر تحميل الفرق. تأكد من الإنترنت ثم اضغط البطولة مرة أخرى.'));
+  else d.teams.slice().sort(function (a, b) { return (a.ar === a.name) - (b.ar === b.name) || a.ar.localeCompare(b.ar, 'ar'); }).forEach(function (t) {
+    var on = cfg.teams.some(function (x) { return x.id === t.id; });
+    chip(tw, t.ar, on, function () {
+      if (on) cfg.teams = cfg.teams.filter(function (x) { return x.id !== t.id; });
+      else { if (cfg.teams.length >= 2) cfg.teams.shift(); cfg.teams.push({ id: t.id, name: t.name, ar: t.ar, color: t.color }); cfg.on = true; }
+      if (cfg.leagues.indexOf(pickLeague) < 0) cfg.leagues.push(pickLeague);
+      save();
+    });
+  });
+  c.appendChild(tw);
+
+  c.appendChild(el('span', 'ph', 'البطولات التي تتابعها'));
+  var br = row('');
+  MATCH_LEAGUES.forEach(function (l) {
+    var on = cfg.leagues.indexOf(l[0]) >= 0;
+    chip(br, l[1], on, function () { if (on) cfg.leagues = cfg.leagues.filter(function (x) { return x !== l[0]; }); else cfg.leagues.push(l[0]); if (!cfg.leagues.length) cfg.leagues = ['ksa.1']; save(); });
+  });
+  c.appendChild(br);
+
+  c.appendChild(el('span', 'ph', 'التنبيهات'));
+  var r1 = row('قبل المباراة');
+  [[0, 'بدون'], [15, '15 د'], [30, '30 د'], [60, 'ساعة']].forEach(function (x) { chip(r1, x[1], cfg.pre === x[0], function () { cfg.pre = x[0]; save(); }); });
+  c.appendChild(r1);
+  var r2 = row('الأهداف');
+  [['mine', 'أهداف فريقي'], ['all', 'كل الأهداف'], ['off', 'بدون']].forEach(function (x) {
+    var cur = !cfg.goal ? 'off' : cfg.goalAll ? 'all' : 'mine';
+    chip(r2, x[1], cur === x[0], function () { cfg.goal = x[0] !== 'off'; cfg.goalAll = x[0] === 'all'; save(); });
+  });
+  c.appendChild(r2);
+  var r3 = row('أخرى');
+  chip(r3, 'بداية المباراة', cfg.start, function () { cfg.start = !cfg.start; save(); });
+  chip(r3, 'النهاية', cfg.end, function () { cfg.end = !cfg.end; save(); });
+  chip(r3, 'نغمة مع الهدف', cfg.sound, function () { cfg.sound = !cfg.sound; save(); });
+  if (!LITE) chip(r3, 'قراءة بالصوت', cfg.speak, function () { cfg.speak = !cfg.speak; save(); });
+  c.appendChild(r3);
+  c.appendChild(el('span', 'pnote', 'شكل التنبيه ومكانه من الإعدادات ▸ التنبيهات والمباريات. والخرائط مفتوحة يظهر فوقها إذا سمحت «الظهور فوق التطبيقات».'));
+}
+
+function renderList(){
+  var m = matchesData(), L = $('list'), ids = (m.cfg.teams || []).map(function (t) { return t.id; });
+  L.innerHTML = '';
+  var now = Date.now(), evs = m.events.filter(function (e) { return e.state !== 'post' || now - e.date < 3 * 86400000; });
+  if (!m.cfg.on || !ids.length) L.innerHTML = '<div class="pempty">اختر فريقك من اليسار<br>لتظهر مبارياته ونتائجه</div>';
+  else if (!evs.length) L.innerHTML = '<div class="pempty">' + (m.st.at ? 'لا توجد مباريات خلال 3 أسابيع' : 'جارٍ تحميل المواعيد…<br>يحتاج إنترنت') + '</div>';
+  evs.forEach(function (e) {
+    var d = el('div', 'mt' + (e.state === 'in' ? ' live' : ''));
+    function side(t){ var s = el('span', 'tm'); var dt = el('span', 'dot'); dt.style.background = t.color ? '#' + t.color : '#3a5a8a'; s.appendChild(dt); s.appendChild(document.createTextNode(t.ar || t.name)); return s; }
+    d.appendChild(side(e.home));
+    var sc = el('span', 'sc');
+    if (e.state === 'pre') sc.textContent = fmt({ hour: 'numeric', minute: '2-digit' }, 'ar-u-nu-latn', new Date(e.date));
+    else [e.home.score || 0, '-', e.away.score || 0].forEach(function (x) { sc.appendChild(el('span', '', String(x))); });
+    if (e.state === 'pre') sc.style.fontSize = '17px';
+    d.appendChild(sc);
+    var a = side(e.away); a.style.flexDirection = 'row-reverse'; a.style.justifyContent = 'flex-start'; d.appendChild(a);
+    var w = el('span', 'w');
+    if (e.state === 'in') { w.textContent = '● مباشر ' + (e.clock || ''); w.style.color = '#FF9A9A'; }
+    else if (e.state === 'post') { var r = matchResult(e, ids); w.textContent = r[0]; w.style.color = r[1]; }
+    else w.textContent = matchWhen(e.date) + ' · ' + leagueName(e.league);
+    d.appendChild(w);
+    L.appendChild(d);
+  });
+  $('src').textContent = (m.st.at ? 'آخر تحديث للمواعيد ' + agoText(m.st.at) + '. ' : '') + 'المصدر: ESPN (مجاني بدون تسجيل). أثناء المباراة تتحدث النتيجة كل دقيقة.';
+}
+$('onoff').onclick = function () { cfg.on = !cfg.on; save(); renderList(); };
+$('refresh').onclick = function () { nat('matchesRefresh'); toast('جارٍ التحديث…'); setTimeout(renderList, 4000); };
+renderCfg(); renderList();
+setInterval(function () { renderList(); }, 15000);
+fitStage();
+</script>
+</body>
+</html>

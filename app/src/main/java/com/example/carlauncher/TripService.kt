@@ -39,7 +39,7 @@ class TripService : Service() {
         private const val ID_FG = 1
         private const val ID_ALERT = 2
 
-        @Volatile private var instance: TripService? = null
+        @Volatile var instance: TripService? = null
         fun testSound(ctx: Context) {
             val i = instance
             if (i != null) i.main.post { i.playAlertSound(true, true) }
@@ -75,6 +75,7 @@ class TripService : Service() {
             TripStore.closeIfIdle(this@TripService)
             Watchdog.relaunchIfNeeded(this@TripService)
             checkPrayerAlarms()
+            try { Matches.tick(this@TripService) } catch (e: Exception) {}
             checkTripAlerts()
             main.postDelayed(this, 20_000)
         }
@@ -142,20 +143,17 @@ class TripService : Service() {
             .setOngoing(true)
             .build()
 
-    /** تنبيه: إشعار منبثق + صوت قصير + خفض صوت الموسيقى مؤقتاً */
-    private fun alert(title: String, text: String, page: String?, custom: Boolean = false) {
+    /** تنبيه: زجاجي (في الواجهة أو فوق الخرائط) أو إشعار + صوت قصير + خفض صوت الموسيقى مؤقتاً */
+    private fun alert(title: String, text: String, page: String?, custom: Boolean = false, type: String = "drive") {
         val cfg = Prefs.config(this)
-        val n = Notification.Builder(this, CH_ALERT)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(Notification.BigTextStyle().bigText(text))
-            .setContentIntent(openAppIntent(page))
-            .setAutoCancel(true)
-            .setCategory(Notification.CATEGORY_REMINDER)
-            .build()
-        getSystemService(NotificationManager::class.java).notify(ID_ALERT, n)
+        Alerts.show(this, type, title, text, page)
         if (cfg.optBoolean("sound", true)) playAlertSound(cfg.optBoolean("duck", true), custom && cfg.optBoolean("customSound", true))
+    }
+
+    /** تنبيه من خارج الخدمة (المباريات) */
+    fun alertFrom(type: String, title: String, text: String, page: String?, sound: Boolean) {
+        Alerts.show(this, type, title, text, page)
+        if (sound) playChime(Prefs.config(this).optBoolean("duck", true))
     }
 
     /** الصوت المرفوع من الجوال (مثل الأذان) عند دخول الوقت، وإلا نغمة قصيرة */
@@ -236,13 +234,13 @@ class TripService : Service() {
                 val k = "pre_$preAt"
                 if (now >= preAt && now < at && !sp.getBoolean(k, false)) {
                     sp.edit().putBoolean(k, true).apply()
-                    alert("صلاة $name بعد $pre دقائق", "استعد لصلاة $name", "prayer.html")
+                    alert("صلاة $name بعد $pre دقائق", "استعد لصلاة $name", "prayer.html", type = "prayer")
                 }
             }
             val k2 = "at_$at"
             if (now >= at && now < at + 5 * 60_000L && !sp.getBoolean(k2, false)) {
                 sp.edit().putBoolean(k2, true).apply()
-                alert("حان وقت صلاة $name", "حان الآن وقت صلاة $name", "prayer.html", custom = true)
+                alert("حان وقت صلاة $name", "حان الآن وقت صلاة $name", "prayer.html", custom = true, type = "prayer")
             }
         }
         // التذكيرات الشخصية المؤقتة بوقت
@@ -253,7 +251,7 @@ class TripService : Service() {
             val k = "rem_" + at + "_" + title.hashCode()
             if (at > 0 && now >= at && now < at + 10 * 60_000L && !sp.getBoolean(k, false)) {
                 sp.edit().putBoolean(k, true).apply()
-                alert("تذكير", title, "index.html")
+                alert("تذكير", title, "index.html", type = "rem")
             }
         }
         Prefs.cleanupAlarmKeys(this, now)

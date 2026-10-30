@@ -33,7 +33,21 @@ class CleanService : AccessibilityService() {
     override fun onServiceConnected() { instance = this }
     override fun onDestroy() { instance = null; super.onDestroy() }
     override fun onUnbind(intent: android.content.Intent?): Boolean { instance = null; return super.onUnbind(intent) }
-    override fun onAccessibilityEvent(e: AccessibilityEvent?) {}
+    private var lastWin = ""
+    /** نسجّل ما يظهر فوق الواجهة (اسم التطبيق فقط) لمعرفة سبب خروج الاستراحة، ونعيدها إن ظهرت قائمة الأخيرة بدون لمس */
+    override fun onAccessibilityEvent(e: AccessibilityEvent?) {
+        if (e == null || e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val pkg = (e.packageName ?: "").toString(); val cls = (e.className ?: "").toString()
+        if (pkg.isEmpty() || pkg == packageName) return
+        val w = "$pkg/$cls"
+        if (w == lastWin || result == "busy") return
+        lastWin = w
+        if (cls.startsWith("android.widget") || cls.startsWith("android.view")) return
+        Events.add(this, "ظهر: " + pkg.substringAfterLast('.') + " (" + cls.substringAfterLast('.') + ")")
+        if (RestGuard.isSystemShell(pkg, cls) && RestGuard.shouldReturn(this)) {
+            h.postDelayed({ if (RestGuard.shouldReturn(this)) RestGuard.bringBack(this, "ظهرت قائمة النظام بدون لمس") }, 1500)
+        }
+    }
     override fun onInterrupt() {}
 
     fun clearRecents() {
@@ -62,12 +76,18 @@ class CleanService : AccessibilityService() {
         }, if (attempt == 0) 900L else 600L)
     }
 
-    private fun goHome() {
-        performGlobalAction(GLOBAL_ACTION_HOME)
+    /** نرجع للواجهة ونتأكد أنها ظهرت فعلاً، وإلا نعيد المحاولة */
+    private fun goHome(attempt: Int = 0) {
+        if (attempt == 0) Events.add(this, "إغلاق التطبيقات: " + (if (result == "done") "مُسحت القائمة" else "لم يوجد زر مسح الكل"))
+        if (attempt == 0) performGlobalAction(GLOBAL_ACTION_HOME)
         try {
             startActivity(android.content.Intent(this, MainActivity::class.java)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
         } catch (e: Exception) {}
+        h.postDelayed({
+            if (!MainActivity.visible && attempt < 2) goHome(attempt + 1)
+            else if (!MainActivity.visible) Events.add(this, "تعذّر الرجوع للواجهة بعد الإغلاق")
+        }, 1500)
     }
 
     private fun label(n: AccessibilityNodeInfo): String =

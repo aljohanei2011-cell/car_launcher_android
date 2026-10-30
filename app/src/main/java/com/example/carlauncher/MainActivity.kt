@@ -24,7 +24,7 @@ import androidx.core.content.ContextCompat
  */
 class MainActivity : AppCompatActivity() {
 
-    companion object { @Volatile var alive = false }
+    companion object { @Volatile var alive = false; @Volatile var visible = false }
     private var resumed = false
     private var needRebuild = false
 
@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         CrashLog.install(this)
         alive = true
+        Events.add(this, "تشغيل الواجهة" + (if (savedInstanceState != null) " (بعد إغلاقها من النظام)" else ""))
         hideSystemBars()
 
         webView = WebView(this).apply {
@@ -169,7 +170,13 @@ class MainActivity : AppCompatActivity() {
             PackageManager.PERMISSION_GRANTED
 
     // عند فتح تطبيق آخر (الخرائط مثلاً) نوقف الواجهة مؤقتاً لتوفير المعالج؛ التنبيهات تعمل من الخدمة
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) Events.add(this, "النظام يطلب تخفيف الذاكرة (المستوى $level)")
+    }
+
     override fun onDestroy() {
+        Events.add(this, "إغلاق الواجهة" + (if (isFinishing) "" else " من النظام"))
         alive = false
         super.onDestroy()
     }
@@ -177,6 +184,10 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         resumed = false
+        visible = false
+        RestGuard.pausedAt = System.currentTimeMillis()
+        Events.add(this, "اختفت الواجهة" + (if (RestGuard.restOpen) " والاستراحة مفتوحة" else "") +
+            (if (System.currentTimeMillis() - RestGuard.lastTouch < 4000) " بعد لمس" else " بدون لمس"))
         Watchdog.setForeground(this, false)
         Voice.onForeground(false)
         try { webView.onPause(); webView.pauseTimers() } catch (e: Exception) {}
@@ -185,6 +196,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         resumed = true
+        visible = true
+        Events.add(this, "ظهرت الواجهة")
+        Alerts.hideOverlay()
         if (needRebuild) { needRebuild = false; recreate(); return }
         Watchdog.setForeground(this, true)
         Voice.onForeground(true)
@@ -211,7 +225,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** زر الأوامر الصوتية في المقود أو الشاشة (إن كانت الشاشة ترسله للتطبيقات) */
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) RestGuard.lastTouch = System.currentTimeMillis()
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        RestGuard.lastTouch = System.currentTimeMillis()
         val voiceKeys = setOf(android.view.KeyEvent.KEYCODE_VOICE_ASSIST, android.view.KeyEvent.KEYCODE_SEARCH, android.view.KeyEvent.KEYCODE_ASSIST)
         if (event.keyCode in voiceKeys && Voice.enabled(this)) {
             if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) {

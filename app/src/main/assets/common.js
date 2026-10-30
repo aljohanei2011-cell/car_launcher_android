@@ -84,7 +84,7 @@ window.addEventListener('error', function (e) {
 });
 var _natCache = {}, NAT_READS = { autoBackups: 1, memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
 /* قراءات سريعة التغير: لا تُحفظ ولا تلغي المحفوظ */
-var NAT_FRESH = { cleanAvail: 1, cleanResult: 1, voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1, isLite: 1 };
+var NAT_FRESH = { alertsTake: 1, matchesState: 1, matchesConfig: 1, matchesTeams: 1, events: 1, cleanAvail: 1, cleanResult: 1, voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1, isLite: 1 };
 function nat(fn){
   if (!HAS_NATIVE || typeof Native[fn] !== 'function') return null;
   if (!NAT_READS[fn] && !NAT_FRESH[fn]) _natCache = {}; // أي أمر (تشغيل، إيقاف...) يلغي القراءات المحفوظة
@@ -139,7 +139,11 @@ var DEFAULT_PREFS = {
   khatma: null, quranApp: '', kidsApp: '', fridayOn: true, fridayMin: 45, azkarAuto: true, occasions: true, arrive: { on: false, phone: '', name: '', text: 'وصلت الحمد لله ✓', place: 'البيت', lat: null, lng: null }, obdAuto: false,
   stretch: true, miqat: true, guest: false, fuelPrice: 2.33, kmpl: null,
   voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
-  perf: 'auto', perfDetected: null, watchdog: true
+  perf: 'auto', perfDetected: null, watchdog: true,
+  /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
+  alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true,
+  /* الشريط العلوي */
+  topBar: { size: 'm', order: ['clean', 'gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){
   try {
@@ -159,7 +163,10 @@ function savePrefs(p){
 function pushConfig(p){
   nat('setConfig', JSON.stringify({ adhan: p.adhan, preMin: +p.preMin, sound: p.sound, duck: p.duck,
     rest: p.rest, restMin: +p.restMin, travel: p.travel, travelKm: +p.travelKm,
-    speedOn: p.speedOn, speedLimit: +p.speedLimit, customSound: p.customSound, watchdog: p.watchdog !== false }));
+    speedOn: p.speedOn, speedLimit: +p.speedLimit, customSound: p.customSound, watchdog: p.watchdog !== false,
+    glassOverlay: p.glassOverlay !== false, stayRest: p.stayRest !== false, alertSec: +p.alertSec || 6, alertPos: p.alertPos || 'tc',
+    alertPos_rem: (p.alertPosT || {}).rem || '', alertPos_note: (p.alertPosT || {}).note || '', alertPos_match: (p.alertPosT || {}).match || '',
+    alertPos_prayer: (p.alertPosT || {}).prayer || '', alertPos_drive: (p.alertPosT || {}).drive || '' }));
 }
 
 var THEMES = {
@@ -820,6 +827,19 @@ function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 var NOTES_KEY = 'carlauncher.notes', REM_KEY = 'carlauncher.reminders', ST_KEY = 'carlauncher.stations';
 function loadNotes(){ return lsGet(NOTES_KEY, []); }
+/* نوع الملاحظة ولونها: يُستنتج من الكلمات، ويمكن تغييره */
+var NOTE_CATS = { buy: ['مشتريات', '#7FB8FF'], car: ['السيارة', '#5AD1A0'], imp: ['مهم', '#F2C879'], gen: ['عامة', '#B9C3D6'] };
+function noteCat(n){
+  if (n.cat && NOTE_CATS[n.cat]) return n.cat;
+  var t = n.text || '';
+  if (/مهم|ضروري|موعد|لا تنس/.test(t)) return 'imp';
+  if (/زيت|كفر|إطار|اطار|سيار|صيان|فحص|بنزين|وقود|غسيل|تأمين|استمار/.test(t)) return 'car';
+  if (/اشتر|مشتريات|خبز|حليب|ماء|سوبر|بقال|قائمة|أغراض|اغراض/.test(t)) return 'buy';
+  return 'gen';
+}
+/* المثبّتة أولاً ثم الأحدث */
+function sortedNotes(l){ return (l || loadNotes()).slice().sort(function (a, b) { return (!!b.pin - !!a.pin) || (b.at - a.at); }); }
+function noteLines(n){ return (n.text || '').split(/\n|،|,/).map(function (x) { return x.replace(/^\s*[-•*✓]\s*/, '').trim(); }).filter(Boolean); }
 function saveNotes(l){ lsSet(NOTES_KEY, l); }
 function loadStations(){ return lsGet(ST_KEY, []); }
 function saveStations(l){ lsSet(ST_KEY, l); }
@@ -866,6 +886,7 @@ function activeReminders(){
   var now = new Date(), list = loadRems(), out = [], t = natJSON('trip'), boot = String(nat('bootId'));
   list.forEach(function (r) {
     if (r.done) return;
+    if (r.snoozeUntil && Date.now() < r.snoozeUntil) return;
     if (r.kind === 'start') { if (r.doneBoot !== boot) out.push(r); return; }
     if (r.kind === 'place') {
       if (t && typeof t.lat === 'number' && r.lat) {
@@ -881,10 +902,17 @@ function activeReminders(){
   });
   return out;
 }
+/* تأجيل التذكير: يختفي ثم يرجع بعد المدة (وتنبّه الخدمة عند رجوعه) */
+function snoozeReminder(id, min){
+  var list = loadRems();
+  list.forEach(function (r) { if (r.id === id) r.snoozeUntil = Date.now() + min * 60000; });
+  saveRems(list);
+}
 function dismissReminder(id){
   var list = loadRems(), boot = String(nat('bootId'));
   list.forEach(function (r) {
     if (r.id !== id) return;
+    delete r.snoozeUntil;
     if (r.kind === 'once') r.done = true;
     else if (r.kind === 'start') r.doneBoot = boot;
     else if (r.kind === 'place') r.dismissedInside = true;
@@ -920,6 +948,7 @@ function pushReminderAlarms(){
     var n = remNext(r, now);
     if (n && n - now < 2 * 86400000 && n >= now - 600000) out.push({ at: n.getTime(), title: r.text });
   });
+  loadRems().forEach(function (r) { if (!r.done && r.snoozeUntil && r.snoozeUntil > now.getTime()) out.push({ at: r.snoozeUntil, title: r.text }); });
   nat('setReminders', JSON.stringify(out));
 }
 
@@ -1021,7 +1050,7 @@ var CARD_CATALOG = [
   ['speed', 'عداد السرعة'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس'],
   ['apps', 'تطبيقاتي المفضلة'], ['notes', 'الملاحظات'], ['reminders', 'تذكيراتي'], ['sysrem', 'تذكيرات اليوم'],
   ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)'],
-  ['nearby', 'أقرب مكان'], ['ramadan', 'رمضان'], ['khatma', 'وردي من القرآن'], ['wallet', 'وثائق السيارة'], ['expenses', 'مصاريف السيارة'], ['obd', 'بيانات السيارة (OBD)']
+  ['nearby', 'أقرب مكان'], ['ramadan', 'رمضان'], ['khatma', 'وردي من القرآن'], ['wallet', 'وثائق السيارة'], ['expenses', 'مصاريف السيارة'], ['obd', 'بيانات السيارة (OBD)'], ['matches', 'المباريات']
 ];
 if (LITE) CARD_CATALOG = CARD_CATALOG.filter(function (c) { return c[0] !== 'obd'; });
 var LAYOUTS = [['classic', 'كلاسيكي'], ['grid', 'شبكة'], ['side', 'جانبي'], ['minimal', 'بسيط']];
@@ -1079,6 +1108,80 @@ function toast(msg, btn, fn, ms){
   if (btn) { var b = document.createElement('button'); b.textContent = btn; b.style.cssText = 'height:46px;padding:0 18px;border-radius:14px;border:none;background:#2F7BFF;color:#fff;font:inherit;font-size:18px'; b.onclick = function () { t.remove(); fn(); }; t.appendChild(b); }
   st.appendChild(t);
   setTimeout(function () { if (t.parentNode) t.remove(); }, ms || 4500);
+}
+
+/* ================================================================
+   المباريات (البيانات من الخدمة)
+   ================================================================ */
+var MATCH_LEAGUES = [['ksa.1', 'دوري روشن'], ['ksa.kings.cup', 'كأس الملك'], ['afc.champions', 'نخبة آسيا'], ['fifa.worldq.afc', 'تصفيات كأس العالم'],
+  ['afc.asian.cup', 'كأس آسيا'], ['fifa.world', 'كأس العالم'], ['uefa.champions', 'أبطال أوروبا'], ['eng.1', 'الدوري الإنجليزي'], ['esp.1', 'الدوري الإسباني']];
+function leagueName(k){ var l = MATCH_LEAGUES.filter(function (x) { return x[0] === k; })[0]; return l ? l[1] : k; }
+function matchesData(){
+  var st = {}; try { st = JSON.parse(nat('matchesState') || '{}'); } catch (e) {}
+  var cfg = {}; try { cfg = JSON.parse(nat('matchesConfig') || '{}'); } catch (e) {}
+  var evs = st.events || [], now = Date.now(), live = null, next = null, last = null;
+  evs.forEach(function (e) {
+    if (e.state === 'in' && !live) live = e;
+    else if (e.state === 'pre' && e.date > now - 3 * 3600000 && !next) next = e;
+    else if (e.state === 'post') last = e;
+  });
+  return { cfg: cfg, st: st, live: live, next: next, last: last, events: evs };
+}
+function matchWhen(t){
+  var d = new Date(t), now = new Date(), days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+  var hm = fmt({ hour: 'numeric', minute: '2-digit' }, 'ar-u-nu-latn', d);
+  return (days === 0 ? 'الليلة ' : days === 1 ? 'غداً ' : days > 1 && days < 7 ? WD_NAMES[d.getDay()] + ' ' : fmt({ day: 'numeric', month: 'short' }, 'ar-u-nu-latn', d) + ' ') + hm;
+}
+function matchResult(e, ids){
+  var h = +e.home.score || 0, a = +e.away.score || 0, mineH = ids.indexOf(e.home.id) >= 0;
+  if (h === a) return ['تعادل', '#F2C879'];
+  return (h > a) === mineH ? ['فوز', '#5AD1A0'] : ['خسارة', '#FF8A80'];
+}
+
+/* ================================================================
+   التنبيه الزجاجي: تذكير، ملاحظة، مباراة، صلاة، قيادة.
+   o = { type, title, sub, buttons: [[نص, دالة]], sticky, ms, page }
+   المكان حسب الإعدادات (عام أو لكل نوع)، والشاشات الضعيفة بدون ضبابية.
+   ================================================================ */
+var ALERT_STYLE = { rem: ['#F2C879', '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'],
+  note: ['#7FB8FF', '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6M9 17h4"/>'],
+  match: ['#5AD1A0', '<circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 5h-5L8 10z"/>'],
+  prayer: ['#C9B6FF', '<path d="M12 3c2 2 4 3.5 4 6a4 4 0 0 1-8 0c0-2.5 2-4 4-6z"/><path d="M4 21V13h16v8M9 21v-4a3 3 0 0 1 6 0v4"/>'],
+  drive: ['#FF9E80', '<path d="M5 17h14M6 17l1.5-6h9L18 17M7 17v2M17 17v2"/><circle cx="8" cy="14" r=".8"/><circle cx="16" cy="14" r=".8"/>'] };
+var ALERT_POS = { tc: 'أعلى الوسط', tl: 'أعلى الزاوية', bc: 'أسفل فوق الشريط', cl: 'بجوار الساعة' };
+function alertPosFor(type, p){ p = p || loadPrefsCached(); return (p.alertPosT || {})[type] || p.alertPos || 'tc'; }
+function glassAlert(o){
+  var st = document.getElementById('stage') || document.body, p = loadPrefsCached();
+  var pos = o.pos || alertPosFor(o.type, p), sty = ALERT_STYLE[o.type] || ALERT_STYLE.note;
+  // أكثر من تنبيه في نفس المكان: تتراص فوق بعض (حد أقصى 3)
+  var same = [].slice.call(document.querySelectorAll('.galert[data-pos="' + pos + '"]:not(.out)'));
+  if (same.length >= 3) { same[0].remove(); same.shift(); }
+  var lite = LITE || p.perf === 'on' || document.body.classList.contains('perf');
+  var a = document.createElement('div'); a.className = 'galert gp-' + pos + (lite ? ' nb' : ''); a.dataset.pos = pos; a.setAttribute('role', 'alert');
+  a.innerHTML = '<span class="gi" style="background:' + sty[0] + '33;color:' + sty[0] + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + sty[1] + '</svg></span><span class="gt"><b></b><small></small></span>';
+  a.querySelector('b').textContent = o.title || ''; a.querySelector('small').textContent = o.sub || '';
+  if (!o.sub) a.querySelector('small').remove();
+  function close(){ if (!a.parentNode) return; a.classList.add('out'); setTimeout(function () { a.remove(); }, 260); }
+  (o.buttons || [['تم', null]]).forEach(function (bt) {
+    var b = document.createElement('button'); b.textContent = bt[0];
+    b.onclick = function (e) { e.stopPropagation(); close(); if (bt[1]) bt[1](); };
+    a.appendChild(b);
+  });
+  if (o.page) a.onclick = function () { close(); if (window.openPage) openPage(o.page); else location.href = o.page; };
+  st.appendChild(a);
+  var off = 0; same.forEach(function (x) { off += x.offsetHeight + 10; });
+  if (off) { if (pos === 'bc') a.style.bottom = (150 + off) + 'px'; else a.style.top = ((pos === 'cl' ? 14 : 86) + off) + 'px'; }
+  if (pos === 'cl') {
+    // بجوار الساعة العلوية تماماً، دون تغطية الشريط الأوسط
+    var ck = document.getElementById('clockTop'), sr = st.getBoundingClientRect(), sc = sr.width / (st.offsetWidth || 1280);
+    if (ck) { var r = ck.getBoundingClientRect(); a.style.left = Math.round((r.right - sr.left) / sc + 14) + 'px'; }
+    var bn = document.getElementById('banner');
+    if (bn && bn.offsetWidth && !off) { var br = bn.getBoundingClientRect(); a.style.maxWidth = Math.max(320, Math.round((br.left - sr.left) / sc - parseInt(a.style.left || 300) - 10)) + 'px'; }
+  }
+  requestAnimationFrame(function () { a.classList.add('in'); });
+  var ms = o.ms || (Math.max(3, +p.alertSec || 6) * 1000 + (o.sticky ? 6000 : 0));
+  setTimeout(close, ms);
+  return a;
 }
 
 /* ===== التخطيطات المحفوظة (سفر، مدينة، ليل، أو لكل سائق) ===== */

@@ -197,3 +197,21 @@ body.perf #wx{display:none}
 
 /* شاشة الاستراحة فوق الرئيسية (بدون إعادة تحميل الرئيسية) */
 #restFrame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;z-index:80;background:transparent}
+
+/* ===== التنبيه الزجاجي ===== */
+.galert{position:absolute;z-index:95;display:flex;align-items:center;gap:14px;max-width:640px;min-width:380px;padding:12px 14px 12px 20px;border-radius:26px;color:#fff;
+  background:rgba(20,30,52,.38);border:1px solid rgba(255,255,255,.32);-webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:0 12px 34px rgba(0,0,0,.35);opacity:0;transition:opacity .25s ease,transform .3s ease;cursor:pointer}
+.galert.nb{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(16,24,44,.86)}
+.galert .gi{width:48px;height:48px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+.galert .gi svg{width:26px;height:26px}
+.galert .gt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.galert .gt b{font-size:21px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.galert .gt small{font-size:16px;color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.galert button{height:52px;min-width:64px;padding:0 18px;border-radius:17px;border:1px solid rgba(255,255,255,.38);background:rgba(255,255,255,.16);color:#fff;font:inherit;font-size:18px;font-weight:600}
+.galert.gp-tc{top:86px;left:50%;transform:translate(-50%,-24px)}.galert.gp-tc.in{opacity:1;transform:translate(-50%,0)}
+.galert.gp-tl{top:86px;left:40px;transform:translateY(-24px)}.galert.gp-tl.in{opacity:1;transform:none}
+.galert.gp-bc{bottom:150px;left:50%;transform:translate(-50%,24px)}.galert.gp-bc.in{opacity:1;transform:translate(-50%,0)}
+.galert.gp-cl{top:14px;left:300px;min-width:0;max-width:560px;padding:6px 8px 6px 14px;gap:10px;border-radius:22px;transform:translateY(-20px)}.galert.gp-cl.in{opacity:1;transform:none}
+.galert.gp-cl .gi{width:36px;height:36px}.galert.gp-cl .gi svg{width:20px;height:20px}.galert.gp-cl .gt b{font-size:18px}.galert.gp-cl .gt small{display:none}.galert.gp-cl button{height:42px;min-width:52px;font-size:16px;padding:0 12px}
+.galert.out{opacity:0!important}

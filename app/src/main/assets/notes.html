@@ -6,6 +6,18 @@
 <title>الملاحظات</title>
 <link rel="stylesheet" href="common.css">
 <link rel="stylesheet" href="page.css">
+<style>
+.pitem{position:relative;border-right:6px solid var(--nc,#B9C3D6);transition:transform .2s ease,opacity .2s ease;touch-action:pan-y}
+.pitem .pin{font-size:16px}
+.cats{display:flex;gap:8px;flex-wrap:wrap}
+.cats button{height:42px;padding:0 16px;border-radius:14px;border:1.5px solid var(--nc);background:transparent;color:#fff;font:inherit;font-size:16px}
+.cats button.on{background:var(--nc);color:#0a0f1f;font-weight:700}
+.ck{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:#0f172d;border:1px solid #1d2747;font-size:20px;color:#fff;text-align:right;font-family:inherit}
+.ck i{width:30px;height:30px;border-radius:9px;border:2px solid #4b6ea8;flex:none;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700}
+.ck.on{opacity:.55;text-decoration:line-through}.ck.on i{background:#1FA35A;border-color:#1FA35A}
+#cks{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.hint{font-size:14px;color:#8F9AB8}
+</style>
 </head>
 <body>
 <div id="stage">
@@ -17,10 +29,12 @@
       <a class="pbtn g" href="upload.html">من الجوال</a>
     </div>
     <div class="pcols">
-      <div class="pcard"><span class="ph">ملاحظاتي</span><div class="plist" id="list"></div></div>
+      <div class="pcard"><span class="ph">ملاحظاتي <span class="hint">· اسحب الملاحظة جانباً لحذفها</span></span><div class="plist" id="list"></div></div>
       <div class="pcard">
-        <div id="lock" class="pnote" style="display:none;color:#FFD48A">الكتابة متوقفة أثناء القيادة للسلامة. يمكنك القراءة فقط.</div>
-        <textarea class="pinp" id="ed" placeholder="اكتب ملاحظتك هنا…"></textarea>
+        <div id="lock" class="pnote" style="display:none;color:#FFD48A">الكتابة متوقفة أثناء القيادة للسلامة. يمكنك القراءة وشطب عناصر القائمة.</div>
+        <div class="prow" style="justify-content:space-between"><div class="cats" id="cats"></div><div class="prow"><button class="pbtn sm g" id="pin">📌 تثبيت</button><button class="pbtn sm g" id="listBtn">☑ قائمة</button></div></div>
+        <div id="cks" style="display:none"></div>
+        <textarea class="pinp" id="ed" placeholder="اكتب ملاحظتك هنا… (كل سطر عنصر إذا جعلتها قائمة)"></textarea>
         <div class="prow"><button class="pbtn" id="save">حفظ</button><button class="pbtn r" id="del">حذف</button><span class="pnote" id="msg"></span></div>
       </div>
     </div>
@@ -31,34 +45,80 @@
 var prefs = loadPrefs(); applyPrefs('home', prefs);
 document.body.style.background = '#0a0f1f';
 processInbox();
-var notes = loadNotes(), cur = notes.length ? notes[0].id : null;
+var notes = loadNotes(), cur = notes.length ? sortedNotes(notes)[0].id : null, draftCat = null;
 function $(id){ return document.getElementById(id); }
 function when(t){ return fmt({ day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }, 'ar-u-nu-latn', new Date(t)); }
+function curNote(){ return notes.filter(function (x) { return x.id === cur; })[0]; }
+function persist(){ saveNotes(notes); }
 function render(){
   var L = $('list'); L.innerHTML = '';
   if (!notes.length) L.innerHTML = '<div class="pempty">لا توجد ملاحظات بعد.<br>اكتب هنا والسيارة متوقفة، أو أرسلها من الجوال.</div>';
-  notes.forEach(function (n) {
+  sortedNotes(notes).forEach(function (n) {
     var b = document.createElement('button'); b.className = 'pitem' + (n.id === cur ? ' on' : '');
+    b.style.setProperty('--nc', NOTE_CATS[noteCat(n)][1]);
     var t = document.createElement('div'); t.className = 't';
-    var a = document.createElement('span'); a.className = 'n'; a.textContent = n.text.split('\n')[0] || '(فارغة)';
-    var s = document.createElement('span'); s.className = 's'; s.textContent = when(n.at);
+    var a = document.createElement('span'); a.className = 'n'; a.textContent = (n.pin ? '📌 ' : '') + (n.text.split('\n')[0] || '(فارغة)');
+    var s = document.createElement('span'); s.className = 's'; s.textContent = NOTE_CATS[noteCat(n)][0] + ' · ' + when(n.at) + (n.list ? ' · قائمة ' + (n.checked || []).length + '/' + noteLines(n).length : '');
     t.appendChild(a); t.appendChild(s); b.appendChild(t);
-    b.onclick = function () { cur = n.id; render(); };
+    b.onclick = function () { if (b._swiped) return; cur = n.id; draftCat = null; render(); };
+    swipe(b, n);
     L.appendChild(b);
   });
-  var n = notes.filter(function (x) { return x.id === cur; })[0];
+  var n = curNote();
   $('ed').value = n ? n.text : '';
-  $('del').disabled = !n;
+  $('del').disabled = !n; $('pin').disabled = !n;
+  $('pin').className = 'pbtn sm' + (n && n.pin ? '' : ' g'); $('pin').textContent = n && n.pin ? '📌 مثبّتة' : '📌 تثبيت';
+  $('listBtn').className = 'pbtn sm' + (n && n.list ? '' : ' g');
+  var cat = n ? noteCat(n) : (draftCat || 'gen'), cs = $('cats'); cs.innerHTML = '';
+  Object.keys(NOTE_CATS).forEach(function (k) {
+    var c = document.createElement('button'); c.textContent = NOTE_CATS[k][0]; c.style.setProperty('--nc', NOTE_CATS[k][1]); if (k === cat) c.className = 'on';
+    c.onclick = function () { var x = curNote(); if (x) { x.cat = k; persist(); } else draftCat = k; render(); };
+    cs.appendChild(c);
+  });
+  // القائمة: عناصر تشطبها بلمسة
+  var ck = $('cks'); ck.innerHTML = '';
+  var showList = n && n.list;
+  ck.style.display = showList ? 'flex' : 'none'; $('ed').style.display = showList && isDriving() ? 'none' : '';
+  if (showList) {
+    $('ed').style.height = '120px';
+    noteLines(n).forEach(function (line, i) {
+      var on = (n.checked || []).indexOf(i) >= 0, b = document.createElement('button'); b.className = 'ck' + (on ? ' on' : '');
+      b.innerHTML = '<i>' + (on ? '✓' : '') + '</i><span></span>'; b.querySelector('span').textContent = line;
+      b.onclick = function () { n.checked = n.checked || []; if (on) n.checked = n.checked.filter(function (x) { return x !== i; }); else n.checked.push(i); persist(); render(); };
+      ck.appendChild(b);
+    });
+  } else $('ed').style.height = '';
 }
-$('new').onclick = function () { cur = null; render(); $('ed').focus(); };
+/* السحب جانباً للحذف، مع تراجع خلال 5 ثوانٍ */
+function swipe(el, n){
+  var x0 = null, dx = 0;
+  el.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; dx = 0; el.style.transition = 'none'; }, { passive: true });
+  el.addEventListener('touchmove', function (e) { if (x0 === null) return; dx = e.touches[0].clientX - x0; if (Math.abs(dx) > 10) { el.style.transform = 'translateX(' + dx + 'px)'; el.style.opacity = String(Math.max(.2, 1 - Math.abs(dx) / 400)); } }, { passive: true });
+  el.addEventListener('touchend', function () {
+    el.style.transition = '';
+    if (Math.abs(dx) > 160) { el._swiped = true; removeNote(n); }
+    else { el.style.transform = ''; el.style.opacity = ''; if (Math.abs(dx) > 10) { el._swiped = true; setTimeout(function () { el._swiped = false; }, 300); } }
+    x0 = null;
+  });
+}
+function removeNote(n){
+  var idx = notes.indexOf(n);
+  notes = notes.filter(function (x) { return x !== n; }); persist();
+  if (cur === n.id) cur = notes.length ? sortedNotes(notes)[0].id : null;
+  render();
+  toast('حُذفت الملاحظة', 'تراجع', function () { notes.splice(Math.max(0, idx), 0, n); persist(); cur = n.id; render(); }, 5000);
+}
+$('new').onclick = function () { cur = null; draftCat = null; render(); $('ed').focus(); };
 $('save').onclick = function () {
   var v = $('ed').value.trim(); if (!v) return;
-  var n = notes.filter(function (x) { return x.id === cur; })[0];
-  if (n) { n.text = v; n.at = Date.now(); notes = [n].concat(notes.filter(function (x) { return x !== n; })); }
-  else { n = { id: uid(), text: v, at: Date.now() }; notes.unshift(n); cur = n.id; }
-  saveNotes(notes); $('msg').textContent = 'حُفظت ✓'; setTimeout(function () { $('msg').textContent = ''; }, 1500); render();
+  var n = curNote();
+  if (n) { if (n.text !== v) n.checked = []; n.text = v; n.at = Date.now(); }
+  else { n = { id: uid(), text: v, at: Date.now() }; if (draftCat) n.cat = draftCat; if (noteLines(n).length > 2 && noteCat(n) === 'buy') n.list = true; notes.unshift(n); cur = n.id; }
+  persist(); $('msg').textContent = 'حُفظت ✓'; setTimeout(function () { $('msg').textContent = ''; }, 1500); render();
 };
-$('del').onclick = function () { notes = notes.filter(function (x) { return x.id !== cur; }); saveNotes(notes); cur = notes.length ? notes[0].id : null; render(); };
+$('del').onclick = function () { var n = curNote(); if (n) removeNote(n); };
+$('pin').onclick = function () { var n = curNote(); if (!n) return; n.pin = !n.pin; persist(); render(); };
+$('listBtn').onclick = function () { var n = curNote(); if (!n) return; n.list = !n.list; persist(); render(); };
 setInterval(function () {
   var d = isDriving();
   $('lock').style.display = d ? 'block' : 'none';

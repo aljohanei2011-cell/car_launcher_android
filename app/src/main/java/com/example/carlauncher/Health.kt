@@ -75,3 +75,47 @@ object Watchdog {
     /** الإذن «الظهور فوق التطبيقات» يسمح لأندرويد الحديث بإعادة فتح الواجهة من الخلفية */
     fun canOverlay(c: Context) = Settings.canDrawOverlays(c)
 }
+
+/** سجل أحداث قصير (آخر 80 حدثاً): متى ظهرت الواجهة واختفت، وما الذي فُتح فوقها، ولماذا خرجت الاستراحة */
+object Events {
+    private const val MAX = 80
+    private val fmt = SimpleDateFormat("MM-dd HH:mm:ss", Locale.US)
+    private fun sp(c: Context) = c.getSharedPreferences("events", Context.MODE_PRIVATE)
+    @Synchronized
+    fun add(c: Context, msg: String) {
+        try {
+            val s = sp(c); val old = s.getString("log", "") ?: ""
+            val lines = (old.split("\n").filter { it.isNotEmpty() } + (fmt.format(Date()) + "  " + msg.take(160))).takeLast(MAX)
+            s.edit().putString("log", lines.joinToString("\n")).apply()
+        } catch (e: Exception) {}
+    }
+    fun read(c: Context): String = sp(c).getString("log", "") ?: ""
+    fun clear(c: Context) { sp(c).edit().remove("log").apply() }
+}
+
+/**
+ * «ابقَ في الاستراحة»: إذا كانت الاستراحة مفتوحة واختفت الواجهة بدون لمس منك
+ * (وظهر مكانها قائمة التطبيقات الأخيرة أو واجهة النظام)، نعيد فتحها.
+ */
+object RestGuard {
+    @Volatile var restOpen = false
+    @Volatile var lastTouch = 0L
+    @Volatile var pausedAt = 0L
+    fun enabled(c: Context) = Prefs.config(c).optBoolean("stayRest", true)
+    /** نافذة النظام التي ظهرت: هل هي قائمة الأخيرة أو واجهة النظام؟ */
+    fun isSystemShell(pkg: String, cls: String): Boolean {
+        val p = pkg.lowercase(); val k = cls.lowercase()
+        return k.contains("recents") || p.contains("launcher") || p.contains("quickstep") || p == "com.android.systemui" && k.contains("recent")
+    }
+    fun shouldReturn(c: Context): Boolean {
+        val now = System.currentTimeMillis()
+        return enabled(c) && restOpen && !MainActivity.visible && now - pausedAt < 15_000 && now - lastTouch > 4_000
+    }
+    fun bringBack(c: Context, why: String) {
+        Events.add(c, "إعادة فتح الاستراحة ($why)")
+        try {
+            c.startActivity(Intent(c, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        } catch (e: Exception) { Events.add(c, "تعذّرت إعادة الفتح: " + e.message) }
+    }
+}
