@@ -31,18 +31,32 @@ svg.layer{width:100%;height:100%}
 .S-classic .clock{font-size:150px}
 .S-clock .clock{font-size:250px}
 .S-clock .dates{font-size:26px}
-.S-night #stage,.S-night{background:#000}
-.S-night .clock{font-size:200px;color:#9a6f2c;font-weight:500}
-.S-night .dates,.S-night .dua,.S-night .next,.S-night .top{color:#6b5226!important;opacity:.85}
-.S-night .next *,.S-night .top *{color:#6b5226!important;text-shadow:none!important}
-.S-night .btn{background:none;border-color:#3a2c14;color:#6b5226}
+/* خافت (ليلاً تلقائياً أو دائماً) لنمط «ساعة فقط» */
+.dim #bg,.dim #vid{opacity:0!important}
+.dim .clock{color:#9a6f2c;font-weight:500}
+.dim .dates,.dim .dua,.dim .next,.dim .top{color:#6b5226!important;opacity:.85}
+.dim .next *,.dim .top *{color:#6b5226!important;text-shadow:none!important}
+.dim .btn{background:none;border-color:#3a2c14;color:#6b5226}
+.dim .shade{display:none}
 .S-pattern .clock{font-size:110px;color:#F3E2B3}
 .S-pattern .duaBox{border:2px solid rgba(232,192,97,.6);border-radius:30px;padding:26px 40px;background:rgba(6,30,32,.75);width:min(1050px,100%);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:8px}
-.S-gallery .clockBox{position:absolute;left:40px;top:96px;padding:16px 26px;border-radius:24px}
-.S-gallery .duaBox,.S-gallery .next{background:rgba(0,0,0,.5);border-radius:20px;padding:8px 22px;box-sizing:border-box}
-.S-gallery .duaBox{width:min(1000px,100%)}
-.S-gallery .clock{font-size:90px}
-.S-gallery .mid{justify-content:flex-end}
+.S-gallery .clockBox{padding:18px 40px;border-radius:28px}
+.S-gallery .duaBox,.S-gallery .next{background:rgba(0,0,0,.45);border-radius:20px;padding:8px 22px;box-sizing:border-box}
+.S-gallery .duaBox{width:min(980px,100%)}
+.S-gallery .clock{font-size:110px}
+.S-gallery .mid{justify-content:center;gap:14px}
+/* فاخرة: ساعة كبيرة وشريط الصلوات الخمس */
+.S-lux .clock{font-size:190px;font-weight:300;letter-spacing:0;color:#F6EBD3;text-shadow:0 0 30px rgba(231,199,122,.25)}
+.S-lux .dates{color:#E7D6B0}
+.S-lux .mid{justify-content:flex-end;gap:22px}
+.strip{display:flex;gap:0;padding:8px;border-radius:26px;background:rgba(10,10,12,.45);border:1px solid rgba(231,199,122,.35);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.strip div{min-width:150px;padding:10px 18px;text-align:center;border-radius:18px;display:flex;flex-direction:column;gap:2px}
+.strip div+div{border-right:1px solid rgba(255,255,255,.12)}
+.strip b{font-size:21px;font-weight:600;color:#E9E2D2}.strip span{font-size:24px;direction:ltr;color:#fff;font-variant-numeric:tabular-nums}
+.strip .on{background:rgba(231,199,122,.16);border:1px solid rgba(231,199,122,.7);box-shadow:0 0 18px rgba(231,199,122,.25)}
+.strip .on b,.strip .on span{color:#F2C879}
+body.perf .strip{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(10,10,12,.75)}
+#vid{object-fit:cover;width:100%;height:100%}
 .S-nap .clock{font-size:180px}
 .napOpts{display:flex;gap:14px}
 .napOpts button{height:70px;min-width:120px;border-radius:22px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);font-size:24px;color:#fff}
@@ -53,6 +67,7 @@ svg.layer{width:100%;height:100%}
 <body>
 <div id="stage">
   <img id="bg" alt="">
+  <video id="vid" class="layer" muted loop playsinline style="display:none"></video>
   <script>(function(){var b=document.getElementById('bg'),s=null,c='';try{s=localStorage.getItem('carlauncher.bg.rest');c=localStorage.getItem('carlauncher.bodycls')||'';}catch(e){}if(s)b.src=s;if(c)document.body.className+=' '+c;})();</script>
   <div class="layer" id="gallery"></div>
   <svg class="layer" id="pattern" style="display:none" aria-hidden="true">
@@ -87,6 +102,7 @@ svg.layer{width:100%;height:100%}
         <div class="wird" id="wird"><span class="wl">ورد اليوم</span><span class="wt" id="wirdText"></span><span class="ws" id="wirdSrc"></span></div>
       </div>
       <div class="remind" id="remind"></div>
+      <div class="strip hidden" id="strip"></div>
       <div class="next" id="next">
         <span style="font-size:18px;color:#F2C879">الصلاة القادمة</span>
         <span id="nextName" style="font-size:34px;font-weight:600"></span>
@@ -111,8 +127,10 @@ svg.layer{width:100%;height:100%}
 <script>
 var prefs = loadPrefs();
 applyPrefs('rest', prefs);
-var STYLES = [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['night', 'ليلي خافت'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']];
+var STYLES = [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['lux', 'فاخرة'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']];
 var style = (location.search.match(/style=(\w+)/) || [])[1] || prefs.restStyle || 'classic';
+if (style === 'night') style = 'clock';
+if (!STYLES.some(function (x) { return x[0] === style; })) style = 'classic';
 var show = Object.assign({ dua: true, wird: true, remind: true, prayer: true, date: true }, prefs.restShow || {});
 function $(id){ return document.getElementById(id); }
 function vis(id, on){ $(id).classList.toggle('hidden', !on); }
@@ -120,25 +138,50 @@ function vis(id, on){ $(id).classList.toggle('hidden', !on); }
 function applyStyle(){
   STYLES.forEach(function (s) { document.body.classList.remove('S-' + s[0]); });
   document.body.classList.add('S-' + style);
-  var night = style === 'night', pattern = style === 'pattern', gallery = style === 'gallery';
-  $('bg').style.display = (night || pattern || gallery) ? 'none' : '';
+  var pattern = style === 'pattern', gallery = style === 'gallery', lux = style === 'lux';
+  var video = setVideo(!pattern && !gallery);
+  $('bg').style.display = (pattern || gallery || video) ? 'none' : '';
   $('pattern').style.display = pattern ? '' : 'none';
   $('gallery').style.display = gallery ? '' : 'none';
-  $('shade').style.display = night ? 'none' : '';
   $('clockBox').className = 'clockBox' + (gallery ? ' glass' : '');
   $('title').textContent = (STYLES.filter(function (s) { return s[0] === style; })[0] || STYLES[0])[1];
   // ما يظهر في كل نمط (ومع اختياراتك من الإعدادات)
-  var minimal = style === 'clock' || style === 'night';
-  vis('dates', show.date && style !== 'night');
-  vis('dua', show.dua && style !== 'clock' && style !== 'nap');
+  var minimal = style === 'clock' || lux;
+  vis('dates', show.date);
+  vis('dua', show.dua && style !== 'clock' && style !== 'nap' && !lux);
   vis('wird', show.wird && !minimal && style !== 'gallery' && style !== 'nap');
-  vis('remind', show.remind && !minimal && style !== 'nap');
-  vis('next', show.prayer && style !== 'clock');
+  vis('remind', show.remind && style !== 'clock' && style !== 'nap');
+  vis('next', show.prayer && style !== 'clock' && !lux);
+  vis('strip', lux);
   vis('nap', style === 'nap');
   $('duaBox').classList.toggle('hidden', $('dua').classList.contains('hidden') && $('wird').classList.contains('hidden'));
   if (gallery) startGallery(); else stopGallery();
   if (style === 'nap') renderNap();
+  applyDim();
   setTimeout(setDua, 50);
+}
+/* «ساعة فقط» تخفت ليلاً تلقائياً (أو دائماً) حسب الإعدادات */
+function applyDim(){
+  var m = prefs.restDim || 'night';
+  document.body.classList.toggle('dim', style === 'clock' && (m === 'always' || (m === 'night' && isNight())));
+}
+/* الخلفية المتحركة: فيديو يرفعه المستخدم من جواله (لا يعمل في النسخة الخفيفة) */
+function setVideo(want){
+  var v = $('vid'), name = prefs.restVideo, url = null;
+  if (want && name && !LITE) { try { (JSON.parse(nat('videos') || '[]')).forEach(function (x) { if (x.name === name) url = x.url; }); } catch (e) {} }
+  if (!url) { if (v.getAttribute('src')) { v.pause(); v.removeAttribute('src'); v.load(); } v.style.display = 'none'; return false; }
+  if (v.getAttribute('src') !== url) v.src = url;
+  v.style.display = '';
+  var p = v.play(); if (p && p.catch) p.catch(function () {});
+  return true;
+}
+document.addEventListener('visibilitychange', function () { var v = $('vid'); if (!v.getAttribute('src')) return; if (document.hidden) v.pause(); else { var p = v.play(); if (p && p.catch) p.catch(function () {}); } });
+window.addEventListener('pagehide', function () { var v = $('vid'); try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {} });
+function renderStrip(d){
+  if (style !== 'lux') return;
+  var list = prayerMinutes(d), np = nextPrayer(d), h = '';
+  list.forEach(function (p) { h += '<div' + (p.key === np.key ? ' class="on"' : '') + '><b>' + p.name + '</b><span>' + fmtMin(p.min) + '</span></div>'; });
+  if ($('strip').innerHTML !== h) $('strip').innerHTML = h;
 }
 
 /* ===== الدعاء: سطر واحد ===== */
@@ -148,7 +191,7 @@ function setDua(){
   el.style.opacity = 0;
   setTimeout(function () {
     el.innerHTML = ''; el.textContent = duas[duaIndex % duas.length];
-    var max = style === 'pattern' ? 46 : style === 'night' ? 30 : style === 'gallery' ? 30 : 40;
+    var max = style === 'pattern' ? 46 : style === 'gallery' ? 30 : 40;
     fitOneLine(el, max, 24);
     if (perfOn()) { var mq = el.querySelector('.mq'); if (mq) mq.style.animation = 'none'; }
     el.style.opacity = 1;
@@ -232,6 +275,8 @@ function tick(){
   var rems = activeReminders().map(function (r) { return r.text; });
   if (prefs.reminders) rems = rems.concat(hijriReminders());
   $('remind').textContent = rems.slice(0, 3).join(' · ');
+  renderStrip(d);
+  if (d.getSeconds() === 0) applyDim();
 }
 var w = todayWird(); $('wirdText').textContent = w[0]; $('wirdSrc').textContent = '(' + w[1] + ')';
 

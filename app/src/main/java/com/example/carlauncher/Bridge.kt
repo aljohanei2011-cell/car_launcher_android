@@ -153,6 +153,8 @@ class Bridge(private val act: MainActivity) {
     // ===== الصور =====
     @JavascriptInterface fun images(): String = Images.list(ctx)
     @JavascriptInterface fun fonts(): String = Fonts.list(ctx)
+    @JavascriptInterface fun videos(): String = Videos.list(ctx)
+    @JavascriptInterface fun deleteVideo(name: String) = Videos.delete(ctx, name)
     @JavascriptInterface fun deleteFont(name: String) = Fonts.delete(ctx, name)
     @JavascriptInterface fun saveImage(slot: String, dataUrl: String): String = Images.saveDataUrl(ctx, slot, dataUrl) ?: ""
     @JavascriptInterface fun deleteImage(name: String) = Images.delete(ctx, name)
@@ -456,10 +458,11 @@ class Bridge(private val act: MainActivity) {
     /** all=false: الإعدادات فقط. all=true: كل البيانات (الرحلات، الصور، الأصوات، التطبيقات المرفوعة، رمز التحديث) */
     @JavascriptInterface
     fun resetNative(all: Boolean) {
+        mirrorClear()
         listOf("launcher", "inbox", "weather").forEach { ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply() }
         if (all) {
             listOf("trip", "secure").forEach { ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply() }
-            listOf(Images.dir(ctx), Sounds.dir(ctx), Apks.dir(ctx), Fonts.dir(ctx)).forEach { d -> d.listFiles()?.forEach { it.delete() } }
+            listOf(Images.dir(ctx), Sounds.dir(ctx), Apks.dir(ctx), Fonts.dir(ctx), Videos.dir(ctx)).forEach { d -> d.listFiles()?.forEach { it.delete() } }
             Backup.file(ctx).delete()
         }
     }
@@ -522,6 +525,21 @@ class Bridge(private val act: MainActivity) {
     // ===== سجل الأعطال ومراقب الإغلاق =====
     @JavascriptInterface fun logError(msg: String) = CrashLog.add(ctx, "page", msg)
     @JavascriptInterface fun crashLog(): String = CrashLog.read(ctx)
+
+    // ===== نسخة ثانية من الإعدادات داخل التطبيق =====
+    // ذاكرة الصفحات قد تتلف إذا انقطعت الكهرباء لحظة الحفظ (عند تشغيل السيارة)، فنحفظ نسخة في ملف
+    // بطريقة آمنة (ملف مؤقت ثم إعادة تسمية) ونستعيدها تلقائياً إذا وُجدت الإعدادات فارغة أو تالفة.
+    private fun mirrorFile() = java.io.File(ctx.filesDir, "mirror.json")
+    @JavascriptInterface fun mirrorSet(json: String) {
+        try {
+            JSONObject(json)
+            val tmp = java.io.File(ctx.filesDir, "mirror.tmp")
+            java.io.FileOutputStream(tmp).use { it.write(json.toByteArray()); it.fd.sync() }
+            if (!tmp.renameTo(mirrorFile())) { mirrorFile().delete(); tmp.renameTo(mirrorFile()) }
+        } catch (e: Exception) {}
+    }
+    @JavascriptInterface fun mirrorGet(): String = try { mirrorFile().takeIf { it.exists() }?.readText() ?: "" } catch (e: Exception) { "" }
+    @JavascriptInterface fun mirrorClear() { try { mirrorFile().delete() } catch (e: Exception) {} }
 
     // ===== التنبيهات الزجاجية وسجل الأحداث =====
     @JavascriptInterface fun alertsTake(): String = Alerts.take()

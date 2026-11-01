@@ -111,6 +111,32 @@ function natJSONraw(fn){
 var LITE = (function () { if (HAS_NATIVE) return nat('isLite') === true; try { return localStorage.getItem('carlauncher.liteTest') === '1'; } catch (e) { return false; } })();
 /* ===== الإعدادات المحفوظة (آمنة إن فشل التخزين) ===== */
 var PREFS_KEY = 'carlauncher.prefs';
+/* ===== حماية الإعدادات: نسخة ثانية داخل التطبيق =====
+   عند فتح الرئيسية: إذا كانت الإعدادات مفقودة أو تالفة ووُجدت نسخة محفوظة، نستعيد كل شيء بصمت ونسجّل ذلك. */
+(function mirrorRestore(){
+  if (!HAS_NATIVE || IN_FRAME || !/(^|\/)(index\.html)?$/.test(location.pathname)) return;
+  var raw = null, ok = false;
+  try { raw = localStorage.getItem(PREFS_KEY); if (raw) { JSON.parse(raw); ok = true; } } catch (e) { ok = false; }
+  if (ok) return;
+  var m = null; try { m = JSON.parse(Native.mirrorGet() || 'null'); } catch (e) {}
+  if (!m || !m[PREFS_KEY]) return;
+  try {
+    Object.keys(m).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) localStorage.setItem(k, m[k]); });
+    Native.logEvent('استُعيدت الإعدادات تلقائياً من النسخة المحفوظة (كانت ' + (raw ? 'تالفة' : 'مفقودة') + ')');
+  } catch (e) {}
+})();
+var _mirrorT = null;
+function mirrorSave(now){
+  if (!HAS_NATIVE) return;
+  clearTimeout(_mirrorT);
+  _mirrorT = setTimeout(function () {
+    try {
+      var o = {};
+      Object.keys(localStorage).forEach(function (k) { if (k.indexOf('carlauncher.') === 0) { var v = localStorage.getItem(k); if (v && v.length < 300000 && k !== 'carlauncher.appcache') o[k] = v; } });
+      if (o[PREFS_KEY]) Native.mirrorSet(JSON.stringify(o));
+    } catch (e) {}
+  }, now ? 0 : 4000);
+}
 var DEFAULT_PREFS = {
   theme: 'mountain', font: 'thmanyah', solid: false, city: 'dhahran',
   brand: 'toyota', subBrands: [], brandText: '', brandSize: 'm',
@@ -143,7 +169,8 @@ var DEFAULT_PREFS = {
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
   alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true,
   /* الشريط العلوي */
-  topBar: { size: 'm', order: ['clean', 'gps', 'wifi', 'bt'], place: 'clock' }
+  clockDial: 'gold', restDim: 'night', restVideo: false,
+  topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){
   try {
@@ -151,6 +178,8 @@ function loadPrefs(){
     var p = Object.assign({}, DEFAULT_PREFS, raw ? JSON.parse(raw) : {});
     // الخطوط المحذوفة من التطبيق تُستبدل بالافتراضي (الخطوط المرفوعة u: تبقى)
     ['font', 'clockFont', 'duaFont'].forEach(function (k) { if (p[k] && !FONTS[p[k]] && String(p[k]).indexOf('u:') !== 0) p[k] = k === 'duaFont' ? 'alyamama' : k === 'clockFont' ? '' : 'thmanyah'; });
+    if (['ring', 'flip', 'words'].indexOf(p.clockStyle) >= 0) p.clockStyle = 'digital';
+    if (p.restStyle === 'night') { p.restStyle = 'clock'; p.restDim = 'always'; }
     if (LITE) liteFix(p);
     return p;
   } catch (e) { return Object.assign({}, DEFAULT_PREFS); }
@@ -158,6 +187,7 @@ function loadPrefs(){
 function savePrefs(p){
   try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) {}
   pushConfig(p);
+  mirrorSave();
 }
 /* إرسال إعدادات التنبيهات للخدمة التي تعمل في الخلفية */
 function pushConfig(p){
@@ -176,6 +206,8 @@ var THEMES = {
   day:      { label: 'النهاري', bg: 'bg/home_day.jpg',     rest: 'bg/rest_day.jpg' },
   violet:   { label: 'البنفسجي', bg: 'bg/home_violet.jpg', rest: 'bg/rest_violet.jpg' },
   glow:     { label: 'الذهبي', bg: 'bg/home_glow.jpg',     rest: 'bg/rest_glow.jpg' },
+  lux_gold:   { label: 'فاخر ذهبي', bg: 'skins/lux/bg_gold.jpg', rest: 'skins/lux/bg_gold.jpg' },
+  lux_blue:   { label: 'فاخر أزرق', bg: 'skins/lux/bg_blue.jpg', rest: 'skins/lux/bg_blue.jpg' },
   gold_auto:  { label: 'ذهبي تلقائي (حسب الوقت)', auto: 'gold', bg: 'skins/gold/bg_night.jpg', rest: 'skins/gold/bg_night.jpg' },
   gold_night: { label: 'ذهبي ليلي', bg: 'skins/gold/bg_night.jpg', rest: 'skins/gold/bg_night.jpg' },
   gold_fajr:  { label: 'ذهبي فجر', bg: 'skins/gold/bg_fajr.jpg', rest: 'skins/gold/bg_fajr.jpg' },
@@ -237,7 +269,9 @@ var SKINS = {
   red:     { label: 'فضي أحمر', theme: 'red_auto' },
   light:   { label: 'أبيض نهاري', theme: 'light_sky' },
   saudi:   { label: 'سعودي', theme: 'saudi_auto' },
-  ptime:   { label: 'أوقات الصلاة', theme: 'ptime_auto' }
+  ptime:   { label: 'أوقات الصلاة', theme: 'ptime_auto' },
+  lux:     { label: 'فاخر ذهبي (زجاجي)', theme: 'lux_gold' },
+  luxblue: { label: 'فاخر أزرق (زجاجي)', theme: 'lux_blue' }
 };
 /* في النسخة الخفيفة: ثيم واحد داكن وخلفية الليل (أو صورتك)، ووضع الأداء دائماً */
 if (LITE) {
@@ -250,10 +284,10 @@ function liteFix(p){
   p.skin = 'classic'; if (!ok(p.theme)) p.theme = 'night'; if (!ok(p.nightTheme)) p.nightTheme = 'night';
   if (p.restBg && p.restBg !== 'auto' && !ok(p.restBg)) p.restBg = 'auto';
   p.weatherFx = false; p.perf = 'on'; p.voiceWake = false;
-  if (['digital', 'thin', 'words'].indexOf(p.clockStyle) < 0) p.clockStyle = 'digital';
+  if (['digital', 'thin', 'capsule', 'dual'].indexOf(p.clockStyle) < 0) p.clockStyle = 'digital';
   p.driveSimple = { on: false, speed: 80 }; p.obdAuto = false;
 }
-var SKIN_CLASSES = ['skin-gold', 'skin-red', 'skin-light', 'skin-saudi', 'skin-ptime', 'skinx'];
+var SKIN_CLASSES = ['skin-gold', 'skin-red', 'skin-light', 'skin-saudi', 'skin-ptime', 'skin-lux', 'skin-luxblue', 'skinx'];
 /* ألوان التمييز التي يختارها المستخدم (فوق لون الثيم) */
 var ACCENTS = [['', 'لون الثيم'], ['#2BB673', 'أخضر'], ['#D9B65C', 'ذهبي'], ['#2F7BFF', 'أزرق'], ['#FF8A4C', 'برتقالي'], ['#FF5FA2', 'وردي'], ['#9B7BFF', 'بنفسجي'], ['#E8334A', 'أحمر']];
 /* نوع تأثير الطقس من بيانات الطقس */
@@ -840,11 +874,11 @@ function noteCat(n){
 /* المثبّتة أولاً ثم الأحدث */
 function sortedNotes(l){ return (l || loadNotes()).slice().sort(function (a, b) { return (!!b.pin - !!a.pin) || (b.at - a.at); }); }
 function noteLines(n){ return (n.text || '').split(/\n|،|,/).map(function (x) { return x.replace(/^\s*[-•*✓]\s*/, '').trim(); }).filter(Boolean); }
-function saveNotes(l){ lsSet(NOTES_KEY, l); }
+function saveNotes(l){ lsSet(NOTES_KEY, l); mirrorSave(); }
 function loadStations(){ return lsGet(ST_KEY, []); }
 function saveStations(l){ lsSet(ST_KEY, l); }
 function loadRems(){ return lsGet(REM_KEY, []); }
-function saveRems(l){ lsSet(REM_KEY, l); pushReminderAlarms(); }
+function saveRems(l){ lsSet(REM_KEY, l); pushReminderAlarms(); mirrorSave(); }
 
 /* ما يصل من الجوال يُحفظ هنا */
 function processInbox(){
@@ -1084,20 +1118,13 @@ var CARD_PARTS = {
   trip: [['time', 'مدة القيادة'], ['cost', 'تكلفة الوقود']],
   qibla: [['txt', 'الوصف']]
 };
-var CLOCK_STYLES = [['digital', 'رقمية'], ['thin', 'رقمية نحيفة'], ['analog', 'بعقارب'], ['ring', 'حلقة الصلاة'], ['flip', 'أرقام تتقلب'], ['words', 'بالحروف'], ['dual', 'مع الصلاة القادمة']];
-if (LITE) CLOCK_STYLES = CLOCK_STYLES.filter(function (x) { return ['digital', 'thin', 'words'].indexOf(x[0]) >= 0; });
+var CLOCK_STYLES = [['digital', 'رقمية'], ['thin', 'رقمية نحيفة'], ['capsule', 'كبسولة زجاجية'], ['led', 'أرقام LED'], ['analog', 'بعقارب'], ['lux', 'عقارب فاخرة'], ['dual', 'مع الصلاة القادمة']];
+var CLOCK_DIALS = [['gold', 'أسود ذهبي'], ['silver', 'فضي'], ['green', 'أخضر'], ['blue', 'أزرق']];
+if (LITE) CLOCK_STYLES = CLOCK_STYLES.filter(function (x) { return ['digital', 'thin', 'capsule', 'dual'].indexOf(x[0]) >= 0; });
 var TEXT_SCALES = [[0.9, 'أصغر'], [1, 'عادي'], [1.15, 'كبير'], [1.3, 'كبير جداً']];
 function partHidden(o, k){ return !!(o && o.hide && o.hide[k]); }
 /* الوقت بالحروف: «العاشرة والنصف مساءً» (يُقرَّب لأقرب 5 دقائق) */
 var HOUR_WORDS = ['الثانية عشرة', 'الواحدة', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة', 'الحادية عشرة', 'الثانية عشرة'];
-function timeWords(d){
-  var h = d.getHours(), m = Math.round(d.getMinutes() / 5) * 5;
-  if (m === 60) { m = 0; h = (h + 1) % 24; }
-  var nh = (h + 1) % 24, useNext = m >= 40, hh = useNext ? nh : h;
-  var tail = { 0: 'تماماً', 5: 'وخمس دقائق', 10: 'وعشر دقائق', 15: 'والربع', 20: 'والثلث', 25: 'والنصف إلا خمس دقائق', 30: 'والنصف', 35: 'والنصف وخمس دقائق', 40: 'إلا ثلثاً', 45: 'إلا ربعاً', 50: 'إلا عشر دقائق', 55: 'إلا خمس دقائق' }[m];
-  var part = hh < 4 ? 'ليلاً' : hh < 6 ? 'فجراً' : hh < 11 ? 'صباحاً' : hh < 14 ? 'ظهراً' : hh < 17 ? 'عصراً' : hh < 20 ? 'مساءً' : 'ليلاً';
-  return { main: 'الساعة ' + HOUR_WORDS[hh % 12 === 0 ? 12 : hh % 12] + ' ' + tail, part: part };
-}
 /* رسالة قصيرة أسفل الشاشة مع زر اختياري */
 function toast(msg, btn, fn, ms){
   var st = document.getElementById('stage') || document.body, old = document.getElementById('toast');

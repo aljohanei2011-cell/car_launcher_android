@@ -158,6 +158,18 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                     event("sound", f.name)
                     ok(out, f.name)
                 }
+                // خلفية متحركة للاستراحة (MP4 / WebM) تبقى على الجهاز فقط
+                method == "POST" && path == "/video" -> {
+                    if (len <= 0 || len > 40L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
+                    val ext = (q["ext"] ?: "mp4").lowercase().takeIf { it in setOf("mp4", "webm", "m4v") } ?: "mp4"
+                    val tmp = File(Videos.dir(ctx), "upload.tmp")
+                    if (!streamToFile(inp, len, tmp) || !Videos.looksValid(tmp)) { tmp.delete(); send(out, 400, "text/plain", "not a video".toByteArray()); return }
+                    val f = File(Videos.dir(ctx), "rest_" + System.currentTimeMillis() + "." + ext)
+                    tmp.renameTo(f)
+                    Videos.trim(ctx)
+                    event("video", f.name)
+                    ok(out, f.name)
+                }
                 // خط من الجوال (ttf / otf / woff / woff2) يبقى على الجهاز فقط
                 method == "POST" && path == "/font" -> {
                     if (len <= 0 || len > 20L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
@@ -289,6 +301,26 @@ object Images {
         if (name.contains('/') || name.contains("..")) return
         File(dir(c), name).delete()
     }
+}
+
+/* فيديوهات الاستراحة المتحركة (حد أقصى 3 على الجهاز) */
+object Videos {
+    fun dir(c: Context) = File(c.filesDir, "videos").apply { mkdirs() }
+    /** MP4 يبدأ بـ ftyp، وWebM بـ 1A45DFA3 */
+    fun looksValid(f: File): Boolean = try {
+        val b = ByteArray(12); f.inputStream().use { it.read(b) }
+        (b[4] == 'f'.code.toByte() && b[5] == 't'.code.toByte() && b[6] == 'y'.code.toByte() && b[7] == 'p'.code.toByte()) ||
+            (b[0] == 0x1A.toByte() && b[1] == 0x45.toByte() && b[2] == 0xDF.toByte() && b[3] == 0xA3.toByte())
+    } catch (e: Exception) { false }
+    fun trim(c: Context) { dir(c).listFiles()?.filter { it.name.startsWith("rest_") }?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() } }
+    fun list(c: Context): String {
+        val a = JSONArray()
+        dir(c).listFiles()?.filter { it.name.startsWith("rest_") }?.sortedByDescending { it.lastModified() }?.forEach {
+            a.put(JSONObject().put("name", it.name).put("size", it.length()).put("url", "file://" + it.absolutePath))
+        }
+        return a.toString()
+    }
+    fun delete(c: Context, name: String) { if (name.contains('/') || name.contains("..")) return; File(dir(c), name).delete() }
 }
 
 /* خطوط يرفعها المستخدم من جواله: تُحفظ في ملفات التطبيق ولا تدخل في المستودع */

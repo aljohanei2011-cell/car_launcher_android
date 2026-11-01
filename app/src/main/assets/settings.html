@@ -237,7 +237,7 @@ function renderLook(){
   var sk = section('الثيم', 'شكل البطاقات والألوان والزخارف. يتغير فوراً لتراه هنا قبل الرجوع للرئيسية، ويمكنك التراجع.');
   var sg = el('div', 'themes'); sg.style.gridTemplateColumns = 'repeat(3,minmax(0,1fr))';
   [['classic', 'bg/home_mountain.jpg'], ['gold', 'skins/gold/bg_night.jpg'], ['red', 'skins/red/bg_night.jpg'],
-   ['light', 'skins/light/bg_sky.jpg'], ['saudi', 'skins/saudi/bg_riyadh_night.jpg'], ['ptime', 'skins/ptime/bg_maghrib.jpg']].filter(function (x) { return SKINS[x[0]]; }).forEach(function (x) {
+   ['light', 'skins/light/bg_sky.jpg'], ['saudi', 'skins/saudi/bg_riyadh_night.jpg'], ['ptime', 'skins/ptime/bg_maghrib.jpg'], ['lux', 'skins/lux/bg_gold.jpg'], ['luxblue', 'skins/lux/bg_blue.jpg']].filter(function (x) { return SKINS[x[0]]; }).forEach(function (x) {
     var b = el('button', 'tile' + ((prefs.skin || 'classic') === x[0] ? ' on' : ''), SKINS[x[0]].label);
     b.style.backgroundImage = "url('" + thumb(x[1]) + "')"; b.style.height = '100px'; b.style.fontSize = '19px';
     b.onclick = function () {
@@ -648,7 +648,7 @@ function renderSystem(){
   }); };
   var r2 = el('button', 'opt', 'إعادة تعيين كل الإعدادات');
   r2.onclick = function () { confirmBox('إرجاع كل الإعدادات للوضع الافتراضي؟ (الملاحظات والتذكيرات والصيانة والوقود والرحلات والصور تبقى)', function () {
-    try { localStorage.removeItem(PREFS_KEY); sessionStorage.clear(); } catch (e) {}
+    try { localStorage.setItem(PREFS_KEY, '{}'); sessionStorage.clear(); } catch (e) {}
     nat('resetNative', false); goHome(true);
   }); };
   var r3 = el('button', 'opt', 'مسح كل البيانات');
@@ -702,7 +702,6 @@ function renderSystem(){
   lm.appendChild(fr); s.appendChild(lm);
   toggle(s, 'تحرير تلقائي عند فتح شاشة الاستراحة', 'ramOnRest');
   toggle(s, 'تحرير تلقائي بعد تشغيل السيارة', 'ramOnBoot');
-  toggle(s, 'زر «إغلاق التطبيقات» بجوار الساعة', 'cleanBtn', 'يطلب تأكيداً ثم يوقف التطبيقات الشغالة في الخلفية.');
   if (!LITE && HAS_NATIVE) {
     var on = nat('cleanAvail') === true, ca = el('div', 'line');
     ca.appendChild(el('span', '', 'مسح قائمة التطبيقات الأخيرة مثل الجوال:'));
@@ -837,6 +836,7 @@ function renderHome(){
 
   s = section('شكل الساعة', 'يُطبَّق على بطاقة الساعة. يمكنك أيضاً اختيار شكل مختلف لكل بطاقة بالضغط المطوّل عليها.');
   opts(s, CLOCK_STYLES, prefs.clockStyle || 'digital', function (k) { prefs.clockStyle = k; upd(); });
+  if (!LITE) { s.appendChild(el('span', 'note', 'لون قرص «العقارب الفاخرة»:')); opts(s, CLOCK_DIALS, prefs.clockDial || 'gold', function (k) { prefs.clockDial = k; upd(); }, true); }
 
   s = section('حجم النصوص وتحرير البطاقات', 'التكبير يغيّر النص فقط وتبقى البطاقات بحجمها. اضغط مطولاً على أي بطاقة في الرئيسية لتحريرها: حجم نصها، وما يظهر فيها، ومكانها، ونوعها.');
   s.appendChild(el('span', 'note', 'حجم النص في كل البطاقات:'));
@@ -903,27 +903,27 @@ function renderHome(){
   }
   toggle(s, 'إظهار أسماء الأزرار', 'dockLabels');
 
-  s = section('الشريط العلوي (الأيقونات)', 'كبّر الأيقونات وأبعدها عن بعض حتى لا تضغط أيقونة بدل أخرى.');
+  s = section('الشريط العلوي (الأيقونات)', 'أيقونات الحالة بجوار الساعة، وزرا «تحدّث» و«إغلاق» وحدهما بجوار اسم السيارة حتى لا يُضغطا بالخطأ.');
   var tb = Object.assign({}, DEFAULT_PREFS.topBar, prefs.topBar || {});
   function setTb(){ prefs.topBar = tb; upd(); }
-  s.appendChild(el('span', 'note', 'الحجم:'));
+  s.appendChild(el('span', 'note', 'حجم أيقونات الحالة:'));
   opts(s, [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']], tb.size, function (k) { tb.size = k; setTb(); }, true);
-  s.appendChild(el('span', 'note', 'المكان:'));
-  opts(s, [['clock', 'بجوار الساعة'], ['brand', 'بجوار اسم السيارة (بعيداً عن الساعة)']], tb.place, function (k) { tb.place = k; setTb(); }, true);
   var si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
-  var TBN = { clean: 'إغلاق التطبيقات', gps: 'GPS', wifi: 'الواي فاي', bt: 'البلوتوث' };
-  var order = (tb.order || []).slice(); Object.keys(TBN).forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
-  s.appendChild(el('span', 'note', 'الترتيب والإظهار (الأول هو الأقرب للساعة):'));
+  var TBN = { gps: 'GPS', wifi: 'الواي فاي', bt: 'البلوتوث' };
+  var order = (tb.order || []).filter(function (k) { return TBN[k]; }); Object.keys(TBN).forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
+  s.appendChild(el('span', 'note', 'ترتيب أيقونات الحالة (الأول هو الأقرب للساعة):'));
   order.forEach(function (k, i) {
     var row = el('div', 'line'); row.appendChild(el('span', '', TBN[k]));
     var o = el('div', 'opts'); o.style.marginRight = 'auto';
-    var shown = k === 'clean' ? prefs.cleanBtn !== false : si[k];
-    var sh = el('button', 'opt sm' + (shown ? ' on' : ''), shown ? 'ظاهرة' : 'مخفية');
-    sh.onclick = function () { if (k === 'clean') prefs.cleanBtn = !shown; else { si[k] = !shown; prefs.statusIcons = si; } upd(); };
+    var sh = el('button', 'opt sm' + (si[k] ? ' on' : ''), si[k] ? 'ظاهرة' : 'مخفية');
+    sh.onclick = function () { si[k] = !si[k]; prefs.statusIcons = si; upd(); };
     var up = el('button', 'opt sm', '▲'); up.disabled = i === 0; up.onclick = function () { order.splice(i - 1, 0, order.splice(i, 1)[0]); tb.order = order; setTb(); };
     var dn = el('button', 'opt sm', '▼'); dn.disabled = i === order.length - 1; dn.onclick = function () { order.splice(i + 1, 0, order.splice(i, 1)[0]); tb.order = order; setTb(); };
     o.appendChild(sh); o.appendChild(up); o.appendChild(dn); row.appendChild(o); s.appendChild(row);
   });
+  s.appendChild(el('span', 'note', 'أزرار الأوامر:'));
+  toggle(s, 'زر «إغلاق التطبيقات»', 'cleanBtn', 'يطلب تأكيداً ثم يغلق التطبيقات الشغالة في الخلفية.');
+  if (!LITE) toggle(s, 'زر «تحدّث» (الأوامر الصوتية)', 'micBtn', 'يظهر فقط إذا فعّلت الأوامر الصوتية.');
 }
 
 /* ===== التنبيهات والمباريات ===== */
@@ -968,7 +968,21 @@ function preview(type){
 /* ===== تبويب الاستراحة ===== */
 function renderRest(){
   var s = section('نمط شاشة الاستراحة');
-  opts(s, [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['night', 'ليلي خافت'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']], prefs.restStyle, function (k) { prefs.restStyle = k; upd(); });
+  opts(s, [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['lux', 'فاخرة (شريط الصلوات)'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']], prefs.restStyle === 'night' ? 'clock' : prefs.restStyle, function (k) { prefs.restStyle = k; upd(); });
+  if ((prefs.restStyle || 'classic') === 'clock') { s.appendChild(el('span', 'note', 'الإضاءة في «ساعة فقط»:')); opts(s, [['night', 'خافتة ليلاً تلقائياً'], ['always', 'خافتة دائماً'], ['off', 'عادية']], prefs.restDim || 'night', function (k) { prefs.restDim = k; upd(); }, true); }
+  if (!LITE) {
+    s.appendChild(el('span', 'note', 'خلفية متحركة (فيديو ترفعه من جوالك من «الإرسال من الجوال» ▸ استراحة متحركة):'));
+    var vids = []; try { vids = JSON.parse(nat('videos') || '[]'); } catch (e) {}
+    var vo = el('div', 'opts');
+    var nb = el('button', 'opt sm' + (!prefs.restVideo ? ' on' : ''), 'بدون (صورة)'); nb.onclick = function () { prefs.restVideo = false; upd(); }; vo.appendChild(nb);
+    vids.forEach(function (v, i) {
+      var b = el('button', 'opt sm' + (prefs.restVideo === v.name ? ' on' : ''), 'فيديو ' + (i + 1) + ' (' + Math.round(v.size / 1048576 * 10) / 10 + ' م.ب)');
+      b.onclick = function () { prefs.restVideo = v.name; upd(); }; vo.appendChild(b);
+      var x = el('button', 'opt sm', '×'); x.setAttribute('aria-label', 'حذف'); x.onclick = function () { nat('deleteVideo', v.name); if (prefs.restVideo === v.name) prefs.restVideo = false; upd(); }; vo.appendChild(x);
+    });
+    if (!vids.length) vo.appendChild(el('span', 'note', 'لا توجد فيديوهات بعد.'));
+    s.appendChild(vo);
+  }
   var pv = el('a', 'opt sm', 'معاينة'); pv.href = 'rest.html'; pv.style.display = 'flex'; pv.style.alignItems = 'center'; pv.style.alignSelf = 'flex-start'; s.appendChild(pv);
 
   s = section('ما يظهر');
@@ -1111,7 +1125,7 @@ function renderOverview(){
   var body = document.getElementById('body');
   var v = natJSON('version') || {}, ch = nat('updChannel') || 'stable', m = memText(), us = natJSON('updateState') || {};
   var ov = el('div', 'ov4');
-  [['الإصدار' + (LITE ? ' (النسخة الخفيفة)' : ''), (v.name || '—').replace('-lite', '') + ' <span class="tag ' + (ch === 'beta' ? 't1' : 't3') + '">' + (ch === 'beta' ? 'تجريبية' : 'ثابتة') + '</span>'],
+  [['الإصدار' + (LITE ? ' (النسخة الخفيفة)' : ''), (v.name || '—').replace('-lite', '')],
    ['الذاكرة', m ? m.pct + '% <span style="font-size:14px;opacity:.7">من ' + m.total + ' ج</span>' : '—'],
    ['الثيم', (SKINS[prefs.skin || 'classic'] || SKINS.classic).label],
    ['المدينة', esc0(cityLabel())]].forEach(function (x) { var c = el('div', 'ovc glass'); c.innerHTML = '<span>' + x[0] + '</span><b>' + x[1] + '</b>'; ov.appendChild(c); });

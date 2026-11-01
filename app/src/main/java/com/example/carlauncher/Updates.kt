@@ -204,7 +204,8 @@ object Updater {
                 val arr = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
                 val wantLite = if (switchTo != null) switchTo == "lite" else BuildConfig.LITE
                 switching = switchTo != null && wantLite != BuildConfig.LITE
-                val beta = forceBeta || switchTo != null || channel(c) == "beta"
+                // قناة واحدة: كل إصدار منشور نهائي ويصل فوراً
+                val beta = true
                 val now = System.currentTimeMillis()
                 var best: JSONObject? = null; var bestN = 0
                 var newest: JSONObject? = null; var newestN = 0

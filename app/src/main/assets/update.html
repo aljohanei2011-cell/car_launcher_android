@@ -46,8 +46,6 @@
         
         <div class="row"><span class="sub">النسخة</span><span style="display:flex;gap:8px;align-items:center"><b id="edName"></b><button class="btn g" id="edSw"></button></span></div>
         <span class="note sub" id="edNote" style="font-size:15px;margin-top:-10px"></span>
-        <div class="row"><span class="sub">قناة التحديث لهذه الشاشة</span><span style="display:flex;gap:8px"><button class="btn g" id="chS">ثابتة</button><button class="btn g" id="chB">تجريبية</button></span></div>
-        <span class="note sub" id="chNote" style="font-size:15px;margin-top:-10px"></span>
         <button class="btn" id="check">بحث عن تحديث</button>
         <div class="msg" id="pend" style="display:none"></div>
         <div class="bar" id="bar" style="display:none"><div id="barIn"></div></div>
@@ -99,17 +97,11 @@ function poll(){
   }
   else if (s.phase === 'error') { m.className = 'msg err'; m.textContent = s.error; btn.textContent = 'إعادة المحاولة'; }
   else m.textContent = '';
-  var pd = $('pend');
-  if (s.pendingHrs > 0 && (s.phase === 'none' || s.phase === 'available')) {
-    pd.style.display = 'block';
-    pd.innerHTML = 'يوجد إصدار تجريبي أحدث (' + s.newest + ') يصل للقناة الثابتة بعد ' + s.pendingHrs + ' ساعة تقريباً. <button class="btn g" id="nowBeta">تثبيته الآن</button>';
-    $('nowBeta').onclick = function () { betaOnce = true; nat('updateCheckBeta'); poll(); };
-  } else pd.style.display = 'none';
+  $('pend').style.display = 'none';
   if (switchTo && s.phase === 'available' && s.switching) { switchTo = null; nat('updateDownload'); }
   if (s.phase === 'available' && s.switching) { m.textContent = 'جارٍ تحميل النسخة ' + (s.edition === 'lite' ? 'الخفيفة' : 'الكاملة') + '…'; }
-  if (betaOnce && s.phase === 'available' && s.channel === 'beta') { betaOnce = false; if (nat('canInstall')) { nat('clearInstallStatus'); nat('updateDownload'); } }
 }
-var betaOnce = false, switchTo = null;
+var switchTo = null;
 /* التحويل بين النسخة الكاملة والخفيفة (نفس التطبيق؛ تبقى الإعدادات والبيانات) */
 function renderEd(){
   $('edName').textContent = LITE ? 'الخفيفة' : 'الكاملة';
@@ -125,14 +117,6 @@ $('edSw').onclick = function () { startSwitch(LITE ? 'full' : 'lite'); };
 renderEd();
 var swq = (location.search.match(/switch=(lite|full)/) || [])[1];
 if (swq && (swq === 'lite') !== LITE) setTimeout(function () { $('edSw').textContent = 'جارٍ التحضير…'; startSwitch(swq); }, 300);
-function renderCh(){
-  var ch = nat('updChannel') || 'stable';
-  $('chS').className = 'btn' + (ch === 'stable' ? '' : ' g'); $('chB').className = 'btn' + (ch === 'beta' ? '' : ' g');
-  $('chNote').textContent = ch === 'beta' ? 'تجريبية: كل إصدار يصلك فور نشره. مناسبة لشاشة التجربة.' : 'ثابتة: الإصدارات الكبيرة تصلك بعد يومين، وإصدارات «الإصلاح العاجل» تصلك فوراً. مناسبة لباقي الشاشات.';
-}
-$('chS').onclick = function () { nat('setUpdChannel', 'stable'); renderCh(); nat('updateCheck'); poll(); };
-$('chB').onclick = function () { nat('setUpdChannel', 'beta'); renderCh(); nat('updateCheck'); poll(); };
-renderCh();
 $('check').onclick = function () {
   if (!HAS_NATIVE) return;
   if (!nat('canInstall')) { askInstallPermission(); return; }

@@ -14,8 +14,16 @@
 .st{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:none;border:none;padding:0}
 .st svg{width:26px;height:26px}
 /* أحجام أيقونات الشريط العلوي: مساحة اللمس أكبر من الأيقونة */
-.status.sz-m{gap:18px}.status.sz-m .st{width:56px;height:52px;border-radius:16px;background:rgba(255,255,255,.07)}.status.sz-m .st svg{width:30px;height:30px}
-.status.sz-l{gap:22px}.status.sz-l .st{width:70px;height:60px;border-radius:18px;background:rgba(255,255,255,.09)}.status.sz-l .st svg{width:36px;height:36px}
+/* زرا الأوامر (تحدّث، إغلاق): وحدهما بجوار اسم السيارة، بعيداً عن الساعة */
+.acts{display:flex;align-items:center;gap:24px;margin-right:26px}
+.act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:70px;height:58px;padding:0 10px;border-radius:18px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:13px;font-weight:600;flex:none}
+.act svg{width:24px;height:24px}
+.act.mic{border-color:rgba(111,168,255,.75);background:rgba(47,123,255,.22)}
+.act.mic.on{box-shadow:0 0 0 4px rgba(47,123,255,.35),0 0 18px rgba(47,123,255,.6)}
+.act.cls{border-color:rgba(255,120,110,.6);background:rgba(255,90,80,.12)}
+body.skin-light .act{color:#13202f;border-color:rgba(19,32,47,.3)}body.skin-light .act svg{stroke:#13202f}
+.status.sz-m{gap:22px}.status.sz-m .st{width:56px;height:52px;border-radius:16px;background:rgba(255,255,255,.07)}.status.sz-m .st svg{width:30px;height:30px}
+.status.sz-l{gap:26px}.status.sz-l .st{width:70px;height:60px;border-radius:18px;background:rgba(255,255,255,.09)}.status.sz-l .st svg{width:36px;height:36px}
 
 .st.off{opacity:.35}
 .clockTop{font-size:26px;font-weight:600;direction:ltr;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -88,13 +96,7 @@ body.skin-saudi .card.op-solid{background:#072A1E!important}
 body.skin-gold .card.op-solid{background:#0f1d30!important}
 body.skin-red .card.op-solid{background:#16191e!important}
 /* ساعة الأرقام المتقلبة */
-.flip{display:flex;align-items:center;justify-content:center;gap:.08em;direction:ltr}
-.flip .fl{display:inline-block;min-width:.66em;text-align:center;padding:.04em .06em;border-radius:.12em;background:rgba(0,0,0,.28);box-shadow:inset 0 -1px 0 rgba(255,255,255,.08),0 .05em .12em rgba(0,0,0,.3);position:relative;line-height:1.1}
-.flip .fl::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.45)}
 body.skin-light .flip .fl{background:rgba(255,255,255,.75)}
-.flip .fl.go{animation:flipIn .55s ease-out}
-.flip .flc{opacity:.7;margin:0 .02em}
-@keyframes flipIn{0%{transform:perspective(400px) rotateX(-90deg);opacity:.3}100%{transform:perspective(400px) rotateX(0);opacity:1}}
 
 /* ===== القائمة (Dock) ===== */
 #dock{display:flex;gap:14px;box-sizing:border-box}
@@ -130,7 +132,7 @@ body.skin-light .flip .fl{background:rgba(255,255,255,.75)}
   </div>
   <div class="wrap" id="wrap">
     <div class="top">
-      <div class="right"><div class="logo" id="brand" aria-label="اسم السيارة"></div></div>
+      <div class="right"><div class="logo" id="brand" aria-label="اسم السيارة"></div><div class="acts" id="acts"></div></div>
       <div class="center"><a class="banner" id="banner" href="maintenance.html"></a></div>
       <div class="left">
         <span class="clockTop" id="clockTop"></span>
@@ -240,6 +242,7 @@ window.closeRest = function () {
   if (!o.rest && (np.digits !== o.digits || np.h24 !== o.h24 || !!nat('voiceEnabled') !== !!o.voice)) { location.reload(); return; }
   document.getElementById('wrap').style.visibility = '';
   var bg = document.getElementById('bg'); if (bg.dataset.src) { bg.src = bg.dataset.src; delete bg.dataset.src; }
+  setTimeout(buildGlass, 50);
   if (o.rest) { renderWeatherFx(); forceCards = true; tick(); forceCards = false; }
   else { _imgs = null; window.onPageResume(); }
 };
@@ -267,6 +270,7 @@ document.addEventListener('click', function (e) {
 function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
 function renderDock(){
+  setTimeout(placeGlass, 80);
   var d = document.getElementById('dock'); d.innerHTML = '';
   var items = (prefs.dock || []).slice();
   if (items.indexOf('settings') < 0) items.push('settings');
@@ -303,14 +307,11 @@ function renderStatus(){
   var el = document.getElementById('status'), si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
   var tb = Object.assign({}, DEFAULT_PREFS.topBar, prefs.topBar || {});
   el.className = 'status sz-' + (tb.size || 'm');
-  // المكان: بجوار الساعة، أو في الطرف الآخر بجوار اسم السيارة (بعيداً عن الساعة)
-  var host = tb.place === 'brand' ? document.querySelector('.top .right') : document.querySelector('.top .left');
-  if (host && el.parentNode !== host) { if (tb.place === 'brand') host.appendChild(el); else host.insertBefore(el, document.getElementById('remChip')); }
-  var order = (tb.order || DEFAULT_PREFS.topBar.order).slice();
-  ['clean', 'gps', 'wifi', 'bt'].forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
+  var order = (tb.order || DEFAULT_PREFS.topBar.order).filter(function (k) { return k !== 'clean'; });
+  ['gps', 'wifi', 'bt'].forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
+  renderActs();
   var s = HAS_NATIVE ? (natJSON('status') || {}) : {}, t = HAS_NATIVE ? (natJSON('trip') || {}) : {};
   var B = {
-    clean: function () { return prefs.cleanBtn !== false ? '<button class="st" style="color:#fff" onclick="cleanAsk()" aria-label="إغلاق التطبيقات">' + SI.clean + '</button>' : ''; },
     gps: function () { return si.gps ? '<button class="st' + (t.gps ? '' : ' off') + '" style="color:' + (t.gps ? '#5AD1A0' : '#fff') + '" onclick="nat(\'openSystem\',\'gps\')" aria-label="GPS ' + (t.gps ? 'متصل' : 'يبحث') + '">' + SI.gps + '</button>' : ''; },
     wifi: function () { return si.wifi ? '<button class="st' + (s.wifi ? '' : ' off') + '" style="color:' + (s.internet ? '#fff' : '#F2C879') + '" onclick="nat(\'openSystem\',\'wifi\')" aria-label="واي فاي">' + SI.wifi(s.wifi ? (s.wifiLevel == null ? 3 : s.wifiLevel) : -1) + '</button>' : ''; },
     bt: function () { return si.bt ? '<button class="st' + (s.bt === 'connected' || s.bt === 'on' ? '' : ' off') + '" style="color:' + (s.bt === 'connected' ? '#6FA8FF' : '#fff') + '" onclick="nat(\'openSystem\',\'bt\')" aria-label="بلوتوث">' + SI.bt + '</button>' : ''; }
@@ -318,6 +319,16 @@ function renderStatus(){
   var html = '';
   order.forEach(function (k) { if (B[k]) html += B[k](); });
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
+}
+/* زر «إغلاق» (وزر «تحدّث» يضيفه ملف الأوامر الصوتية) */
+function renderActs(){
+  var a = document.getElementById('acts'); if (!a) return;
+  var c = document.getElementById('clsBtn');
+  if (prefs.cleanBtn === false) { if (c) c.remove(); return; }
+  if (!c) {
+    c = document.createElement('button'); c.id = 'clsBtn'; c.className = 'act cls'; c.setAttribute('aria-label', 'إغلاق التطبيقات');
+    c.innerHTML = SI.clean + '<span>إغلاق</span>'; c.onclick = cleanAsk; a.appendChild(c);
+  }
 }
 /* الضغط على زر الإغلاق يطلب تأكيداً (يمنع الضغط الخطأ) */
 function cleanAsk(){
@@ -357,14 +368,7 @@ function clockDates(d, o){
            hijri: partHidden(o, 'hijri') ? '' : '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div>' };
 }
 function ampmHtml(d, o){ var a = partHidden(o, 'ampm') ? '' : ampm(d); return a ? '<span style="font-size:.25em;font-weight:500;margin-left:.2em">' + a + '</span>' : ''; }
-/* بداية الفترة الحالية (من الصلاة السابقة) للحلقة */
-function prayerProgress(d){
-  var now = riyadhMinutes(d), list = prayerMinutes(d), prev = null, next = null;
-  for (var i = 0; i < list.length; i++) { if (list[i].min <= now) prev = list[i]; else if (!next) next = list[i]; }
-  var start = prev ? prev.min : list[list.length - 1].min - 1440, end = next ? next.min : list[0].min + 1440;
-  return Math.max(0, Math.min(1, (now - start) / Math.max(1, end - start)));
-}
-var _flipPrev = '', _rcEl = null;
+var _rcEl = null;
 /* البطاقة التي تُرسم الآن أعرض من ارتفاعها بوضوح؟ (لترتيب الساعة أفقياً أو عمودياً) */
 function cardWide(){ return !!_rcEl && _rcEl.clientWidth > _rcEl.clientHeight * 1.45; }
 var CLOCK_RENDER = {
@@ -383,29 +387,45 @@ var CLOCK_RENDER = {
       hand(ha, 52, 7, fg, 10) + hand(ma, 76, 4.5, fg, 12) + hand(sa, 82, 2, ac, 18) + '<circle cx="100" cy="100" r="6" fill="' + ac + '"/></svg>' +
       '<div style="min-width:0;flex:none">' + (wide ? '<div class="k-big" style="font-size:2.4em">' + clockStr(d) + ampmHtml(d, o) + '</div>' : '') + t.greg + t.hijri + '</div></div>';
   },
-  ring: function (d, o) {
-    var t = clockDates(d, o), np = nextPrayer(d), f = prayerProgress(d), C = 2 * Math.PI * 88, ac = accentCol('#5AB0FF');
-    var wide = cardWide();
-    return '<div style="display:flex;flex-direction:' + (wide ? 'row' : 'column') + ';align-items:center;justify-content:center;gap:' + (wide ? '1.2em' : '.5em') + ';height:100%;min-height:0;text-align:center" ondblclick="openRest()"><div style="position:relative;' + (wide ? 'height:100%' : 'flex:1;min-height:0;max-width:100%') + ';aspect-ratio:1">' +
-      '<svg viewBox="0 0 200 200" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="100" cy="100" r="88" fill="none" stroke="' + (isLight() ? 'rgba(0,0,0,.1)' : 'rgba(255,255,255,.12)') + '" stroke-width="10"/>' +
-      '<circle cx="100" cy="100" r="88" fill="none" stroke="' + ac + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (C * f).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 100 100)"/></svg>' +
-      '<div class="k-center" style="position:absolute;inset:0"><div class="k-big" style="font-size:2.7em">' + clockStr(d) + '</div><div class="k-sub">' + (partHidden(o, 'ampm') ? '' : ampm(d)) + '</div></div></div>' +
-      '<div style="min-width:0;flex:none"><div class="k-lbl">' + np.name + ' ' + np.timeFmt + ' · ' + fmtDiff(np.diff) + '</div>' + t.greg + t.hijri + '</div></div>';
-  },
-  flip: function (d, o) {
-    var t = clockDates(d, o), str = clockStr(d), out = '';
-    for (var i = 0; i < str.length; i++) {
-      var ch = str.charAt(i);
-      if (ch === ':') { out += '<span class="flc">:</span>'; continue; }
-      out += '<span class="fl' + (_flipPrev && _flipPrev.charAt(i) !== ch ? ' go' : '') + '">' + ch + '</span>';
+  /* عقارب فاخرة بأرقام عربية وأربعة ألوان للقرص */
+  lux: function (d, o) {
+    var t = clockDates(d, o), D = LUX_DIALS[prefs.clockDial] || LUX_DIALS.gold, uid = 'lx' + (_luxN++ % 2);
+    var h = d.getHours() % 12, m = d.getMinutes(), sec = d.getSeconds();
+    var ha = h * 30 + m * 0.5, ma = m * 6 + sec * 0.1, sa = sec * 6, ticks = '', nums = '';
+    for (var i = 0; i < 60; i++) { var big = i % 5 === 0; if (big) continue; ticks += '<line x1="100" y1="13" x2="100" y2="17" stroke="' + D.tick + '" stroke-opacity=".55" stroke-width="1" transform="rotate(' + i * 6 + ' 100 100)"/>'; }
+    var AR = ['١٢', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '١٠', '١١'];
+    for (var k = 0; k < 12; k++) {
+      var an = k * 30 * Math.PI / 180, x = 100 + Math.sin(an) * 70, y = 100 - Math.cos(an) * 70 + 7;
+      nums += '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" fill="' + D.num + '" font-size="' + (k % 3 === 0 ? 21 : 17) + '" font-weight="700" font-family="Tahoma,sans-serif">' + AR[k] + '</text>';
+      nums += '<rect x="99" y="10" width="2" height="9" rx="1" fill="' + D.num + '" transform="rotate(' + k * 30 + ' 100 100)"/>';
     }
-    _flipPrev = str;
-    return '<div class="k-center" ondblclick="openRest()">' + t.greg + '<div class="flip k-huge" style="font-size:5em">' + out + ampmHtml(d, o) + '</div>' + t.hijri + '</div>';
+    var hand = function (a, len, w, col) { return '<path d="M' + (100 - w) + ' 104 L100 ' + (100 - len) + ' L' + (100 + w) + ' 104 Z" fill="' + col + '" transform="rotate(' + a + ' 100 100)"/>'; };
+    var wide = cardWide();
+    return '<div style="display:flex;flex-direction:' + (wide ? 'row' : 'column') + ';align-items:center;justify-content:center;gap:' + (wide ? '1.2em' : '.4em') + ';height:100%;min-height:0;text-align:center" ondblclick="openRest()">' +
+      '<svg viewBox="0 0 200 200" style="' + (wide ? 'height:100%' : 'flex:1;min-height:0;width:100%') + ';aspect-ratio:1;max-width:100%" aria-label="' + clockStr(d) + '"><defs>' +
+      '<radialGradient id="' + uid + 'd" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="' + D.dial[0] + '"/><stop offset="1" stop-color="' + D.dial[1] + '"/></radialGradient>' +
+      '<linearGradient id="' + uid + 'b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + D.bezel[0] + '"/><stop offset=".5" stop-color="' + D.bezel[1] + '"/><stop offset="1" stop-color="' + D.bezel[0] + '"/></linearGradient></defs>' +
+      '<circle cx="100" cy="100" r="98" fill="url(#' + uid + 'b)"/><circle cx="100" cy="100" r="91" fill="url(#' + uid + 'd)"/>' + ticks + nums +
+      hand(ha, 46, 4.2, D.hand) + hand(ma, 70, 3.2, D.hand) + '<line x1="100" y1="118" x2="100" y2="22" stroke="' + D.sec + '" stroke-width="1.2" transform="rotate(' + sa + ' 100 100)"/>' +
+      '<circle cx="100" cy="100" r="5" fill="' + D.sec + '"/><circle cx="100" cy="100" r="2" fill="' + D.dial[1] + '"/></svg>' +
+      '<div style="min-width:0;flex:none">' + (wide ? '<div class="k-big" style="font-size:2.2em">' + clockStr(d) + ampmHtml(d, o) + '</div>' : '') + t.greg + t.hijri + '</div></div>';
   },
-  words: function (d, o) {
-    var w = timeWords(d), t = clockDates(d, o);
-    return '<div class="k-center" ondblclick="openRest()"><div class="k-mid font-dua" style="white-space:normal;font-size:2.5em;line-height:1.35;font-weight:700">' + w.main + '</div><div class="k-mid" style="font-size:1.6em;color:var(--accent,#5AB0FF)">' + w.part + '</div>' +
-      '<div class="k-sub">' + clockStr(d) + (ampm(d) ? ' ' + ampm(d) : '') + '</div>' + t.hijri + '</div>';
+  /* كبسولة زجاجية: أرقام نحيفة وثوانٍ صغيرة والتاريخ تحت خط */
+  capsule: function (d, o) {
+    var t = clockDates(d, o), ac = accentCol('#7FB8FF');
+    return '<div class="k-center" ondblclick="openRest()"><div class="capsule" style="--cap:' + ac + '">' +
+      '<div style="display:flex;align-items:baseline;gap:.15em;direction:ltr;justify-content:center"><span class="k-huge" style="font-weight:300;font-size:5.4em;letter-spacing:-.01em">' + clockStr(d) + '</span>' +
+      '<span style="font-size:1.6em;opacity:.75;font-variant-numeric:tabular-nums">' + pad2(d.getSeconds()) + '</span>' + ampmHtml(d, o) + '</div>' +
+      '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);margin:.35em 1em .45em"></div>' + t.greg + t.hijri + '</div></div>';
+  },
+  /* أرقام LED مضيئة (مرسومة، بدون خط إضافي) */
+  led: function (d, o) {
+    var t = clockDates(d, o), ac = accentCol('#7FD0FF'), str = clockStr(d), x = 0, out = '';
+    for (var i = 0; i < str.length; i++) { var ch = str.charAt(i); if (ch === ':') { out += '<circle cx="' + (x + 6) + '" cy="30" r="3.2"/><circle cx="' + (x + 6) + '" cy="58" r="3.2"/>'; x += 14; } else { out += segDigit(+ch, x); x += 50; } }
+    var sec = segDigit(Math.floor(d.getSeconds() / 10), 0) + segDigit(d.getSeconds() % 10, 50);
+    return '<div class="k-center" ondblclick="openRest()">' + t.greg + '<div style="display:flex;align-items:flex-end;gap:.45em;justify-content:center;direction:ltr;margin:.3em 0;filter:drop-shadow(0 0 .35em ' + ac + ')">' +
+      '<svg viewBox="-4 -4 ' + (x + 8) + ' 96" style="height:5.2em" fill="' + ac + '">' + out + '</svg>' +
+      '<svg viewBox="-4 -4 108 96" style="height:2.1em;opacity:.8" fill="' + ac + '">' + sec + '</svg></div>' + t.hijri + '</div>';
   },
   dual: function (d, o) {
     var t = clockDates(d, o), np = nextPrayer(d), left = Math.max(0, np.diff * 60 - d.getSeconds());
@@ -417,6 +437,21 @@ var CLOCK_RENDER = {
       '<div class="k-big" style="font-size:2.4em">' + pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60) + '</div><div class="k-sub">' + np.timeFmt + '</div></div></div>';
   }
 };
+var LUX_DIALS = {
+  gold:   { dial: ['#1b1b1d', '#050506'], bezel: ['#8a6a2a', '#f3d78e'], num: '#E7C77A', tick: '#E7C77A', hand: '#F1D48A', sec: '#E0B65C' },
+  silver: { dial: ['#2a2c30', '#0d0e10'], bezel: ['#7d838b', '#eef1f4'], num: '#E6E9EE', tick: '#C9CED6', hand: '#F2F4F7', sec: '#D9B46A' },
+  green:  { dial: ['#145a40', '#05241a'], bezel: ['#8a6a2a', '#f3d78e'], num: '#E7C77A', tick: '#E7C77A', hand: '#F1D48A', sec: '#E0B65C' },
+  blue:   { dial: ['#1a4590', '#06142e'], bezel: ['#7d838b', '#eef1f4'], num: '#E6E9EE', tick: '#C9CED6', hand: '#F2F4F7', sec: '#D9B46A' }
+};
+var _luxN = 0;
+/* رقم بسبع قطع (LED) */
+var SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
+function segDigit(n, x){
+  var P = ['M8 2h28l-5 6H13z', 'M38 4v34l-6-4V10z', 'M38 50v34l-6-6V54z', 'M8 86h28l-5-6H13z', 'M6 50v34l6-6V54z', 'M6 4v34l6-4V10z', 'M9 44l5-4h16l5 4-5 4H14z'];
+  var m = SEG[n] || 0, o = '';
+  for (var i = 0; i < 7; i++) o += '<path d="' + P[i] + '" transform="translate(' + x + ' 0)" fill-opacity="' + ((m >> i) & 1 ? 1 : .07) + '"/>';
+  return o;
+}
 function clockStyleOf(o){ return (o && o.style) || prefs.clockStyle || 'digital'; }
 card('clock', 'الساعة', function (o) {
   var st = clockStyleOf(o);
@@ -669,7 +704,48 @@ function buildPages(){
   var dots = document.getElementById('dots'); dots.innerHTML = '';
   if (pages.length > 1) pages.forEach(function () { dots.appendChild(document.createElement('i')); });
   updateDots();
+  setTimeout(placeGlass, 60);
 }
+/* ===== الزجاج المرسوم مسبقاً =====
+   بدل أن يحسب المعالج الضبابية خلف كل بطاقة باستمرار (ثقيل، وكان يُستبدل بلون داكن في وضع الأداء)،
+   نجهّز نسخة مضبّبة صغيرة من الخلفية مرة واحدة، وتعرض كل بطاقة الجزء الذي خلفها. الشكل نفسه وأخف بكثير. */
+var _glassSrc = '';
+function buildGlass(){
+  var img = document.getElementById('bg'), st = document.getElementById('stage');
+  var on = prefs.fakeGlass !== false && img && img.getAttribute('src');
+  document.body.classList.toggle('fg', !!on);
+  if (!on) return;
+  if (!img.complete || !img.naturalWidth) { img.onload = buildGlass; return; }
+  var key = img.getAttribute('src') + '|' + st.offsetWidth + 'x' + st.offsetHeight;
+  if (_glassSrc === key) return placeGlass();
+  try {
+    var W = st.offsetWidth, H = st.offsetHeight, iw = img.naturalWidth, ih = img.naturalHeight;
+    var sc = Math.max(W / iw, H / ih), dw = iw * sc, dh = ih * sc, dx = (W - dw) / 2, dy = (H - dh) / 2;
+    // تصغير شديد ثم تكبير ناعم = ضبابية بدون أي حساب ثقيل
+    var t = document.createElement('canvas'); t.width = Math.round(W / 16); t.height = Math.round(H / 16);
+    var tc = t.getContext('2d'); tc.imageSmoothingQuality = 'high';
+    tc.drawImage(img, dx / 16, dy / 16, dw / 16, dh / 16);
+    var c = document.createElement('canvas'); c.width = Math.round(W / 4); c.height = Math.round(H / 4);
+    var cc = c.getContext('2d'); cc.imageSmoothingQuality = 'high'; cc.drawImage(t, 0, 0, c.width, c.height);
+    st.style.setProperty('--gbg', 'url(' + c.toDataURL('image/jpeg', 0.82) + ')');
+    st.style.setProperty('--gw', W + 'px'); st.style.setProperty('--gh', H + 'px');
+    _glassSrc = key;
+  } catch (e) { document.body.classList.remove('fg'); return; }
+  placeGlass();
+}
+/* كل بطاقة تعرض الجزء من الخلفية الذي يقع خلفها (حسب موضعها حين تكون صفحتها ظاهرة) */
+function placeGlass(){
+  if (!document.body.classList.contains('fg')) return;
+  var st = document.getElementById('stage'), sr = st.getBoundingClientRect(), k = sr.width / (st.offsetWidth || 1);
+  var pagesEl = document.getElementById('pages'), pr = pagesEl.getBoundingClientRect();
+  [].forEach.call(document.querySelectorAll('#wrap .glass'), function (el) {
+    var r = el.getBoundingClientRect(), pg = el.closest('.hpage'), x;
+    if (pg) { var gr = pg.getBoundingClientRect(); x = (r.left - gr.left + pr.left - sr.left) / k; } else x = (r.left - sr.left) / k;
+    var y = (r.top - sr.top) / k;
+    el.style.setProperty('--gx', -Math.round(x) + 'px'); el.style.setProperty('--gy', -Math.round(y) + 'px');
+  });
+}
+window.addEventListener('resize', function () { _glassSrc = ''; setTimeout(buildGlass, 120); });
 function updateDots(){
   var p = document.getElementById('pages'), w = p.clientWidth || 1;
   var idx = Math.round(Math.abs(p.scrollLeft) / w);
@@ -780,6 +856,15 @@ function cycleProfile(){
   var pr = applyProfile(l[i % l.length].id); if (pr) { window.onPageResume(); toast('«' + pr.name + '»'); }
 }
 
+/* ===== مؤقت واحد للواجهة كلها =====
+   بدل عشرة مؤقتات تعمل كل واحد على حدة (تنبيه المعالج مرات كثيرة)، مؤقت واحد كل ثانية ينفّذ ما حان وقته */
+var _jobs = [];
+function every(fn, ms){ _jobs.push({ fn: fn, ms: ms, at: Date.now() }); }
+setInterval(function () {
+  var now = Date.now();
+  for (var i = 0; i < _jobs.length; i++) { var j = _jobs[i]; if (now - j.at >= j.ms - 50) { j.at = now; try { j.fn(); } catch (e) {} } }
+}, 1000);
+
 /* ================= الشريط العلوي: التذكيرات ================= */
 var bannerItems = [], bannerIdx = 0;
 function renderBanner(){
@@ -800,7 +885,7 @@ function showBanner(){
   var it = bannerItems[bannerIdx % bannerItems.length];
   b.textContent = it.t; b.href = it.href; b.style.display = 'flex';
 }
-setInterval(function () { bannerIdx++; showBanner(); }, 8000);
+every(function () { bannerIdx++; showBanner(); }, 8000);
 function renderRemChip(){
   var el = document.getElementById('remChip'), a = activeReminders(), html = '';
   if (a.length) html = '<div class="chip"><span>' + esc(a[0].text) + (a.length > 1 ? ' (+' + (a.length - 1) + ')' : '') + '</span><button aria-label="تم" onclick="dismissReminder(\'' + a[0].id + '\');renderRemChip()">✓</button></div>';
@@ -862,7 +947,7 @@ function tick(){
   }
   renderCards(); renderRemChip();
 }
-window.onPageResume = function () { var of = document.getElementById('restFrame'); if (of && _ovl && !_ovl.rest) { try { of.contentWindow.postMessage({ rafiq: 'resume' }, '*'); } catch (e) {} return; } forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); _wxCur = null; renderWeatherFx(); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); lastTouch = Date.now(); };
+window.onPageResume = function () { var of = document.getElementById('restFrame'); if (of && _ovl && !_ovl.rest) { try { of.contentWindow.postMessage({ rafiq: 'resume' }, '*'); } catch (e) {} return; } forceCards = true; setTimeout(function () { forceCards = false; }, 50); prefs = loadPrefs(); _prefsCache = null; applyPrefs('home', prefs); _wxCur = null; renderWeatherFx(); buildPages(); renderDock(); tick(); renderBanner(); renderStatus(); applyBrightness(); buildGlass(); lastTouch = Date.now(); };
 
 /* كل خطوة مستقلة: لو تعطلت واحدة تُسجَّل في سجل الأعطال وتكمل البقية، فلا تبقى الشاشة فارغة */
 function safe(name, fn){ try { fn(); } catch (e) { nat('logError', 'index/' + name + ': ' + (e && e.message)); } }
@@ -875,9 +960,9 @@ if (!LITE && ((HAS_NATIVE && nat('voiceEnabled')) || lsGet('carlauncher.voiceTes
 <script>
 if (FIRST_RUN) setTimeout(function () { openPage('wizard.html'); }, 700);
 safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
-safe('tick', tick); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
-setInterval(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
-setInterval(function () { if (!document.hidden) renderStatus(); }, 5000);
+safe('tick', tick); safe('glass', buildGlass); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
+every(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
+every(function () { if (!document.hidden) renderStatus(); }, 5000);
 autoDetectPerf();
 /* البحث عن تحديث بهدوء: عند تشغيل الشاشة ثم كل ساعة عند توفر الإنترنت، وتنبيه مرة لكل إصدار جديد */
 function autoUpdateCheck(boot){
@@ -896,9 +981,8 @@ function autoUpdateCheck(boot){
   }, 8000);
 }
 setTimeout(function () { autoUpdateCheck(true); }, 15000);
-setInterval(function () { if (!document.hidden) autoUpdateCheck(false); }, 10 * 60000);
-setInterval(autoUpdateCheck, 10 * 60000);
-setInterval(function () {
+every(function () { if (!document.hidden) autoUpdateCheck(false); }, 10 * 60000);
+every(function () {
   var before = loadNotes().length;
   processInbox(); updatePlaceReminders(); if (!restOpen()) autoRest();
   var notes = loadNotes();
@@ -938,15 +1022,18 @@ function nativeAlerts(){
     if (o.type === 'match') tick();
   });
 }
-setInterval(function () { if (!document.hidden) nativeAlerts(); }, 2000);
+every(function () { if (!document.hidden) nativeAlerts(); }, 2000);
+/* نسخة الإعدادات المحفوظة داخل التطبيق: بعد التشغيل ثم كل 10 دقائق */
+setTimeout(function () { mirrorSave(true); }, 20000);
+every(function () { mirrorSave(true); }, 600000);
 /* «ابقَ في الاستراحة»: إذا أُغلقت الواجهة والاستراحة مفتوحة، نرجع لها عند إعادة التشغيل */
 setTimeout(function () {
   var w = +lsGet('carlauncher.restWanted', 0);
   if (w && prefs.stayRest !== false && Date.now() - w < 3 * 3600000 && !restOpen()) { nat('logEvent', 'رجوع للاستراحة بعد إغلاق الواجهة'); openRest('?auto=1'); }
   else if (w) lsSet('carlauncher.restWanted', 0);
 }, 1200);
-setInterval(function () { if (!restOpen() && !document.getElementById('cardEd')) safe('profile', autoProfileCheck); }, 60000);
-setInterval(function () { if (_ovl && _ovl.rest) lsSet('carlauncher.restWanted', Date.now()); if (!restOpen()) { applyPrefs('home', prefs); renderWeatherFx(); } pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
+every(function () { if (!restOpen() && !document.getElementById('cardEd')) safe('profile', autoProfileCheck); }, 60000);
+every(function () { if (_ovl && _ovl.rest) lsSet('carlauncher.restWanted', Date.now()); if (!restOpen()) { applyPrefs('home', prefs); renderWeatherFx(); buildGlass(); } pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 /* الواجهة فُتحت بنجاح: نصفّر عداد وضع الأمان، ونأخذ نسخة احتياطية تلقائية أسبوعياً وعند تغيّر الإصدار */
 var BOOT_T0 = window.BOOT_T0 || 0;
 try { lsSet('carlauncher.startMs', Math.round(performance.now())); } catch (e) {}

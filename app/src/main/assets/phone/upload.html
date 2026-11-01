@@ -46,6 +46,7 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <button data-m="apk">تطبيق APK</button>
   <button data-m="snd">صوت التنبيه</button>
   <button data-m="font">خط</button>
+  <button data-m="vid">استراحة متحركة</button>
   <button data-m="note">ملاحظة</button>
   <button data-m="rem">تذكير</button>
   <button data-m="exp">مصروف</button>
@@ -81,6 +82,13 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <label class="pick">اختر ملف الخط<input id="fontFile" type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden></label>
   <div class="prog" id="fontProg"><div></div></div>
   <div class="msg" id="fontMsg"></div>
+</section>
+
+<section id="m-vid">
+  <div class="box">فيديو يتحرك خلف شاشة الاستراحة (بدون صوت). الأنسب: MP4 بمقاس 1280×720، ومدته من 10 إلى 30 ثانية تتكرر بدون قفزة، وأقل من 15 ميجا (الحد 40 ميجا). يبقى على الشاشة فقط، ويُحفظ آخر 3 فيديوهات.</div>
+  <label class="pick">اختر الفيديو<input id="vidFile" type="file" accept="video/mp4,video/webm,.mp4,.webm,.m4v" hidden></label>
+  <div class="prog" id="vidProg"><div></div></div>
+  <div class="msg" id="vidMsg"></div>
 </section>
 
 <section id="m-snd">
@@ -282,6 +290,11 @@ document.getElementById('sndFile').onchange = function (e) {
 document.getElementById('fontFile').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;
   sendFile('/font?t=' + token + '&name=' + encodeURIComponent(f.name), f, 'fontProg', 'fontMsg', 'وصل الخط ✓ اختره من الإعدادات ▸ المظهر ▸ الخطوط.');
+};
+document.getElementById('vidFile').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  var ext = (f.name.split('.').pop() || 'mp4').toLowerCase();
+  sendFile('/video?t=' + token + '&ext=' + encodeURIComponent(ext), f, 'vidProg', 'vidMsg', 'وصل الفيديو ✓ اختره من الإعدادات ▸ الاستراحة ▸ خلفية متحركة.');
 };
 document.getElementById('bakFileUi').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;

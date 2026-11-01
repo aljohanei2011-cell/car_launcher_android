@@ -275,7 +275,8 @@ var VERR = { 1: 'انتهت مهلة الشبكة', 2: 'لا يوجد إنترن
 var _vSeq = -1, _vPoll = null, _vHide = null, _vWakeOn = false;
 function voiceReplyOn(){ return prefs.voiceReply !== false && !document.body.classList.contains('perf'); }
 function voiceUI(show){
-  var o = document.getElementById('vo');
+  var o = document.getElementById('vo'), mb = document.getElementById('micBtn');
+  if (mb) mb.classList.toggle('on', !!show);
   if (!show) { if (o) o.remove(); return null; }
   if (!o) {
     o = document.createElement('div'); o.id = 'vo';
@@ -358,7 +359,7 @@ if (VOICE_HOME) setInterval(function () { if (!document.hidden) voiceWakeLoop();
 /* ---------- زر الميكروفون ---------- */
 if (VOICE_HOME) (function () {
   var css = document.createElement('style');
-  css.textContent = '#micBtn{width:44px;height:44px;border-radius:22px;border:1.5px solid rgba(255,255,255,.35);background:rgba(47,123,255,.25);display:flex;align-items:center;justify-content:center;padding:0;flex:none}#micBtn svg{width:24px;height:24px}' +
+  css.textContent = '' +
     'body.skin-light #micBtn svg{stroke:#13202f}' +
     '#vo{position:absolute;left:0;right:0;top:0;z-index:92;display:flex;align-items:center;gap:22px;padding:22px 40px;background:linear-gradient(180deg,rgba(4,10,24,.96),rgba(4,10,24,.88));color:#fff;box-shadow:0 12px 40px rgba(0,0,0,.5);min-height:120px;box-sizing:border-box}' +
     '.voMic{width:76px;height:76px;border-radius:38px;background:var(--accent,#2F7BFF);display:flex;align-items:center;justify-content:center;flex:none;transition:transform .12s}.voMic svg{width:38px;height:38px}' +
@@ -367,12 +368,13 @@ if (VOICE_HOME) (function () {
     '.voX{height:56px;padding:0 22px;border-radius:16px;border:1px solid rgba(255,255,255,.3);background:none;color:#fff;font:inherit;font-size:19px}' +
     '@keyframes voPulse{0%,100%{box-shadow:0 0 0 0 rgba(47,123,255,.6)}50%{box-shadow:0 0 0 16px rgba(47,123,255,0)}}body.perf #vo .voMic{animation:none!important}';
   document.head.appendChild(css);
-  var left = document.querySelector('.top .left');
-  if (left && !document.getElementById('micBtn')) {
-    var b = document.createElement('button'); b.id = 'micBtn'; b.setAttribute('aria-label', 'أمر صوتي');
-    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+  // زر «تحدّث» وحده بجوار اسم السيارة (بعيداً عن الساعة)، أول زر في مجموعة الأوامر
+  var acts = document.getElementById('acts') || document.querySelector('.top .left');
+  if (acts && !document.getElementById('micBtn') && loadPrefsCached().micBtn !== false) {
+    var b = document.createElement('button'); b.id = 'micBtn'; b.className = 'act mic'; b.setAttribute('aria-label', 'أمر صوتي');
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>تحدّث</span>';
     b.onclick = function () { window.onVoiceKey(); };
-    left.insertBefore(b, left.firstChild);
+    acts.insertBefore(b, acts.firstChild);
   }
   voiceWakeLoop();
 })();

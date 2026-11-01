@@ -215,3 +215,42 @@ body.perf #wx{display:none}
 .galert.gp-cl{top:14px;left:300px;min-width:0;max-width:560px;padding:6px 8px 6px 14px;gap:10px;border-radius:22px;transform:translateY(-20px)}.galert.gp-cl.in{opacity:1;transform:none}
 .galert.gp-cl .gi{width:36px;height:36px}.galert.gp-cl .gi svg{width:20px;height:20px}.galert.gp-cl .gt b{font-size:18px}.galert.gp-cl .gt small{display:none}.galert.gp-cl button{height:42px;min-width:52px;font-size:16px;padding:0 12px}
 .galert.out{opacity:0!important}
+
+/* ===== الزجاج المرسوم مسبقاً (الرئيسية) ===== */
+#stage{--gtint:rgba(10,25,55,.46)}
+body.skin-gold #stage{--gtint:rgba(12,24,42,.6)}
+body.skin-red #stage{--gtint:rgba(20,22,27,.64)}
+body.skin-light #stage{--gtint:rgba(243,246,250,.62)}
+body.skin-saudi #stage{--gtint:rgba(6,40,28,.5)}
+body.fg #wrap .glass{position:relative;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:transparent!important;isolation:isolate}
+body.fg #wrap .glass::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(var(--gtint),var(--gtint)),var(--gbg) no-repeat;background-size:auto,var(--gw) var(--gh);background-position:0 0,var(--gx,0) var(--gy,0)}
+body.fg.solid #wrap .glass::before{background:linear-gradient(rgba(10,25,55,.9),rgba(10,25,55,.9))}
+/* استجابة فورية للمس */
+.card,.dk,.st,.k-btn,.qpB{transition:transform .12s ease}
+.card:active,.dk:active,.st:active,.k-btn:active,.qpB:active{transform:scale(.97)}
+body.perf .card:active,body.perf .dk:active,body.perf .st:active{transform:scale(.97)}
+
+/* ساعة الكبسولة الزجاجية */
+.capsule{padding:.5em 1.4em .7em;border-radius:999px;border:1.5px solid rgba(255,255,255,.35);background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02));box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 0 0 4px rgba(255,255,255,.04)}
+body.skin-gold .capsule,body.skin-lux .capsule{border-color:rgba(231,199,122,.6)}
+
+/* ===================== النمط الفاخر (زجاج أسود بإطار ذهبي، أو أزرق ليلي) ===================== */
+body.skin-lux{--accent:#E7C77A;--accent2:#F5DDA0}
+body.skin-luxblue{--accent:#7FB3FF;--accent2:#A9CCFF}
+body.skin-lux .glass{background:linear-gradient(165deg,rgba(28,26,22,.62),rgba(8,8,9,.66));border:1px solid rgba(231,199,122,.55);box-shadow:inset 0 1px 0 rgba(255,235,190,.18),0 0 22px rgba(231,199,122,.12),0 14px 34px rgba(0,0,0,.5)}
+body.skin-luxblue .glass{background:linear-gradient(165deg,rgba(18,30,58,.55),rgba(4,8,20,.66));border:1px solid rgba(127,179,255,.5);box-shadow:inset 0 1px 0 rgba(200,225,255,.18),0 0 22px rgba(80,140,255,.14),0 14px 34px rgba(0,0,0,.5)}
+body.skin-lux #stage{--gtint:rgba(10,9,8,.5)}
+body.skin-luxblue #stage{--gtint:rgba(4,10,26,.5)}
+body.skin-lux .k-lbl,body.skin-lux .label,body.skin-lux .accent{color:#E7C77A!important}
+body.skin-luxblue .k-lbl,body.skin-luxblue .label,body.skin-luxblue .accent{color:#8FC0FF!important}
+body.skin-lux .k-sub,body.skin-luxblue .k-sub{color:#C9C3B6}
+body.skin-luxblue .k-sub{color:#B8C6DC}
+body.skin-lux .dk svg,body.skin-lux .st svg{filter:grayscale(1) sepia(1) saturate(2.2) hue-rotate(-10deg) brightness(1.2)}
+body.skin-lux .dk:first-child{border-color:#E7C77A;background:linear-gradient(165deg,rgba(90,70,30,.55),rgba(20,18,14,.7));box-shadow:0 0 20px rgba(231,199,122,.28)}
+body.skin-luxblue .dk:first-child{border-color:#7FB3FF;background:linear-gradient(165deg,rgba(30,70,150,.5),rgba(6,14,34,.7));box-shadow:0 0 20px rgba(80,140,255,.3)}
+body.skin-lux .banner,body.skin-lux .chip{background:rgba(14,12,10,.7);border-color:#E7C77A;color:#F5DDA0}
+body.skin-luxblue .banner,body.skin-luxblue .chip{background:rgba(6,12,28,.7);border-color:#7FB3FF;color:#CFE2FF}
+body.skin-lux .opt.on,body.skin-lux .tab.on{background:linear-gradient(165deg,#b98a35,#7a5a1f);border-color:#F5D58A}
+body.skin-lux .clockTop,body.skin-lux .k-huge,body.skin-lux .k-big{color:#F6EBD3}
+body.skin-lux .act{border-color:rgba(231,199,122,.5)}
