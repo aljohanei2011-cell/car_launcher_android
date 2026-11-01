@@ -201,7 +201,8 @@ class MainActivity : AppCompatActivity() {
     /** نلتقط شكل الرئيسية (بنصف الدقة) عند الخروج منها */
     private fun saveSnapshot() {
         try {
-            val w = webView.width, h = webView.height
+            val w = webView.width
+            val h = webView.height
             if (w < 100 || h < 100) return
             val bm = android.graphics.Bitmap.createBitmap(w / 2, h / 2, android.graphics.Bitmap.Config.RGB_565)
             val c = android.graphics.Canvas(bm); c.scale(0.5f, 0.5f); webView.draw(c)
