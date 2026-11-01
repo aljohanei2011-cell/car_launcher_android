@@ -34,6 +34,9 @@ object Voice {
     @Volatile private var err = 0
     @Volatile private var seq = 0
     @Volatile private var rms = 0f
+    @Volatile private var rmsMax = -100f
+    /** تخصيص: اللهجة، ومدة الانتظار، وصوت الرد (السرعة والطبقة ومستوى الصوت) */
+    @Volatile var opts = JSONObject()
     @Volatile private var wake = false
     @Volatile private var wakeMode = false     // الجلسة الحالية من الاستماع الدائم؟
     @Volatile private var foreground = true
@@ -68,7 +71,10 @@ object Voice {
     }
 
     fun stateJson(): String = JSONObject().put("state", state).put("partial", partial).put("results", results)
-        .put("err", err).put("seq", seq).put("rms", rms.toDouble()).put("wake", wakeMode).toString()
+        .put("err", err).put("seq", seq).put("rms", rms.toDouble()).put("rmsMax", rmsMax.toDouble()).put("wake", wakeMode).toString()
+
+    /** «اضغط وتكلّم»: عند رفع الإصبع ننهي الاستماع ونأخذ ما قيل */
+    fun stopListening() { main.post { try { rec?.stopListening() } catch (e: Exception) {} } }
 
     fun listen(c: Context, preferOffline: Boolean) {
         appCtx = c.applicationContext; offline = preferOffline
@@ -106,11 +112,11 @@ object Voice {
         if (r0 == null) { state = "error"; err = 5; seq++; return }
         val r: SpeechRecognizer = r0
         rec = r; wakeMode = isWake
-        partial = ""; results = JSONArray(); err = 0; state = "listening"
+        partial = ""; results = JSONArray(); err = 0; state = "listening"; rmsMax = -100f
         r.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(v: Float) { rms = v }
+            override fun onRmsChanged(v: Float) { rms = v; if (v > rmsMax) rmsMax = v }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -123,18 +129,28 @@ object Voice {
                 release(); again()
             }
             override fun onError(code: Int) {
-                err = code; state = "error"; seq++
+                // لم يصل للميكروفون أي صوت إطلاقاً (غالباً تطبيق آخر يمسكه أو الصوت يذهب للبلوتوث)
+                val noAudio = (code == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || code == SpeechRecognizer.ERROR_NO_MATCH || code == SpeechRecognizer.ERROR_AUDIO) && rmsMax < 1f
+                err = if (noAudio && !isWake) 100 else code; state = "error"; seq++
+                if (!isWake) Events.add(c, "أمر صوتي: خطأ " + err + (if (noAudio) " (لم يصل صوت للميكروفون)" else ""))
                 release(); again(if (code == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || code == SpeechRecognizer.ERROR_CLIENT) 2500 else 500)
             }
         })
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-SA")
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-SA")
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, opts.optString("lang", "ar-SA"))
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, opts.optString("lang", "ar-SA"))
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, c.packageName)
         if (offline) i.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+        // مدة الصبر قبل انتهاء الاستماع (قصيرة/متوسطة/طويلة)
+        val wait = if (isWake) 0L else opts.optLong("waitMs", 0L)
+        if (wait > 0) {
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, wait)
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, wait)
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, if (opts.optBoolean("hold")) 30_000L else 2_000L)
+        }
         try { r.startListening(i) } catch (e: Exception) { state = "error"; err = 5; seq++; release() }
     }
 
@@ -166,6 +182,7 @@ object Voice {
             t = TextToSpeech(c.applicationContext) { st ->
                 if (st != TextToSpeech.SUCCESS) { state = "idle" } else {
                 t?.language = Locale("ar")
+                try { t?.setSpeechRate(opts.optDouble("rate", 1.0).toFloat()); t?.setPitch(opts.optDouble("pitch", 1.0).toFloat()) } catch (e: Exception) {}
                 t?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(id: String?) {}
                     override fun onDone(id: String?) { finish() }
@@ -174,7 +191,8 @@ object Voice {
                         main.post { try { t?.shutdown() } catch (e: Exception) {}; if (tts === t) tts = null; state = "idle"; again(400) }
                     }
                 })
-                t?.speak(text.take(300), TextToSpeech.QUEUE_FLUSH, null, "r")
+                val pb = Bundle(); pb.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, opts.optDouble("vol", 1.0).toFloat())
+                t?.speak(text.take(300), TextToSpeech.QUEUE_FLUSH, pb, "r")
                 }
             }
             tts = t

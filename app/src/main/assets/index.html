@@ -253,7 +253,13 @@ function openPage(url){
   setTimeout(function () { if (restOpen()) { document.getElementById('wrap').style.visibility = 'hidden'; var bg = document.getElementById('bg'); if (bg.getAttribute('src')) { bg.dataset.src = bg.getAttribute('src'); bg.removeAttribute('src'); } var wx = document.getElementById('wx'); if (wx) { wx.innerHTML = ''; _wxCur = null; } } }, 800);
 }
 window.openPage = openPage;
-function openRest(q){ openPage('rest.html' + (q || '')); }
+/* الاستراحة صفحة مستقلة: الرئيسية تُفرَّغ من الذاكرة تماماً أثناءها (كان اجتماعهما يملأ الذاكرة) */
+function openRest(q){
+  lsSet('carlauncher.restWanted', Date.now());
+  nat('setRestOpen', true); nat('logEvent', 'فتح الاستراحة' + (/auto=1/.test(q || '') ? ' تلقائياً' : ''));
+  mirrorSave(true);
+  location.href = 'rest.html' + (q || '');
+}
 window.closeRest = function () {
   var f = document.getElementById('restFrame');
   if (f) { try { f.src = 'about:blank'; } catch (e) {} f.remove(); }
@@ -874,6 +880,20 @@ function cycleProfile(){
   var pr = applyProfile(l[i % l.length].id); if (pr) { window.onPageResume(); toast('«' + pr.name + '»'); }
 }
 
+/* وضع الشاشة الضعيفة: ذاكرة 2 جيجا أو أقل، أو أُغلقت الواجهة لنقص الذاكرة.
+   نطفئ الاستماع الدائم والتأثيرات المتحركة مرة واحدة (والشكل يبقى كما هو) */
+function autoWeak(){
+  if (!HAS_NATIVE) return;
+  var m = natJSON('memInfo') || {}, kills = nat('memKills') || 0;
+  var weak = (m.total && m.total <= 2.3 * 1073741824) || kills > 0;
+  if (!weak || (prefs._weakAt && !prefs.voiceWake && !prefs.weatherFx)) return;
+  if (prefs.voiceWake || prefs.weatherFx) {
+    prefs.voiceWake = false; prefs.weatherFx = false; prefs._weakAt = Date.now(); savePrefs(prefs);
+    nat('logEvent', 'وضع الشاشة الضعيفة: أُطفئ الاستماع الدائم والتأثيرات المتحركة لتوفير الذاكرة');
+    try { nat('voiceWake', false); } catch (e) {}
+    renderWeatherFx();
+  }
+}
 /* ===== مؤقت واحد للواجهة كلها =====
    بدل عشرة مؤقتات تعمل كل واحد على حدة (تنبيه المعالج مرات كثيرة)، مؤقت واحد كل ثانية ينفّذ ما حان وقته */
 var _jobs = [];
@@ -977,7 +997,8 @@ if (!LITE && ((HAS_NATIVE && nat('voiceEnabled')) || lsGet('carlauncher.voiceTes
 <script>
 if (FIRST_RUN) setTimeout(function () { openPage('wizard.html'); }, 700);
 safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
-safe('tick', tick); safe('glass', buildGlass); setTimeout(function () { nat('ready'); }, 250); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
+nat('setOverlay', false); nat('setRestOpen', false);
+safe('tick', tick); safe('glass', buildGlass); setTimeout(function () { nat('ready'); }, 250); safe('weak', autoWeak); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
 every(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
 every(function () { if (!document.hidden) renderStatus(); }, 5000);
 autoDetectPerf();
@@ -1006,39 +1027,6 @@ every(function () {
   if (notes.length > before) glassAlert({ type: 'note', title: 'ملاحظة جديدة من جوالك', sub: notes[0].text.split('\n')[0], page: 'notes.html', buttons: [['فتح', function () { openPage('notes.html'); }]] });
   remAlerts();
 }, 5000);
-/* ===== التنبيهات الزجاجية ===== */
-/* التذكير عند وقته: مرة لكل موعد، مع التأجيل. الشريحة بجوار الساعة تبقى حتى «تم» */
-var _remShown = lsGet('carlauncher.remShown', {});
-function remAlerts(){
-  var a = activeReminders(), day = todayStr(), changed = false;
-  a.forEach(function (r) {
-    var k = r.id + ':' + (r.kind === 'once' ? (r.snoozeUntil || 0) : day + (r.snoozeUntil || ''));
-    if (_remShown[k]) return;
-    _remShown[k] = Date.now(); changed = true;
-    glassAlert({ type: 'rem', title: r.text, sub: 'تذكير' + (r.kind === 'place' ? ' عند المكان' : ''), sticky: true,
-      buttons: [['10 د', function () { snoozeReminder(r.id, 10); renderRemChip(); }], ['ساعة', function () { snoozeReminder(r.id, 60); renderRemChip(); }], ['تم', function () { dismissReminder(r.id); renderRemChip(); tick(); }]] });
-    if (prefs.alertSpeak && nat('voiceEnabled')) nat('speak', 'تذكير: ' + r.text);
-  });
-  if (changed) {
-    var cut = Date.now() - 3 * 86400000; Object.keys(_remShown).forEach(function (k) { if (_remShown[k] < cut) delete _remShown[k]; });
-    lsSet('carlauncher.remShown', _remShown);
-  }
-}
-/* ما وصل من الخدمة: صلاة، مباريات، قيادة، أو تأجيل/إنهاء تذكير من فوق الخرائط */
-function nativeAlerts(){
-  if (!HAS_NATIVE) return;
-  var list = []; try { list = JSON.parse(nat('alertsTake') || '[]'); } catch (e) {}
-  list.forEach(function (o) {
-    if (o.type === 'rem') {
-      if (!o.done && !o.snooze) return; // التذكيرات تعرضها الواجهة بنفسها
-      var txt = o.sub || o.title, rr = loadRems().filter(function (r) { return r.text === txt && !r.done; })[0];
-      if (rr) { if (o.done) dismissReminder(rr.id); else { var l = loadRems(); l.forEach(function (r) { if (r.id === rr.id) r.snoozeUntil = o.snooze; }); saveRems(l); } renderRemChip(); }
-      return;
-    }
-    glassAlert({ type: o.type, title: o.title, sub: o.sub, page: o.page && o.page !== 'index.html' ? o.page : '' });
-    if (o.type === 'match') tick();
-  });
-}
 every(function () { if (!document.hidden) nativeAlerts(); }, 2000);
 /* نسخة الإعدادات المحفوظة داخل التطبيق: بعد التشغيل ثم كل 10 دقائق */
 setTimeout(function () { mirrorSave(true); }, 20000);

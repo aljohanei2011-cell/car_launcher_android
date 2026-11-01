@@ -360,6 +360,20 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun voicePerm() = Voice.requestPermission(act)
     @JavascriptInterface fun voiceListen(preferOffline: Boolean) = Voice.listen(ctx, preferOffline)
     @JavascriptInterface fun voiceStop() = Voice.stop()
+    @JavascriptInterface fun voiceStopListening() = Voice.stopListening()
+    /** اختصار «اتصل بـ…»: يفتح الاتصال بالرقم (تطبيق هاتف الشاشة/البلوتوث) */
+    @JavascriptInterface fun dial(number: String) {
+        val n = number.filter { it.isDigit() || it == '+' }
+        if (n.isEmpty()) return
+        act.runOnUiThread { try { act.startActivity(Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:$n")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) {} }
+    }
+    @JavascriptInterface fun voiceOpts(json: String) { try { Voice.opts = JSONObject(json) } catch (e: Exception) {} }
+    @JavascriptInterface fun openVoiceData() {
+        act.runOnUiThread {
+            val tries = listOf(Intent("com.google.android.voicesearch.action.SETTINGS"), Intent("android.speech.action.LANGUAGE_DETAILS"), Intent(Settings.ACTION_SETTINGS))
+            for (i in tries) { try { act.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); break } catch (e: Exception) {} }
+        }
+    }
     @JavascriptInterface fun voiceState(): String = Voice.stateJson()
     @JavascriptInterface fun voiceWake(on: Boolean) = Voice.setWake(ctx, on)
     @JavascriptInterface fun speak(text: String) = Voice.speak(ctx, text)
@@ -488,6 +502,13 @@ class Bridge(private val act: MainActivity) {
         val keep = HashSet<String>()
         keep.add(ctx.packageName)
         try { controller()?.packageName?.let { keep.add(it) } } catch (e: Exception) {}
+        // لا نغلق أبداً خدمة التعرف على الكلام وخدمة النطق (وإلا يتعطل «تحدّث»)
+        try {
+            val pm = ctx.packageManager
+            pm.queryIntentServices(Intent(android.speech.RecognitionService.SERVICE_INTERFACE), 0).forEach { keep.add(it.serviceInfo.packageName) }
+            pm.queryIntentServices(Intent(android.speech.tts.TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE), 0).forEach { keep.add(it.serviceInfo.packageName) }
+        } catch (e: Exception) {}
+        keep.add("com.google.android.googlequicksearchbox"); keep.add("com.google.android.tts")
         kotlin.concurrent.thread {
             val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             val before = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
@@ -548,6 +569,8 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun logEvent(msg: String) = Events.add(ctx, msg.take(160))
     @JavascriptInterface fun setRestOpen(open: Boolean) { RestGuard.restOpen = open }
     @JavascriptInterface fun ready() = act.pageReady()
+    @JavascriptInterface fun restKilledRecently(): Boolean =
+        System.currentTimeMillis() - ctx.getSharedPreferences("watchdog", Context.MODE_PRIVATE).getLong("restKill", 0L) < 6 * 3600_000L
     @JavascriptInterface fun setOverlay(open: Boolean) { act.overlayOpen = open }
 
     // ===== المباريات =====

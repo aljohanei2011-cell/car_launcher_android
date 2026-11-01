@@ -1257,6 +1257,41 @@ function glassAlert(o){
   return a;
 }
 
+/* ===== التنبيهات الزجاجية ===== */
+/* التذكير عند وقته: مرة لكل موعد، مع التأجيل. الشريحة بجوار الساعة تبقى حتى «تم» */
+var _remShown = null;
+function remAlerts(){
+  if (!_remShown) _remShown = lsGet('carlauncher.remShown', {});
+  var a = activeReminders(), day = todayStr(), changed = false;
+  a.forEach(function (r) {
+    var k = r.id + ':' + (r.kind === 'once' ? (r.snoozeUntil || 0) : day + (r.snoozeUntil || ''));
+    if (_remShown[k]) return;
+    _remShown[k] = Date.now(); changed = true;
+    glassAlert({ type: 'rem', title: r.text, sub: 'تذكير' + (r.kind === 'place' ? ' عند المكان' : ''), sticky: true,
+      buttons: [['10 د', function () { snoozeReminder(r.id, 10); if (window.renderRemChip) renderRemChip(); }], ['ساعة', function () { snoozeReminder(r.id, 60); if (window.renderRemChip) renderRemChip(); }], ['تم', function () { dismissReminder(r.id); if (window.renderRemChip) renderRemChip(); if (window.tick) tick(); }]] });
+    if (prefs.alertSpeak && nat('voiceEnabled')) nat('speak', 'تذكير: ' + r.text);
+  });
+  if (changed) {
+    var cut = Date.now() - 3 * 86400000; Object.keys(_remShown).forEach(function (k) { if (_remShown[k] < cut) delete _remShown[k]; });
+    lsSet('carlauncher.remShown', _remShown);
+  }
+}
+/* ما وصل من الخدمة: صلاة، مباريات، قيادة، أو تأجيل/إنهاء تذكير من فوق الخرائط */
+function nativeAlerts(){
+  if (!HAS_NATIVE) return;
+  var list = []; try { list = JSON.parse(nat('alertsTake') || '[]'); } catch (e) {}
+  list.forEach(function (o) {
+    if (o.type === 'rem') {
+      if (!o.done && !o.snooze) return; // التذكيرات تعرضها الواجهة بنفسها
+      var txt = o.sub || o.title, rr = loadRems().filter(function (r) { return r.text === txt && !r.done; })[0];
+      if (rr) { if (o.done) dismissReminder(rr.id); else { var l = loadRems(); l.forEach(function (r) { if (r.id === rr.id) r.snoozeUntil = o.snooze; }); saveRems(l); } if (window.renderRemChip) renderRemChip(); }
+      return;
+    }
+    glassAlert({ type: o.type, title: o.title, sub: o.sub, page: o.page && o.page !== 'index.html' ? o.page : '' });
+    if (o.type === 'match' && window.tick) tick();
+  });
+}
+
 /* ===== التخطيطات المحفوظة (سفر، مدينة، ليل، أو لكل سائق) ===== */
 var PROFILE_KEY = 'carlauncher.profiles';
 var PROFILE_FIELDS = ['layout', 'homes', 'dock', 'dockLabels', 'skin', 'theme', 'accent', 'clockStyle', 'textScale', 'font', 'clockFont', 'duaFont', 'statusIcons', 'favApps', 'weatherFx', 'hideEmpty', 'emptyAlt', 'restStyle'];

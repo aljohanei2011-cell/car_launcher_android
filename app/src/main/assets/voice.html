@@ -31,10 +31,13 @@
         <span class="ph">تجربة</span>
         <span class="pnote">اضغط وتكلّم. هنا نعرض ما فهمناه فقط بدون تنفيذ.</span>
         <button class="mic" id="mic" aria-label="تجربة الميكروفون"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <div style="height:14px;border-radius:7px;background:rgba(255,255,255,.1);overflow:hidden"><div id="meter" style="height:100%;width:0;background:linear-gradient(90deg,#1FA35A,#F2C879);transition:width .12s"></div></div>
         <div class="heard" id="heard"></div>
         <div class="act" id="act"></div>
-        <div class="prow" style="justify-content:center"><button class="pbtn g" id="tts">تجربة الرد بالصوت</button></div>
+        <div class="prow" style="justify-content:center"><button class="pbtn g" id="tts">تجربة الرد بالصوت</button><button class="pbtn g" id="offl">العربي بدون إنترنت</button></div>
         <span class="pnote" id="st" style="text-align:center"></span>
+        <span class="ph" style="font-size:17px">آخر الأوامر</span>
+        <div id="vlog" style="flex:1;min-height:0;overflow-y:auto;font-size:15px;line-height:1.7;color:#C3D1E8"></div>
       </div>
     </div>
   </div>
@@ -71,14 +74,20 @@ $('mic').onclick = function () {
   if (!c.perm) { nat('voicePerm'); $('st').textContent = 'اسمح باستخدام الميكروفون ثم أعد المحاولة'; return; }
   var st0 = natJSON('voiceState') || {}; seq = st0.seq || 0;
   $('heard').textContent = 'تكلّم الآن…'; $('act').textContent = ''; $('st').textContent = '';
+  if (typeof voicePushOpts === 'function') voicePushOpts();
   nat('voiceListen', !!prefs.voiceOffline);
   clearInterval(poll);
   poll = setInterval(function () {
     var st = natJSON('voiceState'); if (!st) return;
-    if (st.state === 'listening' && st.partial) $('heard').textContent = st.partial;
+    if (st.state === 'listening') { $('meter').style.width = Math.max(0, Math.min(100, ((st.rms || 0) + 2) * 9)) + '%'; if (st.partial) $('heard').textContent = st.partial; }
+    else $('meter').style.width = '0';
     if (st.seq !== seq && st.state !== 'listening') {
       clearInterval(poll);
-      if (st.state === 'error' || !st.results || !st.results.length) { $('heard').textContent = ''; $('st').textContent = VERR[st.err] || 'لم أسمع شيئاً'; return; }
+      if (st.state === 'error' || !st.results || !st.results.length) {
+        $('heard').textContent = '';
+        $('st').textContent = st.err === 100 || (st.rmsMax != null && st.rmsMax < 1) ? 'الميكروفون لا يصله صوت: افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google».' : (VERR[st.err] || 'لم أسمع شيئاً') + ' — الميكروفون يعمل (وصله صوت)، تكلّم أوضح أو أقرب.';
+        return;
+      }
       var cmd = null, heard = st.results[0];
       st.results.some(function (r) { cmd = parseVoice(r, NAME); if (cmd) heard = r; return !!cmd; });
       $('heard').textContent = '«' + heard + '»';
@@ -87,6 +96,13 @@ $('mic').onclick = function () {
     }
   }, 200);
 };
+$('offl').onclick = function () { nat('openVoiceData'); };
+function renderLog(){
+  var l = lsGet('carlauncher.voiceLog', []);
+  $('vlog').innerHTML = l.length ? '' : 'لا توجد أوامر بعد.';
+  l.forEach(function (x) { var d = document.createElement('div'); d.textContent = '«' + x.t + '» ← ' + x.w; $('vlog').appendChild(d); });
+}
+renderLog(); setInterval(renderLog, 4000);
 $('tts').onclick = function () { nat('speak', 'هلا، أنا ' + NAME + '. جاهز لأوامرك.'); };
 fitStage();
 </script>

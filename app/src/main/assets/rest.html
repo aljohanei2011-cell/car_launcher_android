@@ -196,8 +196,15 @@ function pickVideo(){
   if (isNight() && prefs.restVideoNight && by(prefs.restVideoNight)) return by(prefs.restVideoNight);
   return prefs.restVideo ? by(prefs.restVideo) || null : null;
 }
+/* حماية الذاكرة: إذا أغلق النظام الواجهة والفيديو يعمل مؤخراً، أو الذاكرة المتاحة قليلة، نعرض صورة بدل الفيديو */
+var _vidSafe = (function () {
+  if (!HAS_NATIVE || LITE) return true;
+  var m = natJSON('memInfo') || {}, killed = nat('restKilledRecently') === true;
+  if (killed || (m.avail && m.avail < 380 * 1048576)) { setTimeout(function () { if (prefs.restVideo || prefs.restVideoRotate) toast('عُرضت صورة بدل الفيديو لتوفير الذاكرة'); }, 1500); return false; }
+  return true;
+})();
 function setVideo(want){
-  var v = $('vid'), x = want && !LITE ? pickVideo() : null, url = x && x.url;
+  var v = $('vid'), x = want && !LITE && _vidSafe ? pickVideo() : null, url = x && x.url;
   var on = !!url;
   document.body.classList.toggle('hasVid', on);
   ['vp-c', 'vp-tl', 'vp-bc', 'vl-thin', 'vl-capsule', 'vl-lux', 'vl-none', 'vl-bold'].forEach(function (c) { document.body.classList.remove(c); });
@@ -350,13 +357,23 @@ $('styleBtn').onclick = function () {
   stopAlarm(); napEnd = 0; applyStyle(); tick();
 };
 
+/* الاستراحة صفحة مستقلة: نسجّل أنها مفتوحة، والخروج منها بيدك (أو بالمدة) يلغي «الرجوع لها» */
+function restLeave(){ lsSet('carlauncher.restWanted', 0); nat('setRestOpen', false); nat('logEvent', 'خروج من الاستراحة'); }
+if (!IN_FRAME) {
+  lsSet('carlauncher.restWanted', Date.now()); nat('setRestOpen', true); nat('setOverlay', true);
+  setTimeout(function () { nat('ready'); }, 300);
+  setInterval(function () { lsSet('carlauncher.restWanted', Date.now()); }, 60000);
+  document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a[href]'); if (a) restLeave(); }, true);
+}
 /* العودة للرئيسية تلقائياً بعد مدة (إن اخترتها)، ما عدا أثناء القيلولة */
 var openedAt = Date.now();
 document.addEventListener('pointerdown', function () { openedAt = Date.now(); }, true);
 setInterval(function () {
   var r = +prefs.restReturn || 0;
-  if (r && !napEnd && Date.now() - openedAt > r * 60000) goHome();
+  if (r && !napEnd && Date.now() - openedAt > r * 60000) { restLeave(); goHome(); }
 }, 10000);
+/* التنبيهات (التذكير والصلاة والمباريات) تظهر في الاستراحة أيضاً */
+setInterval(function () { if (!document.hidden) { nativeAlerts(); remAlerts(); } }, 3000);
 
 applyStyle(); tick();
 setInterval(tick, 1000);

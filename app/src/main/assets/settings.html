@@ -140,14 +140,14 @@ var SEC_CAT = {
   'نمط شاشة الاستراحة': 'restT', 'الخلفية المتحركة': 'restT', 'ما يظهر': 'restT', 'متى تعمل': 'restT', 'مدة بقائها': 'restT', 'خلفية الاستراحة': 'restT', 'الأدعية': 'restT*',
   'المدينة (لمواقيت الصلاة)': 'prayer', 'تنبيه الصلاة': 'prayer', 'الصوت': 'prayer', 'تذكيرات': 'prayer',
   'مساعد القيادة': 'drive', 'تنبيه السرعة': 'drive', 'تنبيه الاستراحة': 'drive', 'القيادة والإنترنت': 'drive', 'الإضاءة الليلية': 'drive', 'عند تشغيل السيارة': 'drive', 'رسالة الوصول': 'drive*',
-  'الأوامر الصوتية': 'comm', 'المكالمات والرسائل': 'comm', 'التطبيقات': 'comm', 'التحكم بالموسيقى من الرئيسية': 'comm', 'وضع الركاب': 'comm*',
+  'الأوامر الصوتية': 'comm', 'تخصيص الصوت': 'comm', 'اختصاراتك الصوتية': 'comm', 'المكالمات والرسائل': 'comm', 'التطبيقات': 'comm', 'التحكم بالموسيقى من الرئيسية': 'comm', 'وضع الركاب': 'comm*',
   'شكل التنبيهات ومكانها': 'alerts', 'مكان كل نوع': 'alerts*', 'الظهور فوق الخرائط': 'alerts', 'المباريات': 'alerts', 'سجل الأحداث': 'system*',
   'السيارة': 'car', 'تكلفة الوقود': 'car',
   'العبادة': 'worship', 'دعاء السفر': 'worship',
   'أدوات الشاشة': 'system', 'النسخ الاحتياطية التلقائية': 'system*', 'التحديث والنسخ الاحتياطي': 'system', 'الواجهة الافتراضية': 'system', 'الأداء': 'system', 'الرقم السري': 'system', 'حول التطبيق': 'system',
   'الاستقرار': 'system*', 'الذاكرة (RAM)': 'system*', 'إعادة التعيين': 'system*'
 };
-var LITE_HIDE = { 'الثيم': 1, 'الأوامر الصوتية': 1, 'المكالمات والرسائل': 1, 'مساعد القيادة': 1 };
+var LITE_HIDE = { 'الثيم': 1, 'الأوامر الصوتية': 1, 'تخصيص الصوت': 1, 'اختصاراتك الصوتية': 1, 'المكالمات والرسائل': 1, 'مساعد القيادة': 1 };
 var tab = 'overview', citySearch = '', pageIdx = 0;
 try { tab = sessionStorage.getItem('settings.tab') || 'overview'; } catch (e) {}
 if (tab === 'apps') tab = 'comm';
@@ -541,7 +541,7 @@ function confirmBox(text, onYes){
   r.appendChild(y); r.appendChild(n); box.appendChild(r); ov.appendChild(box);
   document.getElementById('stage').appendChild(ov);
 }
-var UI_KEYS = ['cardGap', 'iconMode', 'iconDim', 'iconStyle', 'clockDial', 'clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'autoProfile', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
+var UI_KEYS = ['voiceBtn', 'voiceWait', 'voiceBeep', 'voiceMusic', 'voiceLang', 'voiceRate', 'voicePitch', 'voiceVol', 'cardGap', 'iconMode', 'iconDim', 'iconStyle', 'clockDial', 'clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'autoProfile', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
 /* ===== نقل الإعدادات بين الشاشات (عن طريق الجوال) ===== */
 function showTransfer(){
@@ -605,8 +605,52 @@ function renderVoice(){
   s.appendChild(el('span', 'note', wk ? 'يعمل والرئيسية ظاهرة فقط، ويتوقف في وضع الأداء وعند تشغيل الموسيقى. قد تسمع صوت تنبيه خفيف مع كل استماع في بعض الأجهزة.' :
     'غير متاح على هذه الشاشة: ' + (c.ramGb < 3 ? 'الذاكرة أقل من 3 جيجا' : perfOn(prefs) ? 'وضع الأداء مفعّل' : 'أغلق النظام الواجهة لنقص الذاكرة مؤخراً') + '. استخدم زر الميكروفون.'));
   if (prefs.voiceWake && wk) toggle(s, 'إيقاف الاستماع الدائم أثناء تشغيل الموسيقى', 'wakePauseMusic');
+  s = section('تخصيص الصوت', 'طريقة الاستماع والرد، واختصاراتك الخاصة.');
+  s.appendChild(el('span', 'note', 'زر «تحدّث»:'));
+  opts(s, [['tap', 'ضغطة واحدة (يستمع حتى تسكت)'], ['hold', 'اضغط وتكلّم (يستمع ما دام إصبعك على الزر)']], prefs.voiceBtn || 'tap', function (k) { prefs.voiceBtn = k; upd(); }, true);
+  if (prefs.voiceBtn !== 'hold') { s.appendChild(el('span', 'note', 'مدة الانتظار قبل انتهاء الاستماع:')); opts(s, [['s', 'قصيرة'], ['m', 'متوسطة'], ['l', 'طويلة (إذا تتوقف بين الكلمات)']], prefs.voiceWait || 'm', function (k) { prefs.voiceWait = k; upd(); }, true); }
+  toggle(s, 'نغمة عند بدء الاستماع وانتهائه', 'voiceBeep');
+  s.appendChild(el('span', 'note', 'الموسيقى أثناء الاستماع:'));
+  opts(s, [['pause', 'توقف مؤقتاً ثم تعود'], ['none', 'تبقى كما هي']], prefs.voiceMusic || 'pause', function (k) { prefs.voiceMusic = k; upd(); }, true);
+  s.appendChild(el('span', 'note', 'اللهجة (تحسّن الفهم):'));
+  opts(s, [['ar-SA', 'سعودي'], ['ar-AE', 'خليجي'], ['ar-EG', 'مصري'], ['ar', 'عربي فصيح']], prefs.voiceLang || 'ar-SA', function (k) { prefs.voiceLang = k; upd(); }, true);
+  s.appendChild(el('span', 'note', 'سرعة الرد بالصوت:'));
+  opts(s, [[0.8, 'بطيء'], [1, 'عادي'], [1.25, 'سريع']], prefs.voiceRate || 1, function (k) { prefs.voiceRate = k; upd(); }, true);
+  s.appendChild(el('span', 'note', 'طبقة الصوت:'));
+  opts(s, [[0.85, 'منخفضة'], [1, 'عادية'], [1.2, 'مرتفعة']], prefs.voicePitch || 1, function (k) { prefs.voicePitch = k; upd(); }, true);
+  s.appendChild(el('span', 'note', 'مستوى صوت الرد:'));
+  opts(s, [[0.5, '50%'], [0.75, '75%'], [1, '100%']], prefs.voiceVol == null ? 1 : prefs.voiceVol, function (k) { prefs.voiceVol = k; upd(); }, true);
+  var tt = el('button', 'opt sm', 'تجربة الرد'); tt.onclick = function () { nat('voiceOpts', JSON.stringify({ lang: prefs.voiceLang || 'ar-SA', rate: +prefs.voiceRate || 1, pitch: +prefs.voicePitch || 1, vol: prefs.voiceVol == null ? 1 : +prefs.voiceVol })); nat('speak', 'هلا، أنا ' + (prefs.voiceName || 'رفيق') + '. جاهز لأوامرك.'); }; s.appendChild(tt);
+
+  s = section('اختصاراتك الصوتية', 'عبارة تقولها، وماذا تفعل. مثال: «ودّني البيت» تفتح الملاحة، «اتصل بأبوي» تتصل بالرقم.');
+  var scs = (prefs.voiceShortcuts || []).slice();
+  var ACT = { nav: 'ملاحة إلى', app: 'فتح تطبيق', call: 'اتصال بالرقم', page: 'فتح صفحة' };
+  var PAGES = [['rest.html', 'الاستراحة'], ['azkar.html', 'الأذكار'], ['prayer.html', 'الصلاة'], ['notes.html', 'الملاحظات'], ['matches.html', 'المباريات'], ['trip.html', 'الرحلة'], ['settings.html', 'الإعدادات']];
+  scs.forEach(function (x, i) {
+    var row = el('div', 'line'); row.appendChild(el('span', '', '«' + x.say + '» ← ' + ACT[x.act] + ' ' + (x.act === 'page' ? (PAGES.filter(function (p) { return p[0] === x.val; })[0] || ['', x.val])[1] : x.act === 'app' ? appLabel(x.val) : x.val)));
+    var del = el('button', 'opt sm', '×'); del.style.marginRight = 'auto'; del.onclick = function () { scs.splice(i, 1); prefs.voiceShortcuts = scs; upd(); }; row.appendChild(del); s.appendChild(row);
+  });
+  if (scs.length < 12) {
+    var f = el('div', 'opts');
+    var say = el('input', 'txt'); say.placeholder = 'العبارة: ودّني البيت'; say.maxLength = 40; say.style.flex = '1';
+    var act = el('select', 'txt'); Object.keys(ACT).forEach(function (k) { var o = el('option', '', ACT[k]); o.value = k; act.appendChild(o); });
+    var val = el('input', 'txt'); val.placeholder = 'المكان أو الرقم'; val.maxLength = 60; val.style.flex = '1';
+    var pg = el('select', 'txt'); PAGES.forEach(function (p) { var o = el('option', '', p[1]); o.value = p[0]; pg.appendChild(o); }); pg.style.display = 'none';
+    var ap = el('select', 'txt'); (natJSON('apps') || []).forEach(function (a) { var o = el('option', '', a.label); o.value = a.pkg; ap.appendChild(o); }); ap.style.display = 'none';
+    act.onchange = function () { val.style.display = act.value === 'nav' || act.value === 'call' ? '' : 'none'; pg.style.display = act.value === 'page' ? '' : 'none'; ap.style.display = act.value === 'app' ? '' : 'none'; val.placeholder = act.value === 'call' ? 'رقم الجوال' : 'المكان: البيت، حي النخيل…'; val.inputMode = act.value === 'call' ? 'tel' : 'text'; };
+    var add = el('button', 'opt sm on', '+ إضافة');
+    add.onclick = function () {
+      var v = act.value === 'page' ? pg.value : act.value === 'app' ? ap.value : val.value.trim();
+      if (!say.value.trim() || !v) { toast('اكتب العبارة وما تفعله'); return; }
+      scs.push({ say: say.value.trim(), act: act.value, val: v }); prefs.voiceShortcuts = scs; upd();
+    };
+    [say, act, val, pg, ap, add].forEach(function (x) { f.appendChild(x); });
+    s.appendChild(f);
+    if (isDriving()) { s.appendChild(el('span', 'note', 'الإضافة متاحة والسيارة متوقفة.')); add.disabled = true; }
+  }
+
   var r = el('div', 'opts');
-  var h = el('a', 'opt sm', 'ماذا أقول؟ وتجربة الميكروفون'); h.href = 'voice.html'; h.style.cssText = 'display:flex;align-items:center'; r.appendChild(h);
+  var h = el('a', 'opt sm', 'اختبار الميكروفون، وماذا أقول، وآخر الأوامر'); h.href = 'voice.html'; h.style.cssText = 'display:flex;align-items:center'; r.appendChild(h);
   s.appendChild(r);
   s.appendChild(el('span', 'note', 'للاستخدام: زر الميكروفون أعلى الرئيسية، أو زر «أمر صوتي» في القائمة السفلية، أو زر الصوت في المقود إن كانت الشاشة ترسله.'));
 }

@@ -70,7 +70,10 @@ class MainActivity : AppCompatActivity() {
                 // منع أي تنقل إلى الإنترنت من داخل التطبيق
                 // إذا توقف محرك الصفحات (نقص ذاكرة مثلاً) نعيد بناء الواجهة بدل أن يُغلق التطبيق
                 override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
-                    CrashLog.add(this@MainActivity, "webview", "توقف محرك الصفحات" + (if (detail?.didCrash() == true) " (عطل)" else " (أغلقه النظام لنقص الذاكرة)"))
+                    CrashLog.add(this@MainActivity, "webview", "توقف محرك الصفحات" + (if (detail?.didCrash() == true) " (عطل)" else " (أغلقه النظام لنقص الذاكرة)") + (if (RestGuard.restOpen) " والاستراحة مفتوحة" else ""))
+                    Events.add(this@MainActivity, "أغلق النظام محرك الصفحات" + (if (RestGuard.restOpen) " والاستراحة مفتوحة" else ""))
+                    // في الاستراحة: نعرض صورة بدل الفيديو لساعات حتى لا يتكرر
+                    if (RestGuard.restOpen) getSharedPreferences("watchdog", MODE_PRIVATE).edit().putLong("restKill", System.currentTimeMillis()).apply()
                     try { (view?.parent as? android.view.ViewGroup)?.removeView(view); view?.destroy() } catch (e: Exception) {}
                     // إن كانت الواجهة ظاهرة نعيد بناءها الآن، وإلا ننتظر حتى يعود المستخدم إليها
                     if (resumed) runOnUiThread { recreate() } else needRebuild = true
@@ -120,7 +123,8 @@ class MainActivity : AppCompatActivity() {
         root.addView(webView, android.widget.FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         showSnapshot(root)
-        webView.loadUrl(base + pageFrom(intent, "index.html"))
+        // رجوع هادئ: إن أُغلقت الواجهة والاستراحة مفتوحة نعود للاستراحة مباشرة
+        webView.loadUrl(base + pageFrom(intent, if (RestGuard.restOpen) "rest.html?auto=1" else "index.html"))
         if (intent?.action == Intent.ACTION_VOICE_COMMAND && Voice.enabled(this))
             webView.postDelayed({ webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null) }, 3000)
 

@@ -271,7 +271,7 @@ function parseVoice(t, name){ return VOICE.parse(t, name || (loadPrefsCached().v
 /* ================================================================
    واجهة الاستماع في الرئيسية
    ================================================================ */
-var VERR = { 1: 'انتهت مهلة الشبكة', 2: 'لا يوجد إنترنت (نزّل العربي للاستخدام بدون إنترنت من إعدادات Google)', 3: 'مشكلة في الميكروفون', 4: 'خطأ في خدمة الكلام', 5: 'تعذّر تشغيل خدمة الكلام', 6: 'لم أسمع شيئاً', 7: 'لم أفهم الكلام', 8: 'الخدمة مشغولة، حاول بعد لحظة', 9: 'يحتاج إذن الميكروفون' };
+var VERR = { 100: 'الميكروفون لا يصله صوت', 1: 'انتهت مهلة الشبكة', 2: 'لا يوجد إنترنت (نزّل العربي للاستخدام بدون إنترنت من إعدادات Google)', 3: 'مشكلة في الميكروفون', 4: 'خطأ في خدمة الكلام', 5: 'تعذّر تشغيل خدمة الكلام', 6: 'لم أسمع شيئاً', 7: 'لم أفهم الكلام', 8: 'الخدمة مشغولة، حاول بعد لحظة', 9: 'يحتاج إذن الميكروفون' };
 var _vSeq = -1, _vPoll = null, _vHide = null, _vWakeOn = false;
 function voiceReplyOn(){ return prefs.voiceReply !== false && !document.body.classList.contains('perf'); }
 function voiceUI(show){
@@ -287,19 +287,46 @@ function voiceUI(show){
   }
   return o;
 }
-function voiceStart(){
+/* ---------- تخصيص الصوت ---------- */
+var VWAIT = { s: 1200, m: 2200, l: 3600 };
+function voicePushOpts(){
+  nat('voiceOpts', JSON.stringify({ lang: prefs.voiceLang || 'ar-SA', waitMs: prefs.voiceBtn === 'hold' ? 6000 : (VWAIT[prefs.voiceWait || 'm'] || 2200), hold: prefs.voiceBtn === 'hold',
+    rate: +prefs.voiceRate || 1, pitch: +prefs.voicePitch || 1, vol: prefs.voiceVol == null ? 1 : +prefs.voiceVol }));
+}
+var _beepCtx = null;
+function voiceBeep(up){
+  if (prefs.voiceBeep === false) return;
+  try {
+    _beepCtx = _beepCtx || new (window.AudioContext || window.webkitAudioContext)();
+    var o = _beepCtx.createOscillator(), g = _beepCtx.createGain(), t = _beepCtx.currentTime;
+    o.frequency.setValueAtTime(up ? 660 : 880, t); o.frequency.linearRampToValueAtTime(up ? 990 : 590, t + 0.12);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(_beepCtx.destination); o.start(t); o.stop(t + 0.18);
+  } catch (e) {}
+}
+/* الموسيقى أثناء الاستماع: توقف مؤقت ثم تعود */
+var _vPaused = false;
+function voiceMusicPause(){ if ((prefs.voiceMusic || 'pause') !== 'pause') return; var m = natJSON('media'); if (m && m.playing) { nat('mediaKey', 'pause'); _vPaused = true; } }
+function voiceMusicResume(){ if (_vPaused) { _vPaused = false; setTimeout(function () { nat('mediaKey', 'play'); }, 1200); } }
+/* آخر 10 أوامر: ما سمعه وماذا فهم */
+function voiceLogAdd(heard, what){ var l = lsGet('carlauncher.voiceLog', []); l.unshift({ t: heard, w: what, at: Date.now() }); lsSet('carlauncher.voiceLog', l.slice(0, 10)); }
+var _vRetry = false;
+function voiceStart(retry){
   if (!HAS_NATIVE) { toast('الأوامر الصوتية تعمل داخل التطبيق'); return; }
   var c = natJSON('voiceCaps') || {};
   if (!c.perm) { nat('voicePerm'); toast('اسمح باستخدام الميكروفون ثم اضغط الزر مرة أخرى'); return; }
+  _vRetry = !!retry;
   clearTimeout(_vHide);
+  if (!retry) { voiceMusicPause(); voiceBeep(true); }
+  voicePushOpts();
   var o = voiceUI(true); o.className = 'on';
   document.getElementById('voN').textContent = (prefs.voiceName || 'رفيق') + ' يسمعك…';
-  document.getElementById('voP').textContent = 'تكلّم الآن';
+  document.getElementById('voP').textContent = retry ? 'لم يصلني صوت، أعد كلامك' : (prefs.voiceBtn === 'hold' ? 'تكلّم وأنت ضاغط على الزر' : 'تكلّم الآن');
   var st = natJSON('voiceState') || {}; _vSeq = st.seq || 0;
-  nat('voiceListen', !!prefs.voiceOffline);
+  setTimeout(function () { nat('voiceListen', !!prefs.voiceOffline); }, retry ? 400 : 150);
   voicePollFast();
 }
-function voiceCancel(){ nat('voiceStop'); clearInterval(_vPoll); _vPoll = null; voiceUI(false); if (_vWakeOn) voiceWakeLoop(); }
+function voiceCancel(){ nat('voiceStop'); clearInterval(_vPoll); _vPoll = null; voiceUI(false); voiceMusicResume(); if (_vWakeOn) voiceWakeLoop(); }
 function voicePollFast(){
   clearInterval(_vPoll);
   _vPoll = setInterval(function () {
@@ -308,20 +335,44 @@ function voicePollFast(){
     if (st.state === 'listening') { if (p && st.partial) p.textContent = st.partial; if (mic) mic.style.transform = 'scale(' + (1 + Math.max(0, Math.min(10, st.rms || 0)) / 25) + ')'; }
     if (st.seq !== _vSeq && (st.state === 'done' || st.state === 'error' || st.state === 'idle' || st.state === 'speaking')) {
       _vSeq = st.seq; clearInterval(_vPoll); _vPoll = null;
-      if (st.state === 'error' || !st.results || !st.results.length) voiceShow(VERR[st.err] || 'لم أسمع شيئاً', '', true);
-      else voiceHandle(st.results, false);
+      if (st.state === 'error' || !st.results || !st.results.length) {
+        // لم يصل صوت أو لم يسمع شيئاً: نعيد المحاولة تلقائياً مرة واحدة
+        if (!_vRetry && (st.err === 100 || st.err === 6)) { voiceStart(true); return; }
+        voiceBeep(false); voiceMusicResume();
+        voiceLogAdd('—', VERR[st.err] || 'لم أسمع شيئاً');
+        voiceShow(VERR[st.err] || 'لم أسمع شيئاً', st.err === 100 ? 'افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google»' : '', true);
+      }
+      else { voiceBeep(false); voiceHandle(st.results, false); voiceMusicResume(); }
     }
   }, 180);
 }
 /* تنفيذ أول نتيجة مفهومة من البدائل */
+/* اختصاراتك: عبارة تقولها ← فعل تحدده */
+function voiceShortcut(raw, name){
+  var list = prefs.voiceShortcuts || []; if (!list.length) return null;
+  var n = VOICE.stripName(raw, name).n;
+  for (var i = 0; i < list.length; i++) {
+    var x = list[i], k = VOICE.norm(x.say || ''); if (!k || n.indexOf(k) < 0) continue;
+    return { label: x.say, run: function () {
+      if (x.act === 'app') { nat('launch', x.val); return ''; }
+      if (x.act === 'nav') { var ll = myLatLng(); nat('mapSearch', x.val, ll[0], ll[1], prefs.mapsApp || ''); return 'يلا على ' + x.val; }
+      if (x.act === 'call') { nat('dial', x.val); return 'أتصل'; }
+      if (x.act === 'page') { if (window.openPage) openPage(x.val); else location.href = x.val; return ''; }
+      return '';
+    } };
+  }
+  return null;
+}
 function voiceHandle(results, wake){
   var name = prefs.voiceName || 'رفيق', cmd = null, heard = results[0];
+  for (var j = 0; j < results.length && !cmd; j++) { if (wake && !VOICE.stripName(results[j], name).named) continue; cmd = voiceShortcut(results[j], name); if (cmd) heard = results[j]; }
   for (var i = 0; i < results.length && !cmd; i++) {
     if (wake && !VOICE.stripName(results[i], name).named) continue;
     cmd = parseVoice(results[i], name); if (cmd) heard = results[i];
   }
   if (wake && !cmd) { if (results.some(function (r) { return VOICE.stripName(r, name).named; })) voiceShow('«' + heard + '»', 'ما فهمت الأمر. قل: ' + name + ' وش أقول؟', true); return; }
-  if (!cmd) { voiceShow('«' + heard + '»', 'ما فهمت الأمر. قل «وش أقول؟» لترى الأمثلة', true); if (voiceReplyOn()) nat('speak', 'ما فهمت'); return; }
+  if (!cmd) { voiceLogAdd(heard, 'لم يُفهم'); voiceShow('«' + heard + '»', 'ما فهمت الأمر. قل «وش أقول؟» لترى الأمثلة', true); if (voiceReplyOn()) nat('speak', 'ما فهمت'); return; }
+  voiceLogAdd(heard, cmd.label);
   var reply = '';
   try { reply = cmd.run() || ''; } catch (e) { reply = 'تعذّر التنفيذ'; nat('logError', 'voice: ' + (e && e.message)); }
   voiceShow('«' + heard + '»', reply || cmd.label, false);
@@ -333,7 +384,15 @@ function voiceShow(a, b, err){
   document.getElementById('voN').textContent = a; document.getElementById('voP').textContent = b || '';
   clearTimeout(_vHide); _vHide = setTimeout(function () { voiceUI(false); }, err ? 4500 : 3500);
 }
-window.onVoiceKey = function () { if (document.getElementById('vo') && _vPoll) voiceCancel(); else voiceStart(); };
+window.onVoiceKey = function () { if (Date.now() - _holdAt < 1500) return; if (document.getElementById('vo') && _vPoll) voiceCancel(); else voiceStart(); };
+/* «اضغط وتكلّم»: يستمع ما دام إصبعك على الزر */
+var _holdAt = 0;
+document.addEventListener('pointerdown', function (e) {
+  if (prefs.voiceBtn !== 'hold' || !e.target.closest || !e.target.closest('#micBtn,.dk-voice')) return;
+  _holdAt = Date.now(); if (!_vPoll) voiceStart();
+}, true);
+['pointerup', 'pointercancel'].forEach(function (ev) { document.addEventListener(ev, function () { if (prefs.voiceBtn === 'hold' && _vPoll && Date.now() - _holdAt < 60000) { _holdAt = Date.now(); nat('voiceStopListening'); } }, true); });
+if (HAS_NATIVE) voicePushOpts();
 
 /* ---------- الاستماع الدائم (اختياري بشروط) ---------- */
 function wakeAllowed(){
