@@ -277,6 +277,7 @@ function voiceReplyOn(){ return prefs.voiceReply !== false && !document.body.cla
 function voiceUI(show){
   var o = document.getElementById('vo'), mb = document.getElementById('micBtn');
   if (mb) mb.classList.toggle('on', !!show);
+  [].forEach.call(document.querySelectorAll('.dk-voice'), function (x) { x.classList.toggle('on', !!show); });
   if (!show) { if (o) o.remove(); return null; }
   if (!o) {
     o = document.createElement('div'); o.id = 'vo';

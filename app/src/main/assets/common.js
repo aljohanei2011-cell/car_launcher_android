@@ -22,6 +22,20 @@ fitStage();
 
 /* هل الصفحة داخل نافذة الاستراحة فوق الرئيسية؟ */
 var IN_FRAME = window.parent !== window;
+/* ===== التوافق مع متصفحات الصفحات القديمة في بعض الشاشات =====
+   نفحص ما يدعمه المتصفح، ونضيف بديلاً تلقائياً لما لا يدعمه */
+var WV = (function () { var m = navigator.userAgent.match(/Chrome\/(\d+)/); return m ? +m[1] : 0; })();
+(function compat(){
+  var h = document.documentElement;
+  try {
+    var t = document.createElement('div'); t.style.cssText = 'display:flex;flex-direction:column;gap:1px;position:absolute;visibility:hidden';
+    t.appendChild(document.createElement('div')); t.appendChild(document.createElement('div'));
+    (document.body || h).appendChild(t); var ok = t.scrollHeight === 1; t.remove();
+    if (!ok) h.classList.add('nogap');
+  } catch (e) {}
+  try { if (!(window.CSS && CSS.supports && (CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)')))) h.classList.add('noblur'); } catch (e) { h.classList.add('noblur'); }
+  if (WV && WV < 80) h.classList.add('oldwv');
+})();
 /* الرسائل بين النافذة والرئيسية تعمل حتى لو اعتبر المتصفح الملفين من مصدرين مختلفين */
 function goHome(reload){ if (IN_FRAME) { try { window.parent.postMessage({ rafiq: reload ? 'reloadHome' : 'closeRest' }, '*'); return; } catch (e) {} } location.href = 'index.html'; }
 /* فتح صفحة: من الرئيسية تُفتح كنافذة فوقها (بدون إعادة تحميل الرئيسية)، ومن غيرها انتقال عادي */
@@ -159,17 +173,17 @@ var DEFAULT_PREFS = {
   restStyle: 'classic', restShow: { dua: true, wird: true, remind: true, prayer: true, date: true },
   duaSec: 15, restReturn: 0, restAuto: 'manual', restAutoMin: 5, customDuas: [], hiddenDuas: [],
   /* القيادة */
-  safeMode: true, weatherOn: true, ramOnRest: false, ramOnBoot: false, cleanBtn: true, weatherFx: true, accent: '',
+  safeMode: true, weatherOn: true, cleanBtn: true, cardGap: 'm', iconMode: 'issues', iconDim: true, iconStyle: 'auto', weatherFx: true, accent: '',
   clockStyle: 'digital', textScale: 1,
   driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true,
   khatma: null, quranApp: '', kidsApp: '', fridayOn: true, fridayMin: 45, azkarAuto: true, occasions: true, arrive: { on: false, phone: '', name: '', text: 'وصلت الحمد لله ✓', place: 'البيت', lat: null, lng: null }, obdAuto: false,
   stretch: true, miqat: true, guest: false, fuelPrice: 2.33, kmpl: null,
-  voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: false, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
+  voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: true, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
   perf: 'auto', perfDetected: null, watchdog: true,
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
   alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true,
   /* الشريط العلوي */
-  clockDial: 'gold', restDim: 'night', restVideo: false,
+  clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
   topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){
@@ -179,6 +193,10 @@ function loadPrefs(){
     // الخطوط المحذوفة من التطبيق تُستبدل بالافتراضي (الخطوط المرفوعة u: تبقى)
     ['font', 'clockFont', 'duaFont'].forEach(function (k) { if (p[k] && !FONTS[p[k]] && String(p[k]).indexOf('u:') !== 0) p[k] = k === 'duaFont' ? 'alyamama' : k === 'clockFont' ? '' : 'thmanyah'; });
     if (['ring', 'flip', 'words'].indexOf(p.clockStyle) >= 0) p.clockStyle = 'digital';
+    // تحرير الذاكرة يدوي فقط
+    p.ramOnRest = false; p.ramOnBoot = false;
+    // استبدال بطاقة الموسيقى الفارغة يصير افتراضياً (مرة واحدة)
+    if (!p._v31) { p._v31 = 1; p.hideEmpty = true; if (!p.emptyAlt) p.emptyAlt = 'times'; }
     if (p.restStyle === 'night') { p.restStyle = 'clock'; p.restDim = 'always'; }
     if (LITE) liteFix(p);
     return p;
@@ -707,7 +725,7 @@ function requirePin(onOk){
   if (!p.pin || pinUnlocked()) { onOk(); return; }
   var st = document.getElementById('stage') || document.body;
   var ov = document.createElement('div');
-  ov.style.cssText = 'position:absolute;inset:0;z-index:95;background:rgba(5,10,25,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff';
+  ov.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0;z-index:95;background:rgba(5,10,25,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff';
   ov.innerHTML = '<div style="font-size:26px;font-weight:700">أدخل الرقم السري</div><div id="pinDots" style="font-size:40px;letter-spacing:14px;height:48px;direction:ltr">&nbsp;</div><div id="pinPad" style="display:grid;grid-template-columns:repeat(3,96px);gap:12px;direction:ltr"></div><a href="index.html" style="font-size:18px;color:#9FB0CC;margin-top:6px">رجوع للرئيسية</a>';
   st.appendChild(ov);
   var val = '', pad = ov.querySelector('#pinPad'), dots = ov.querySelector('#pinDots');
@@ -734,7 +752,7 @@ function webBackupJSON(){
   return JSON.stringify(o);
 }
 /* ما يُنقل بين الشاشات في «الواجهة والمظهر فقط» */
-var UI_TRANSFER = ['layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'skin', 'theme', 'accent', 'restBg', 'autoNight', 'nightTheme', 'font', 'clockFont', 'duaFont',
+var UI_TRANSFER = ['cardGap', 'iconMode', 'iconDim', 'iconStyle', 'clockDial', 'topBar', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'skin', 'theme', 'accent', 'restBg', 'autoNight', 'nightTheme', 'font', 'clockFont', 'duaFont',
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace', 'clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt',
   'weatherFx', 'voiceName', 'voiceReply', 'customDuas', 'hiddenDuas', 'occasions'];
 function applyPendingRestore(){
@@ -843,7 +861,7 @@ function isDriving(){ return loadPrefsCached().safeMode && currentSpeed() > 10; 
     if (isDriving()) {
       if (!ov) {
         ov = document.createElement('div'); ov.id = 'driveLock';
-        ov.style.cssText = 'position:absolute;inset:0;z-index:60;background:rgba(5,10,25,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;color:#fff;text-align:center';
+        ov.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0;z-index:60;background:rgba(5,10,25,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;color:#fff;text-align:center';
         ov.innerHTML = '<div style="font-size:34px;font-weight:700">هذه الصفحة تعمل والسيارة متوقفة</div><div style="font-size:20px;color:#9FB0CC">للسلامة أثناء القيادة. يمكنك إيقاف هذا من الإعدادات ▸ النظام.</div><a href="index.html" style="height:64px;padding:0 34px;border-radius:20px;background:#1F5FD1;display:flex;align-items:center;font-size:22px">الرئيسية</a>';
         (document.getElementById('stage') || document.body).appendChild(ov);
       }
@@ -1137,6 +1155,34 @@ function toast(msg, btn, fn, ms){
   setTimeout(function () { if (t.parentNode) t.remove(); }, ms || 4500);
 }
 
+var LUX_DIALS = {
+  gold:   { dial: ['#1b1b1d', '#050506'], bezel: ['#8a6a2a', '#f3d78e'], num: '#E7C77A', tick: '#E7C77A', hand: '#F1D48A', sec: '#E0B65C' },
+  silver: { dial: ['#2a2c30', '#0d0e10'], bezel: ['#7d838b', '#eef1f4'], num: '#E6E9EE', tick: '#C9CED6', hand: '#F2F4F7', sec: '#D9B46A' },
+  green:  { dial: ['#145a40', '#05241a'], bezel: ['#8a6a2a', '#f3d78e'], num: '#E7C77A', tick: '#E7C77A', hand: '#F1D48A', sec: '#E0B65C' },
+  blue:   { dial: ['#1a4590', '#06142e'], bezel: ['#7d838b', '#eef1f4'], num: '#E6E9EE', tick: '#C9CED6', hand: '#F2F4F7', sec: '#D9B46A' }
+};
+var _luxN = 0;
+/* قرص العقارب الفاخرة (يُستخدم في بطاقة الساعة وشاشة الاستراحة) */
+function luxDialSvg(d, dial, style){
+  var D = LUX_DIALS[dial] || LUX_DIALS.gold, uid = 'lx' + (_luxN++ % 4);
+  var h = d.getHours() % 12, m = d.getMinutes(), sec = d.getSeconds();
+  var ha = h * 30 + m * 0.5, ma = m * 6 + sec * 0.1, sa = sec * 6, ticks = '', nums = '';
+  for (var i = 0; i < 60; i++) { if (i % 5 === 0) continue; ticks += '<line x1="100" y1="13" x2="100" y2="17" stroke="' + D.tick + '" stroke-opacity=".55" stroke-width="1" transform="rotate(' + i * 6 + ' 100 100)"/>'; }
+  var AR = ['١٢', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '١٠', '١١'];
+  for (var k = 0; k < 12; k++) {
+    var an = k * 30 * Math.PI / 180, x = 100 + Math.sin(an) * 70, y = 100 - Math.cos(an) * 70 + 7;
+    nums += '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" fill="' + D.num + '" font-size="' + (k % 3 === 0 ? 21 : 17) + '" font-weight="700" font-family="Tahoma,sans-serif">' + AR[k] + '</text>';
+    nums += '<rect x="99" y="10" width="2" height="9" rx="1" fill="' + D.num + '" transform="rotate(' + k * 30 + ' 100 100)"/>';
+  }
+  var hand = function (a, len, w, col) { return '<path d="M' + (100 - w) + ' 104 L100 ' + (100 - len) + ' L' + (100 + w) + ' 104 Z" fill="' + col + '" transform="rotate(' + a + ' 100 100)"/>'; };
+  return '<svg viewBox="0 0 200 200" style="' + (style || '') + ';max-width:100%" aria-label="' + clockStr(d) + '"><defs>' +
+    '<radialGradient id="' + uid + 'd" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="' + D.dial[0] + '"/><stop offset="1" stop-color="' + D.dial[1] + '"/></radialGradient>' +
+    '<linearGradient id="' + uid + 'b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + D.bezel[0] + '"/><stop offset=".5" stop-color="' + D.bezel[1] + '"/><stop offset="1" stop-color="' + D.bezel[0] + '"/></linearGradient></defs>' +
+    '<circle cx="100" cy="100" r="98" fill="url(#' + uid + 'b)"/><circle cx="100" cy="100" r="91" fill="url(#' + uid + 'd)"/>' + ticks + nums +
+    hand(ha, 46, 4.2, D.hand) + hand(ma, 70, 3.2, D.hand) + '<line x1="100" y1="118" x2="100" y2="22" stroke="' + D.sec + '" stroke-width="1.2" transform="rotate(' + sa + ' 100 100)"/>' +
+    '<circle cx="100" cy="100" r="5" fill="' + D.sec + '"/><circle cx="100" cy="100" r="2" fill="' + D.dial[1] + '"/></svg>';
+}
+
 /* ================================================================
    المباريات (البيانات من الخدمة)
    ================================================================ */
@@ -1255,7 +1301,7 @@ function exitGuest(cb){ requirePin(function () { setGuest(false); if (cb) cb(); 
     if (!guestOn()) return;
     var st = document.getElementById('stage') || document.body;
     var ov = document.createElement('div');
-    ov.style.cssText = 'position:absolute;inset:0;z-index:60;background:rgba(5,10,25,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#fff;text-align:center';
+    ov.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0;z-index:60;background:rgba(5,10,25,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#fff;text-align:center';
     ov.innerHTML = '<div style="font-size:34px;font-weight:700">وضع الضيف مفعّل</div><div style="font-size:20px;color:#9FB0CC">هذه الصفحة مخفية حتى يُنهى وضع الضيف.</div>';
     var r = document.createElement('div'); r.style.cssText = 'display:flex;gap:14px';
     var b1 = document.createElement('button'); b1.textContent = 'إنهاء وضع الضيف'; b1.style.cssText = 'height:60px;padding:0 26px;border-radius:18px;border:1px solid #6FA8FF;background:#1F5FD1;color:#fff;font:inherit;font-size:20px';

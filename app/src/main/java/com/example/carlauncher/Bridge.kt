@@ -547,6 +547,8 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun eventsClear() = Events.clear(ctx)
     @JavascriptInterface fun logEvent(msg: String) = Events.add(ctx, msg.take(160))
     @JavascriptInterface fun setRestOpen(open: Boolean) { RestGuard.restOpen = open }
+    @JavascriptInterface fun ready() = act.pageReady()
+    @JavascriptInterface fun setOverlay(open: Boolean) { act.overlayOpen = open }
 
     // ===== المباريات =====
     @JavascriptInterface fun matchesConfig(): String = Matches.config(ctx).toString()

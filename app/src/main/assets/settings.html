@@ -137,7 +137,7 @@ var SEC_CAT = {
   'الثيم': 'look', 'اسم السيارة أعلى الشاشة': 'look', 'خلفية الرئيسية': 'look', 'الوضع الليلي': 'look', 'وضوح البطاقات': 'look',
   'تصميم الواجهة': 'home', 'الصفحات والبطاقات': 'home', 'حجم النصوص وتحرير البطاقات': 'home', 'القائمة السفلية': 'home', 'التخطيطات المحفوظة': 'home*', 'الشريط العلوي (الأيقونات)': 'home',
   'شكل الساعة': 'clock', 'الوقت والأرقام': 'clock', 'الخطوط': 'clock',
-  'نمط شاشة الاستراحة': 'restT', 'ما يظهر': 'restT', 'متى تعمل': 'restT', 'مدة بقائها': 'restT', 'خلفية الاستراحة': 'restT', 'الأدعية': 'restT*',
+  'نمط شاشة الاستراحة': 'restT', 'الخلفية المتحركة': 'restT', 'ما يظهر': 'restT', 'متى تعمل': 'restT', 'مدة بقائها': 'restT', 'خلفية الاستراحة': 'restT', 'الأدعية': 'restT*',
   'المدينة (لمواقيت الصلاة)': 'prayer', 'تنبيه الصلاة': 'prayer', 'الصوت': 'prayer', 'تذكيرات': 'prayer',
   'مساعد القيادة': 'drive', 'تنبيه السرعة': 'drive', 'تنبيه الاستراحة': 'drive', 'القيادة والإنترنت': 'drive', 'الإضاءة الليلية': 'drive', 'عند تشغيل السيارة': 'drive', 'رسالة الوصول': 'drive*',
   'الأوامر الصوتية': 'comm', 'المكالمات والرسائل': 'comm', 'التطبيقات': 'comm', 'التحكم بالموسيقى من الرئيسية': 'comm', 'وضع الركاب': 'comm*',
@@ -526,13 +526,13 @@ function renderApps(){
 }
 
 function showLog(text){
-  var ov = el('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:70;background:rgba(5,10,25,.95);display:flex;flex-direction:column;padding:30px 40px;gap:14px;box-sizing:border-box';
+  var ov = el('div'); ov.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0;z-index:70;background:rgba(5,10,25,.95);display:flex;flex-direction:column;padding:30px 40px;gap:14px;box-sizing:border-box';
   var pre = el('pre', 'latin', text.split('\n\n').reverse().join('\n\n')); pre.style.cssText = 'flex:1;overflow:auto;margin:0;font:14px/1.5 monospace;color:#C3D1E8;white-space:pre-wrap;direction:ltr;text-align:left;background:#0b1328;border-radius:16px;padding:16px';
   var c = el('button', 'opt on', 'إغلاق'); c.style.alignSelf = 'flex-start'; c.onclick = function () { ov.remove(); };
   ov.appendChild(c); ov.appendChild(pre); document.getElementById('stage').appendChild(ov);
 }
 function confirmBox(text, onYes){
-  var ov = el('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:70;background:rgba(5,10,25,.88);display:flex;align-items:center;justify-content:center';
+  var ov = el('div'); ov.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0;z-index:70;background:rgba(5,10,25,.88);display:flex;align-items:center;justify-content:center';
   var box = el('div', 'glass section'); box.style.cssText = 'width:620px;padding:28px;gap:18px;background:rgba(10,25,55,.97)';
   box.appendChild(el('span', 'label', text));
   var r = el('div', 'opts');
@@ -541,11 +541,11 @@ function confirmBox(text, onYes){
   r.appendChild(y); r.appendChild(n); box.appendChild(r); ov.appendChild(box);
   document.getElementById('stage').appendChild(ov);
 }
-var UI_KEYS = ['clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'autoProfile', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
+var UI_KEYS = ['cardGap', 'iconMode', 'iconDim', 'iconStyle', 'clockDial', 'clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'autoProfile', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
 /* ===== نقل الإعدادات بين الشاشات (عن طريق الجوال) ===== */
 function showTransfer(){
-  var ov = el('div'); ov.style.cssText = 'position:absolute;inset:0;z-index:70;background:rgba(5,10,25,.92);display:flex;align-items:center;justify-content:center';
+  var ov = el('div'); ov.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0;z-index:70;background:rgba(5,10,25,.92);display:flex;align-items:center;justify-content:center';
   var box = el('div', 'glass section'); box.style.cssText = 'width:860px;padding:28px 32px;gap:14px;background:rgba(10,25,55,.97)';
   box.appendChild(el('span', 'label', 'نقل الإعدادات من هذه الشاشة إلى شاشة أخرى'));
   [['1', 'في هذه الشاشة: افتح «الإرسال من الجوال» وامسح الباركود بجوالك.'], ['2', 'في الجوال: تبويب «نسخة احتياطية» ▸ «تنزيل نسخة من الشاشة».'], ['3', 'في الشاشة الثانية: افتح «الإرسال من الجوال» وامسح باركودها.'], ['4', 'في الجوال: «استعادة» ▸ اختر «الواجهة والمظهر فقط» أو «كل شيء» ▸ اختر الملف.']].forEach(function (x) {
@@ -700,8 +700,7 @@ function renderSystem(){
     setTimeout(function () { var r = natJSON('ramResult') || {}; fr.textContent = 'تم تحرير ' + Math.round((r.freed || 0) / 1048576) + ' م.ب'; setTimeout(render, 2500); }, 2500);
   };
   lm.appendChild(fr); s.appendChild(lm);
-  toggle(s, 'تحرير تلقائي عند فتح شاشة الاستراحة', 'ramOnRest');
-  toggle(s, 'تحرير تلقائي بعد تشغيل السيارة', 'ramOnBoot');
+  s.appendChild(el('span', 'note', 'التحرير يدوي فقط: من زر «إغلاق» في الأعلى، أو اللوحة السريعة، أو بطاقة الذاكرة، أو بالأمر الصوتي «حرّر الذاكرة».'));
   if (!LITE && HAS_NATIVE) {
     var on = nat('cleanAvail') === true, ca = el('div', 'line');
     ca.appendChild(el('span', '', 'مسح قائمة التطبيقات الأخيرة مثل الجوال:'));
@@ -788,6 +787,8 @@ function renderHome(){
   });
   s.appendChild(g);
   s.appendChild(el('span', 'note', 'كل تصميم يحفظ ترتيب بطاقاته. اسحب الرئيسية يميناً أو يساراً للتنقل بين الصفحات.'));
+  s.appendChild(el('span', 'note', 'المسافة بين البطاقات وأزرار الشريط السفلي:'));
+  opts(s, [['s', 'ضيقة'], ['m', 'متوسطة'], ['l', 'واسعة']], prefs.cardGap || 'm', function (k) { prefs.cardGap = k; upd(); }, true);
 
   var homes = homesCopy(), pages = homes[prefs.layout];
   if (pageIdx >= pages.length) pageIdx = 0;
@@ -880,7 +881,7 @@ function renderHome(){
   s = section('القائمة السفلية', 'حتى 8 أزرار. زر الإعدادات ثابت دائماً.');
   var dock = (prefs.dock || []).slice();
   if (dock.indexOf('settings') < 0) dock.push('settings');
-  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', kids: 'الركاب', voice: 'أمر صوتي', guest: 'وضع الضيف', settings: 'الإعدادات' };
+  var DN = { maps: 'الخرائط', music: 'الموسيقى', radio: 'الراديو', apps: 'التطبيقات', rest: 'الاستراحة', azkar: 'الأذكار', trip: 'الرحلة', prayer: 'الصلاة', notes: 'الملاحظات', reminders: 'التذكيرات', parking: 'الموقف', fuel: 'الوقود', maint: 'الصيانة', profile: 'التخطيط', nearby: 'أقرب مكان', kids: 'الركاب', voice: 'تحدّث (أمر صوتي)', guest: 'وضع الضيف', settings: 'الإعدادات' };
   dock.forEach(function (id, i) {
     var row = el('div', 'line');
     row.appendChild(el('span', '', id.indexOf('app:') === 0 ? appLabel(id.slice(4)) : (DN[id] || id)));
@@ -896,7 +897,11 @@ function renderHome(){
     var ad2 = el('div', 'opts');
     Object.keys(DN).forEach(function (k) {
       if (dock.indexOf(k) >= 0) return;
-      var b = el('button', 'opt sm', '+ ' + DN[k]); b.onclick = function () { dock.splice(dock.length - 1, 0, k); prefs.dock = dock; upd(); }; ad2.appendChild(b);
+      var b = el('button', 'opt sm', '+ ' + DN[k]); b.onclick = function () {
+        dock.splice(dock.length - 1, 0, k); prefs.dock = dock; upd();
+        // زر «تحدّث» في الأسفل: نسأل مرة عن إخفاء زر الأعلى حتى لا يتكرر
+        if (k === 'voice' && prefs.micBtn !== false) confirmBox('أُضيف «تحدّث» للشريط السفلي. إخفاء زر «تحدّث» من الأعلى حتى لا يتكرر؟', function () { prefs.micBtn = false; upd(); });
+      }; ad2.appendChild(b);
     });
     var ap = el('a', 'opt sm', '+ تطبيق من الشاشة'); ap.href = 'apps.html?pick=dock'; ap.style.display = 'flex'; ap.style.alignItems = 'center'; ad2.appendChild(ap);
     s.appendChild(ad2);
@@ -908,6 +913,11 @@ function renderHome(){
   function setTb(){ prefs.topBar = tb; upd(); }
   s.appendChild(el('span', 'note', 'حجم أيقونات الحالة:'));
   opts(s, [['s', 'صغير'], ['m', 'متوسط'], ['l', 'كبير']], tb.size, function (k) { tb.size = k; setTb(); }, true);
+  s.appendChild(el('span', 'note', 'متى تظهر:'));
+  opts(s, [['issues', 'عند وجود مشكلة فقط (انقطاع GPS أو الإنترنت أو البلوتوث)'], ['always', 'دائماً']], prefs.iconMode || 'issues', function (k) { prefs.iconMode = k; upd(); }, true);
+  toggle(s, 'تخفت أثناء القيادة', 'iconDim', 'حتى لا تشتت العين، وتعود عند التوقف.');
+  s.appendChild(el('span', 'note', 'الشكل:'));
+  opts(s, [['auto', 'تلقائي حسب الثيم'], ['plain', 'بدون خلفية'], ['capsule', 'كبسولة واحدة'], ['pill', 'مربعات'], ['circle', 'دوائر'], ['label', 'مع الاسم'], ['line', 'خط حالة']], prefs.iconStyle || 'auto', function (k) { prefs.iconStyle = k; upd(); }, true);
   var si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
   var TBN = { gps: 'GPS', wifi: 'الواي فاي', bt: 'البلوتوث' };
   var order = (tb.order || []).filter(function (k) { return TBN[k]; }); Object.keys(TBN).forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
@@ -971,17 +981,30 @@ function renderRest(){
   opts(s, [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['lux', 'فاخرة (شريط الصلوات)'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']], prefs.restStyle === 'night' ? 'clock' : prefs.restStyle, function (k) { prefs.restStyle = k; upd(); });
   if ((prefs.restStyle || 'classic') === 'clock') { s.appendChild(el('span', 'note', 'الإضاءة في «ساعة فقط»:')); opts(s, [['night', 'خافتة ليلاً تلقائياً'], ['always', 'خافتة دائماً'], ['off', 'عادية']], prefs.restDim || 'night', function (k) { prefs.restDim = k; upd(); }, true); }
   if (!LITE) {
-    s.appendChild(el('span', 'note', 'خلفية متحركة (فيديو ترفعه من جوالك من «الإرسال من الجوال» ▸ استراحة متحركة):'));
+    s = section('الخلفية المتحركة', 'فيديو ترفعه من جوالك («الإرسال من الجوال» ▸ استراحة متحركة): MP4 بمقاس 1280×720 ومن 10 إلى 30 ثانية. في الاستراحة: اضغط مطولاً على الخلفية لتغيير الفيديو والمكان والتعتيم بسرعة.');
     var vids = []; try { vids = JSON.parse(nat('videos') || '[]'); } catch (e) {}
-    var vo = el('div', 'opts');
-    var nb = el('button', 'opt sm' + (!prefs.restVideo ? ' on' : ''), 'بدون (صورة)'); nb.onclick = function () { prefs.restVideo = false; upd(); }; vo.appendChild(nb);
-    vids.forEach(function (v, i) {
-      var b = el('button', 'opt sm' + (prefs.restVideo === v.name ? ' on' : ''), 'فيديو ' + (i + 1) + ' (' + Math.round(v.size / 1048576 * 10) / 10 + ' م.ب)');
-      b.onclick = function () { prefs.restVideo = v.name; upd(); }; vo.appendChild(b);
-      var x = el('button', 'opt sm', '×'); x.setAttribute('aria-label', 'حذف'); x.onclick = function () { nat('deleteVideo', v.name); if (prefs.restVideo === v.name) prefs.restVideo = false; upd(); }; vo.appendChild(x);
-    });
-    if (!vids.length) vo.appendChild(el('span', 'note', 'لا توجد فيديوهات بعد.'));
-    s.appendChild(vo);
+    var vname = function (v, i) { return 'فيديو ' + (i + 1) + ' (' + Math.round(v.size / 1048576 * 10) / 10 + ' م.ب)'; };
+    if (!vids.length) s.appendChild(el('span', 'note', 'لا توجد فيديوهات بعد.'));
+    else {
+      s.appendChild(el('span', 'note', 'فيديو النهار (أو الدائم):'));
+      opts(s, [[false, 'بدون (صورة)']].concat(vids.map(function (v, i) { return [v.name, vname(v, i)]; })), prefs.restVideo || false, function (k) { prefs.restVideo = k; upd(); }, true);
+      s.appendChild(el('span', 'note', 'فيديو الليل (من المغرب حتى الشروق):'));
+      opts(s, [[false, 'نفس فيديو النهار']].concat(vids.map(function (v, i) { return [v.name, vname(v, i)]; })), prefs.restVideoNight || false, function (k) { prefs.restVideoNight = k; upd(); }, true);
+      toggle(s, 'تبديل تلقائي بين الفيديوهات', 'restVideoRotate', 'فيديو مختلف كل مرة تفتح الاستراحة.');
+      var del = el('div', 'opts');
+      vids.forEach(function (v, i) { var x = el('button', 'opt sm', 'حذف ' + vname(v, i)); x.onclick = function () { nat('deleteVideo', v.name); if (prefs.restVideo === v.name) prefs.restVideo = false; if (prefs.restVideoNight === v.name) prefs.restVideoNight = false; upd(); }; del.appendChild(x); });
+      s.appendChild(del);
+      s.appendChild(el('span', 'note', 'مكان الساعة فوق الفيديو (انقلها للزاوية إن كان في وسط الفيديو شعار):'));
+      opts(s, [['c', 'الوسط'], ['tl', 'أعلى الزاوية'], ['bc', 'أسفل الوسط']], prefs.restClockPos || 'c', function (k) { prefs.restClockPos = k; upd(); }, true);
+      s.appendChild(el('span', 'note', 'شكل الساعة فوق الفيديو:'));
+      opts(s, [['thin', 'نحيفة'], ['bold', 'عريضة'], ['capsule', 'كبسولة زجاجية'], ['lux', 'عقارب فاخرة'], ['none', 'بدون ساعة']], prefs.restClockLook || 'thin', function (k) { prefs.restClockLook = k; upd(); }, true);
+      s.appendChild(el('span', 'note', 'تعتيم الفيديو (لوضوح النص):'));
+      opts(s, [[0, 'بدون'], [10, '10%'], [20, '20%'], [30, '30%'], [40, '40%'], [60, '60%']], +prefs.restShadeV || 0, function (k) { prefs.restShadeV = k; upd(); }, true);
+      toggle(s, 'إيقاف الفيديو أثناء الحركة', 'restPauseMove', 'يتوقف عند القيادة حتى لا يشتت، ويعود عند التوقف.');
+      s.appendChild(el('span', 'note', 'ليلاً:'));
+      opts(s, [['dim', 'يخفت'], ['still', 'صورة ثابتة'], ['video', 'كما هو']], prefs.restNightVideo || 'dim', function (k) { prefs.restNightVideo = k; upd(); }, true);
+    }
+    var pv2 = el('a', 'opt sm', 'معاينة'); pv2.href = 'rest.html'; pv2.style.display = 'flex'; pv2.style.alignItems = 'center'; pv2.style.alignSelf = 'flex-start'; s.appendChild(pv2);
   }
   var pv = el('a', 'opt sm', 'معاينة'); pv.href = 'rest.html'; pv.style.display = 'flex'; pv.style.alignItems = 'center'; pv.style.alignSelf = 'flex-start'; s.appendChild(pv);
 

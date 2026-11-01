@@ -3,7 +3,7 @@
 (function () {
   var css = document.createElement('style');
   css.textContent =
-    '#cardEd{position:absolute;inset:0;z-index:85;background:rgba(3,8,18,.55);display:flex;align-items:center;justify-content:center}' +
+    '#cardEd{position:absolute;top:0;right:0;bottom:0;left:0;z-index:85;background:rgba(3,8,18,.55);display:flex;align-items:center;justify-content:center}' +
     '#cardEd .ed{width:900px;max-height:640px;overflow-y:auto;background:#0b1530;border:1.5px solid rgba(120,170,255,.45);border-radius:28px;padding:22px 28px;box-sizing:border-box;color:#fff;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.6);scrollbar-width:none}' +
     '#cardEd .ed::-webkit-scrollbar{display:none}' +
     '#cardEd .hd{display:flex;align-items:center;gap:14px}#cardEd .hd b{font-size:26px;flex:1}' +

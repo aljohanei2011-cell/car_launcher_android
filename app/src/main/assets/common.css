@@ -7,8 +7,8 @@
 
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
 #stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;font-family:'Thmanyah','Noto Sans Arabic',Tahoma,sans-serif;color:#fff;overflow:hidden}
-#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,0) 45%,rgba(0,0,0,.55) 100%)}
+#bg{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:cover}
+.shade{position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,0) 45%,rgba(0,0,0,.55) 100%)}
 .wrap{position:relative;z-index:2;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;color:inherit;cursor:pointer}
@@ -96,18 +96,18 @@ body.perf .logo{text-shadow:none}
 /* ===== الثيمات على صفحات الصلاة والرحلة والأدوات ===== */
 body.skin-gold .page{background:linear-gradient(rgba(5,14,28,.80),rgba(5,14,28,.92)),url(skins/gold/bg_night.jpg) center/cover!important}
 body.skin-red .page{background:linear-gradient(rgba(8,9,11,.80),rgba(8,9,11,.92)),url(skins/red/bg_night.jpg) center/cover!important}
-body.skin-gold .page :is(.tile,.p,.box,.pcard,.it,.odo,.form,.card){background:linear-gradient(165deg,rgba(18,32,52,.85),rgba(7,20,38,.82))!important;border:1px solid rgba(230,184,92,.35)!important}
-body.skin-red .page :is(.tile,.p,.box,.pcard,.it,.odo,.form,.card){background:linear-gradient(170deg,rgba(30,34,40,.9),rgba(14,16,20,.88))!important;border:1px solid rgba(160,168,176,.35)!important;border-top:2px solid rgba(200,16,46,.75)!important}
-body.skin-gold .page :is(.pitem,.r:not(.h),.apk){background:rgba(10,22,40,.75)!important;border-color:rgba(230,184,92,.22)!important}
-body.skin-red .page :is(.pitem,.r:not(.h),.apk){background:rgba(18,20,24,.85)!important;border-color:rgba(160,168,176,.25)!important}
-body.skin-gold .page :is(.lbl,.ph,.h){color:#E6B85C!important}
-body.skin-red .page :is(.lbl,.ph,.h){color:#E8ECEF!important}
+body.skin-gold .page .tile,body.skin-gold .page .p,body.skin-gold .page .box,body.skin-gold .page .pcard,body.skin-gold .page .it,body.skin-gold .page .odo,body.skin-gold .page .form,body.skin-gold .page .card{background:linear-gradient(165deg,rgba(18,32,52,.85),rgba(7,20,38,.82))!important;border:1px solid rgba(230,184,92,.35)!important}
+body.skin-red .page .tile,body.skin-red .page .p,body.skin-red .page .box,body.skin-red .page .pcard,body.skin-red .page .it,body.skin-red .page .odo,body.skin-red .page .form,body.skin-red .page .card{background:linear-gradient(170deg,rgba(30,34,40,.9),rgba(14,16,20,.88))!important;border:1px solid rgba(160,168,176,.35)!important;border-top:2px solid rgba(200,16,46,.75)!important}
+body.skin-gold .page .pitem,body.skin-gold .page .r:not(.h),body.skin-gold .page .apk{background:rgba(10,22,40,.75)!important;border-color:rgba(230,184,92,.22)!important}
+body.skin-red .page .pitem,body.skin-red .page .r:not(.h),body.skin-red .page .apk{background:rgba(18,20,24,.85)!important;border-color:rgba(160,168,176,.25)!important}
+body.skin-gold .page .lbl,body.skin-gold .page .ph,body.skin-gold .page .h{color:#E6B85C!important}
+body.skin-red .page .lbl,body.skin-red .page .ph,body.skin-red .page .h{color:#E8ECEF!important}
 body.skin-gold .page .p.on{background:rgba(230,184,92,.18)!important;border-color:#E6B85C!important}
 body.skin-red .page .p.on{background:rgba(200,16,46,.2)!important;border-color:#F02A48!important;color:#fff!important}
 body.skin-red #arc,body.skin-red #restArc{stroke:#C8102E}
 body.skin-red #speedBar{background:#C8102E!important}
-body.skin-gold .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:linear-gradient(165deg,#b98a35,#7a5a1f)!important;border-color:#F5D58A!important}
-body.skin-red .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:#C8102E!important;border-color:#F02A48!important}
+body.skin-gold .page .pbtn:not(.g):not(.r),body.skin-gold .page .btn:not(.g){background:linear-gradient(165deg,#b98a35,#7a5a1f)!important;border-color:#F5D58A!important}
+body.skin-red .page .pbtn:not(.g):not(.r),body.skin-red .page .btn:not(.g){background:#C8102E!important;border-color:#F02A48!important}
 body.perf .page{background:#0a0f1f!important}
 body.perf.skin-gold .page{background:#071426!important}
 body.perf.skin-red .page{background:#0b0c0e!important}
@@ -131,7 +131,7 @@ body.skin-light .logo,body.skin-light .clockTop,body.skin-light .title{color:#13
 body.skin-light .st{color:#13202f!important}
 body.skin-light .dots i{background:rgba(0,0,0,.2)}body.skin-light .dots i.on{background:#13202f}
 body.skin-light .dk:first-child{border:1.5px solid var(--accent)}
-body.skin-light :is(.opt,.tab,.icon-btn){color:#fff}
+body.skin-light .opt,body.skin-light .tab,body.skin-light .icon-btn{color:#fff}
 body.skin-light .opt.on,body.skin-light .tab.on{background:var(--accent);border-color:var(--accent)}
 body.skin-light .page{color:#fff}
 body.skin-light .banner,body.skin-light .chip{background:rgba(255,255,255,.9);border-color:var(--accent);color:#0A3D75}
@@ -151,9 +151,9 @@ body.skin-saudi .banner,body.skin-saudi .chip{background:rgba(4,24,18,.8);border
 body.skin-saudi #stage::before{content:'';position:absolute;top:-10px;left:-14px;width:150px;height:150px;background:url(skins/saudi/palm.png) center/contain no-repeat;opacity:.38;pointer-events:none;z-index:0;transform:scaleX(-1)}
 body.skin-saudi #stage::after{content:'';position:absolute;left:0;right:0;bottom:0;height:12px;background:url(skins/saudi/sadu.png) repeat-x center/auto 12px;opacity:.85;pointer-events:none;z-index:3}
 body.skin-saudi .page{background:linear-gradient(rgba(4,22,16,.82),rgba(4,22,16,.92)),url(skins/saudi/bg_riyadh_night.jpg) center/cover!important}
-body.skin-saudi .page :is(.tile,.p,.box,.pcard,.it,.odo,.form,.card){background:linear-gradient(165deg,rgba(6,42,30,.86),rgba(4,24,18,.84))!important;border:1px solid rgba(217,182,92,.32)!important}
-body.skin-saudi .page :is(.lbl,.ph,.h){color:#D9B65C!important}
-body.skin-saudi .page :is(.pbtn:not(.g):not(.r),.btn:not(.g)){background:#1F8A4C!important;border-color:#D9B65C!important}
+body.skin-saudi .page .tile,body.skin-saudi .page .p,body.skin-saudi .page .box,body.skin-saudi .page .pcard,body.skin-saudi .page .it,body.skin-saudi .page .odo,body.skin-saudi .page .form,body.skin-saudi .page .card{background:linear-gradient(165deg,rgba(6,42,30,.86),rgba(4,24,18,.84))!important;border:1px solid rgba(217,182,92,.32)!important}
+body.skin-saudi .page .lbl,body.skin-saudi .page .ph,body.skin-saudi .page .h{color:#D9B65C!important}
+body.skin-saudi .page .pbtn:not(.g):not(.r),body.skin-saudi .page .btn:not(.g){background:#1F8A4C!important;border-color:#D9B65C!important}
 body.perf.skin-saudi .page{background:#06201A!important}
 
 /* ===================== ثيم «أوقات الصلاة»: اللون يتغير مع كل صلاة ===================== */
@@ -173,17 +173,17 @@ body.skin-ptime .dk:first-child{border-color:var(--accent);box-shadow:inset 0 -3
 body.skin-ptime .opt.on,body.skin-ptime .tab.on{background:var(--accent);border-color:var(--accent2);color:#10151f}
 body.skin-ptime .banner,body.skin-ptime .chip{background:rgba(10,16,30,.8);border-color:var(--accent);color:#fff}
 body.skin-ptime .page{background:#0B1222!important}
-body.skin-ptime .page :is(.lbl,.ph,.h){color:var(--accent)!important}
+body.skin-ptime .page .lbl,body.skin-ptime .page .ph,body.skin-ptime .page .h{color:var(--accent)!important}
 
 /* لون تمييز يختاره المستخدم (يغلب لون الثيم) */
-body.accent-custom :is(.accent,.k-lbl,.label){color:var(--accent)!important}
+body.accent-custom .accent,body.accent-custom .k-lbl,body.accent-custom .label{color:var(--accent)!important}
 body.accent-custom .mbtn.big{background:var(--accent)!important;border-color:var(--accent)!important}
-body.accent-custom :is(.opt.on,.tab.on){background:var(--accent)!important;border-color:var(--accent)!important}
+body.accent-custom .opt.on,body.accent-custom .tab.on{background:var(--accent)!important;border-color:var(--accent)!important}
 body.accent-custom .dk:first-child{border-color:var(--accent)!important}
 body.accent-custom .k-li.on{color:#fff;background:rgba(255,255,255,.14)}
 
 /* ===================== طبقة الطقس ===================== */
-#wx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+#wx{position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none;overflow:hidden;z-index:1}
 #wx img{position:absolute;left:-4%;top:-4%;width:108%;height:108%;object-fit:cover;mix-blend-mode:screen;opacity:.55;will-change:transform}
 #wx.fx-clouds img{opacity:.45;animation:wxDrift 90s linear infinite alternate}
 #wx.fx-rain img{opacity:.5;animation:wxRain 1.1s linear infinite}
@@ -223,7 +223,7 @@ body.skin-red #stage{--gtint:rgba(20,22,27,.64)}
 body.skin-light #stage{--gtint:rgba(243,246,250,.62)}
 body.skin-saudi #stage{--gtint:rgba(6,40,28,.5)}
 body.fg #wrap .glass{position:relative;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:transparent!important;isolation:isolate}
-body.fg #wrap .glass::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+body.fg #wrap .glass::before{content:'';position:absolute;top:0;right:0;bottom:0;left:0;z-index:-1;border-radius:inherit;pointer-events:none;
   background:linear-gradient(var(--gtint),var(--gtint)),var(--gbg) no-repeat;background-size:auto,var(--gw) var(--gh);background-position:0 0,var(--gx,0) var(--gy,0)}
 body.fg.solid #wrap .glass::before{background:linear-gradient(rgba(10,25,55,.9),rgba(10,25,55,.9))}
 /* استجابة فورية للمس */

@@ -250,12 +250,12 @@ function openQuickPanel(){
     '.nbg button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;border-radius:.9em;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:1em;padding:.5em .2em;min-width:0}' +
     '.nbg svg{width:2.2em;height:2.2em}.nbg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}' +
     '.nbg.big{grid-template-columns:repeat(4,1fr);gap:14px;font-size:22px}.nbg.big button{height:130px}' +
-    '.sheetBg{position:absolute;inset:0;z-index:86;background:rgba(3,8,18,.55);display:flex;align-items:center;justify-content:center}' +
+    '.sheetBg{position:absolute;top:0;right:0;bottom:0;left:0;z-index:86;background:rgba(3,8,18,.55);display:flex;align-items:center;justify-content:center}' +
     '.sheet{width:920px;padding:24px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;color:#fff;background:#0b1530!important;border-radius:28px}' +
     '.sheetT{font-size:26px;font-weight:700}' +
     '.qpS{margin-top:24px}.qpRow{display:flex;align-items:center;gap:18px;font-size:21px}.qpRow span{width:90px}.qpRow input{flex:1;height:40px;accent-color:var(--accent,#2F7BFF)}' +
     '.qpGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.qpB{height:72px;border-radius:18px;border:1px solid #2b4a80;background:#13254a;color:#fff;font:inherit;font-size:19px}.qpB.on{background:var(--accent,#1F5FD1);border-color:#fff}' +
-    '#driveOv{position:absolute;inset:0;z-index:84;background:linear-gradient(180deg,#050b18,#0a1428);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff}' +
+    '#driveOv{position:absolute;top:0;right:0;bottom:0;left:0;z-index:84;background:linear-gradient(180deg,#050b18,#0a1428);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff}' +
     '.dvSpeed{display:flex;align-items:baseline;gap:14px;direction:ltr}.dvSpeed b{font-size:220px;line-height:1;font-weight:700;font-family:var(--font-clock)}.dvSpeed span{font-size:34px;color:#9FB0CC}' +
     '.dvInfo{font-size:30px;color:#C3D1E8;max-width:1100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '.dvBtns{display:flex;gap:18px}.dvBtns button{width:170px;height:120px;border-radius:26px;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:19px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}.dvBtns svg{width:44px;height:44px}' +

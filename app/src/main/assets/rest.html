@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="common.css">
 <style>
 #stage{background:#000}
-.layer{position:absolute;inset:0}
+.layer{position:absolute;top:0;right:0;bottom:0;left:0}
 .wrap{position:relative;height:100%;display:flex;flex-direction:column;box-sizing:border-box;padding:22px 40px 24px}
 .top{display:flex;justify-content:space-between;align-items:center;height:56px;flex:none}
 .mid{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
@@ -56,12 +56,30 @@ svg.layer{width:100%;height:100%}
 .strip .on{background:rgba(231,199,122,.16);border:1px solid rgba(231,199,122,.7);box-shadow:0 0 18px rgba(231,199,122,.25)}
 .strip .on b,.strip .on span{color:#F2C879}
 body.perf .strip{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(10,10,12,.75)}
-#vid{object-fit:cover;width:100%;height:100%}
+#vid{object-fit:cover;width:100%;height:100%;transition:opacity .6s}
+#vshade{background:#000;pointer-events:none}
+/* فوق الفيديو: مكان الساعة وشكلها */
+.vp-tl .clockBox{position:absolute;top:84px;left:40px;align-items:flex-start}
+.vp-tl .clock{font-size:96px!important}
+.vp-tl .mid{justify-content:flex-end;gap:12px}
+.vp-tl .dates{font-size:18px}
+.vp-bc .mid{justify-content:flex-end}
+.vp-bc .clock{font-size:130px!important}
+.vl-thin .clock{font-weight:300;letter-spacing:0}
+.vl-capsule .clockBox{padding:12px 40px 16px;border-radius:999px;border:1.5px solid rgba(255,255,255,.35);background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.03))}
+.vl-capsule .clock{font-weight:300}
+.vl-none .clock{display:none}
+#luxClk{display:none}.vl-lux #luxClk{display:block;height:260px}.vl-lux .clock{display:none}
+.vp-tl.vl-lux #luxClk{height:160px}
+/* لوحة سريعة بالضغط المطوّل */
+#vq{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);z-index:30;display:flex;gap:10px;align-items:center;padding:12px 16px;border-radius:24px;background:rgba(10,14,26,.82);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:17px}
+#vq button{height:52px;min-width:60px;padding:0 14px;border-radius:16px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:16px}
+#vq button.on{background:#2F7BFF;border-color:#6FA8FF}
 .S-nap .clock{font-size:180px}
 .napOpts{display:flex;gap:14px}
 .napOpts button{height:70px;min-width:120px;border-radius:22px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);font-size:24px;color:#fff}
 .napOpts button.on{background:#2F7BFF;border-color:#6FA8FF}
-#gallery img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 1.5s}
+#gallery img{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:cover;transition:opacity 1.5s}
 </style>
 </head>
 <body>
@@ -86,6 +104,7 @@ body.perf .strip{-webkit-backdrop-filter:none;backdrop-filter:none;background:rg
     <rect width="100%" height="100%" fill="url(#pt)"/>
     <rect width="100%" height="100%" fill="url(#vg)"/>
   </svg>
+  <div class="layer" id="vshade" style="display:none"></div>
   <div class="shade" id="shade"></div>
   <div class="wrap">
     <div class="top">
@@ -94,6 +113,7 @@ body.perf .strip{-webkit-backdrop-filter:none;backdrop-filter:none;background:rg
     </div>
     <div class="mid" id="mid">
       <div class="clockBox" id="clockBox">
+        <div id="luxClk"></div>
         <div class="clock" id="clock"></div>
         <div class="dates" id="dates"><span id="hijri"></span><span style="opacity:.5">|</span><span id="greg"></span></div>
       </div>
@@ -166,14 +186,56 @@ function applyDim(){
   document.body.classList.toggle('dim', style === 'clock' && (m === 'always' || (m === 'night' && isNight())));
 }
 /* الخلفية المتحركة: فيديو يرفعه المستخدم من جواله (لا يعمل في النسخة الخفيفة) */
+var _vidPick = null;
+function videoList(){ try { return JSON.parse(nat('videos') || '[]'); } catch (e) { return []; } }
+/* أي فيديو يُعرض: تبديل عشوائي، أو فيديو الليل، أو الفيديو المختار */
+function pickVideo(){
+  var list = videoList(); if (!list.length) return null;
+  var by = function (n) { return list.filter(function (x) { return x.name === n; })[0]; };
+  if (prefs.restVideoRotate && list.length > 1) { if (!_vidPick) _vidPick = list[Math.floor(Math.random() * list.length)]; return _vidPick; }
+  if (isNight() && prefs.restVideoNight && by(prefs.restVideoNight)) return by(prefs.restVideoNight);
+  return prefs.restVideo ? by(prefs.restVideo) || null : null;
+}
 function setVideo(want){
-  var v = $('vid'), name = prefs.restVideo, url = null;
-  if (want && name && !LITE) { try { (JSON.parse(nat('videos') || '[]')).forEach(function (x) { if (x.name === name) url = x.url; }); } catch (e) {} }
-  if (!url) { if (v.getAttribute('src')) { v.pause(); v.removeAttribute('src'); v.load(); } v.style.display = 'none'; return false; }
+  var v = $('vid'), x = want && !LITE ? pickVideo() : null, url = x && x.url;
+  var on = !!url;
+  document.body.classList.toggle('hasVid', on);
+  ['vp-c', 'vp-tl', 'vp-bc', 'vl-thin', 'vl-capsule', 'vl-lux', 'vl-none', 'vl-bold'].forEach(function (c) { document.body.classList.remove(c); });
+  $('vshade').style.display = on ? '' : 'none';
+  if (!on) { if (v.getAttribute('src')) { v.pause(); v.removeAttribute('src'); v.load(); } v.style.display = 'none'; return false; }
+  if (style !== 'lux' && style !== 'nap') { document.body.classList.add('vp-' + (prefs.restClockPos || 'c')); document.body.classList.add('vl-' + (prefs.restClockLook || 'thin')); }
+  $('vshade').style.opacity = String(Math.min(60, Math.max(0, +prefs.restShadeV || 0)) / 100);
   if (v.getAttribute('src') !== url) v.src = url;
   v.style.display = '';
-  var p = v.play(); if (p && p.catch) p.catch(function () {});
+  videoState();
   return true;
+}
+/* أثناء الحركة يتوقف الفيديو، وليلاً يخفت أو يتوقف حسب الإعداد */
+function videoState(){
+  var v = $('vid'); if (!v.getAttribute('src')) return;
+  var night = isNight(), nm = prefs.restNightVideo || 'dim';
+  var stop = (prefs.restPauseMove !== false && isDriving()) || (night && nm === 'still') || document.hidden;
+  v.style.opacity = night && nm === 'dim' ? '.45' : '1';
+  if (stop) v.pause(); else { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+}
+setInterval(videoState, 3000);
+/* الضغط المطوّل على الخلفية: لوحة صغيرة لتغيير الفيديو والمكان والتعتيم */
+var _vqT = null;
+document.addEventListener('pointerdown', function (e) { if (!document.body.classList.contains('hasVid') || e.target.closest('button,a,#vq')) return; clearTimeout(_vqT); _vqT = setTimeout(openVq, 700); }, true);
+['pointerup', 'pointercancel', 'pointermove'].forEach(function (ev) { document.addEventListener(ev, function (e) { if (ev !== 'pointermove' || Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0) > 6) clearTimeout(_vqT); }, true); });
+function saveRestPref(k, v){ prefs = loadPrefs(); prefs[k] = v; savePrefs(prefs); }
+function openVq(){
+  var q = $('vq'); if (q) q.remove();
+  q = document.createElement('div'); q.id = 'vq';
+  function b(t, on, fn){ var x = document.createElement('button'); x.textContent = t; if (on) x.className = 'on'; x.onclick = function (e) { e.stopPropagation(); fn(); openVq(); }; q.appendChild(x); }
+  var list = videoList();
+  if (list.length > 1) b('فيديو آخر', false, function () { var cur = pickVideo(), i = list.indexOf(list.filter(function (x) { return cur && x.name === cur.name; })[0]); var nx = list[(i + 1) % list.length]; _vidPick = null; saveRestPref(isNight() && prefs.restVideoNight ? 'restVideoNight' : 'restVideo', nx.name); applyStyle(); });
+  [['c', 'الوسط'], ['tl', 'الزاوية'], ['bc', 'الأسفل']].forEach(function (p) { b(p[1], (prefs.restClockPos || 'c') === p[0], function () { saveRestPref('restClockPos', p[0]); applyStyle(); }); });
+  b('تعتيم −', false, function () { saveRestPref('restShadeV', Math.max(0, (+prefs.restShadeV || 0) - 10)); applyStyle(); });
+  b('تعتيم +', false, function () { saveRestPref('restShadeV', Math.min(60, (+prefs.restShadeV || 0) + 10)); applyStyle(); });
+  var cl = document.createElement('button'); cl.textContent = '✕'; cl.onclick = function (e) { e.stopPropagation(); q.remove(); }; q.appendChild(cl);
+  document.getElementById('stage').appendChild(q);
+  clearTimeout(q._t); q._t = setTimeout(function () { if (q.parentNode) q.remove(); }, 8000);
 }
 document.addEventListener('visibilitychange', function () { var v = $('vid'); if (!v.getAttribute('src')) return; if (document.hidden) v.pause(); else { var p = v.play(); if (p && p.catch) p.catch(function () {}); } });
 window.addEventListener('pagehide', function () { var v = $('vid'); try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {} });
@@ -276,6 +338,7 @@ function tick(){
   if (prefs.reminders) rems = rems.concat(hijriReminders());
   $('remind').textContent = rems.slice(0, 3).join(' · ');
   renderStrip(d);
+  if (document.body.classList.contains('vl-lux')) $('luxClk').innerHTML = luxDialSvg(d, prefs.clockDial, 'height:100%');
   if (d.getSeconds() === 0) applyDim();
 }
 var w = todayWird(); $('wirdText').textContent = w[0]; $('wirdSrc').textContent = '(' + w[1] + ')';
@@ -300,7 +363,6 @@ setInterval(tick, 1000);
 /* الشاشة تبقى تعمل في الاستراحة، وتحرير الذاكرة اختياري عند الدخول */
 nat('keepOn', true);
 window.addEventListener('pagehide', function () { nat('keepOn', false); });
-if (prefs.ramOnRest) setTimeout(function () { nat('freeRam'); }, 1500);
 fitStage();
 </script>
 </body>

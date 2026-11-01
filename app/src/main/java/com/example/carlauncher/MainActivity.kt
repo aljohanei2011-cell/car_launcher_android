@@ -115,7 +115,11 @@ class MainActivity : AppCompatActivity() {
         webView.isLongClickable = false
         webView.isHapticFeedbackEnabled = false
         webView.keepScreenOn = false
-        setContentView(webView)
+        // تشغيل أسرع: آخر شكل للرئيسية يظهر فوراً كصورة، ثم تحل محله الواجهة الحية حين تجهز
+        val root = android.widget.FrameLayout(this)
+        root.addView(webView, android.widget.FrameLayout.LayoutParams(-1, -1))
+        setContentView(root)
+        showSnapshot(root)
         webView.loadUrl(base + pageFrom(intent, "index.html"))
         if (intent?.action == Intent.ACTION_VOICE_COMMAND && Voice.enabled(this))
             webView.postDelayed({ webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null) }, 3000)
@@ -169,6 +173,49 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
+    // ===== صورة آخر شكل للرئيسية =====
+    private var snapView: android.widget.ImageView? = null
+    @Volatile var overlayOpen = false
+    private fun snapFile() = java.io.File(filesDir, "snap.jpg")
+    private fun showSnapshot(root: android.widget.FrameLayout) {
+        try {
+            val f = snapFile()
+            if (!f.exists() || System.currentTimeMillis() - f.lastModified() > 7 * 86_400_000L) return
+            val bm = android.graphics.BitmapFactory.decodeFile(f.absolutePath) ?: return
+            val iv = android.widget.ImageView(this)
+            iv.scaleType = android.widget.ImageView.ScaleType.FIT_XY
+            iv.setImageBitmap(bm)
+            root.addView(iv, android.widget.FrameLayout.LayoutParams(-1, -1))
+            snapView = iv
+            iv.postDelayed({ pageReady() }, 5000) // احتياط إن تأخرت الواجهة
+        } catch (e: Exception) {}
+    }
+    /** تستدعيها الواجهة عندما تجهز: نخفي الصورة بتلاشٍ سريع */
+    fun pageReady() {
+        runOnUiThread {
+            val iv = snapView ?: return@runOnUiThread
+            snapView = null
+            iv.animate().alpha(0f).setDuration(220).withEndAction { (iv.parent as? android.view.ViewGroup)?.removeView(iv) }.start()
+        }
+    }
+    /** نلتقط شكل الرئيسية (بنصف الدقة) عند الخروج منها */
+    private fun saveSnapshot() {
+        try {
+            val w = webView.width, h = webView.height
+            if (w < 100 || h < 100) return
+            val bm = android.graphics.Bitmap.createBitmap(w / 2, h / 2, android.graphics.Bitmap.Config.RGB_565)
+            val c = android.graphics.Canvas(bm); c.scale(0.5f, 0.5f); webView.draw(c)
+            // صورة سوداء تقريباً (بعض الشاشات لا تسمح بالالتقاط) لا نحفظها
+            var sum = 0L; var n = 0
+            var y = 0; while (y < bm.height) { var x = 0; while (x < bm.width) { val p = bm.getPixel(x, y); sum += (p shr 16 and 255) + (p shr 8 and 255) + (p and 255); n++; x += 37 }; y += 29 }
+            if (n == 0 || sum / (n * 3) < 6) { bm.recycle(); return }
+            val tmp = java.io.File(filesDir, "snap.tmp")
+            java.io.FileOutputStream(tmp).use { bm.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) }
+            tmp.renameTo(snapFile())
+            bm.recycle()
+        } catch (e: Exception) {}
+    }
+
     // عند فتح تطبيق آخر (الخرائط مثلاً) نوقف الواجهة مؤقتاً لتوفير المعالج؛ التنبيهات تعمل من الخدمة
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
@@ -185,6 +232,7 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         resumed = false
         visible = false
+        if (snapView == null && !overlayOpen) saveSnapshot()
         RestGuard.pausedAt = System.currentTimeMillis()
         Events.add(this, "اختفت الواجهة" + (if (RestGuard.restOpen) " والاستراحة مفتوحة" else "") +
             (if (System.currentTimeMillis() - RestGuard.lastTouch < 4000) " بعد لمس" else " بدون لمس"))

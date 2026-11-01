@@ -19,11 +19,26 @@
 .act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:70px;height:58px;padding:0 10px;border-radius:18px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:13px;font-weight:600;flex:none}
 .act svg{width:24px;height:24px}
 .act.mic{border-color:rgba(111,168,255,.75);background:rgba(47,123,255,.22)}
+.dk-voice{border-color:rgba(111,168,255,.75)!important}.dk-voice.on{box-shadow:0 0 0 4px rgba(47,123,255,.35),0 0 18px rgba(47,123,255,.6)!important}
 .act.mic.on{box-shadow:0 0 0 4px rgba(47,123,255,.35),0 0 18px rgba(47,123,255,.6)}
 .act.cls{border-color:rgba(255,120,110,.6);background:rgba(255,90,80,.12)}
 body.skin-light .act{color:#13202f;border-color:rgba(19,32,47,.3)}body.skin-light .act svg{stroke:#13202f}
-.status.sz-m{gap:22px}.status.sz-m .st{width:56px;height:52px;border-radius:16px;background:rgba(255,255,255,.07)}.status.sz-m .st svg{width:30px;height:30px}
-.status.sz-l{gap:26px}.status.sz-l .st{width:70px;height:60px;border-radius:18px;background:rgba(255,255,255,.09)}.status.sz-l .st svg{width:36px;height:36px}
+.status.sz-s{gap:16px}.status.sz-s .st{width:44px;height:44px}
+.status.sz-m{gap:22px}.status.sz-m .st{width:56px;height:52px;border-radius:16px}.status.sz-m .st svg{width:30px;height:30px}
+.status.sz-l{gap:26px}.status.sz-l .st{width:70px;height:60px;border-radius:18px}.status.sz-l .st svg{width:36px;height:36px}
+/* أشكال الأيقونات: مربعات، بدون خلفية، كبسولة، دوائر، مع الاسم، خط حالة */
+.status.ic-pill .st{background:rgba(255,255,255,.08)}
+.status.ic-circle .st{border-radius:50%!important;border:1.5px solid rgba(255,255,255,.32);background:rgba(255,255,255,.06);width:52px!important;height:52px!important}
+.status.ic-capsule{gap:0;padding:2px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.06)}
+.status.ic-capsule .st+.st{border-right:1px solid rgba(255,255,255,.22);border-radius:0}
+body.skin-lux .status.ic-capsule{border-color:rgba(231,199,122,.55)}body.skin-luxblue .status.ic-capsule{border-color:rgba(127,179,255,.5)}
+.status.ic-label .st{flex-direction:column;gap:2px;width:auto!important;min-width:56px;padding:0 6px}.status.ic-label .st small{font-size:11px;color:inherit;opacity:.85;white-space:nowrap}
+.status.ic-line .st{position:relative}.status.ic-line .st::after{content:'';position:absolute;bottom:3px;left:50%;width:18px;margin-left:-9px;height:3px;border-radius:2px;background:currentColor}
+.status:empty{display:none}
+/* أثناء القيادة تخفت، وتظهر بحركة هادئة عند تغيّر الحالة */
+.status{transition:opacity .4s}.status.drv{opacity:.4}
+.st{animation:stIn .3s ease-out}
+@keyframes stIn{from{opacity:0;transform:scale(.75)}to{opacity:1;transform:none}}
 
 .st.off{opacity:.35}
 .clockTop{font-size:26px;font-weight:600;direction:ltr;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -48,11 +63,11 @@ body.skin-light .act{color:#13202f;border-color:rgba(19,32,47,.3)}body.skin-ligh
 
 /* ===== التصاميم ===== */
 .cards{height:100%;box-sizing:border-box}
-.L-classic .cards{display:flex;gap:20px}
+.L-classic .cards{display:flex;gap:var(--cg,26px)}
 .L-classic .card.s{flex:.7}.L-classic .card.m{flex:1}.L-classic .card.l{flex:1.45}
-.L-grid .cards,.L-side .cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));grid-auto-rows:0;gap:16px;overflow:hidden}
+.L-grid .cards,.L-side .cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));grid-auto-rows:0;gap:var(--cgg,20px);overflow:hidden}
 .L-grid .card.s,.L-side .card.s{grid-column:span 2}.L-grid .card.m,.L-side .card.m{grid-column:span 3}.L-grid .card.l,.L-side .card.l{grid-column:span 4}
-.L-minimal .cards{display:flex;gap:16px;height:190px;margin-top:auto}
+.L-minimal .cards{display:flex;gap:var(--cgg,20px);height:190px;margin-top:auto}
 .L-minimal .card{flex:1}
 .minClock{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:1}
 .L-minimal .minClock{display:flex}
@@ -98,9 +113,17 @@ body.skin-red .card.op-solid{background:#16191e!important}
 /* ساعة الأرقام المتقلبة */
 body.skin-light .flip .fl{background:rgba(255,255,255,.75)}
 
+/* المتصفحات القديمة لا تدعم المسافات داخل الصفوف (gap): نستبدلها بهوامش */
+html.nogap .L-classic .cards>.card+.card,html.nogap .L-minimal .cards>.card+.card{margin-right:var(--cg,26px)}
+html.nogap #dock>.dk+.dk{margin-right:var(--dg,20px)}
+html.nogap .L-side #dock>.dk+.dk{margin-right:0;margin-top:8px}
+html.nogap .status>*+*{margin-right:22px}html.nogap .acts>*+*{margin-right:24px}
+html.nogap .top>*+*,html.nogap .left>*+*,html.nogap .right>*+*{margin-right:16px}
+html.nogap .galert>*+*{margin-right:14px}
+
 /* ===== القائمة (Dock) ===== */
-#dock{display:flex;gap:14px;box-sizing:border-box}
-.L-classic #dock,.L-grid #dock,.L-minimal #dock{height:150px;padding:20px 40px 30px}
+#dock{display:flex;gap:var(--dg,20px);box-sizing:border-box}
+.L-classic #dock,.L-grid #dock,.L-minimal #dock{height:150px;padding:var(--dtop,24px) 40px 30px}
 .L-side #dock{flex-direction:column;width:118px;padding:0 0 18px;flex:none;order:-1;overflow-y:auto;scrollbar-width:none;gap:10px}
 .L-side #dock::-webkit-scrollbar{display:none}
 .L-side #dock{gap:8px}
@@ -115,7 +138,7 @@ body.skin-light .flip .fl{background:rgba(255,255,255,.75)}
 .L-side .dk svg,.L-side .dk img{width:32px;height:32px}
 .nolabels .dk span{display:none}
 
-.boot{position:absolute;inset:0;z-index:20;background:rgba(5,10,25,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center}
+.boot{position:absolute;top:0;right:0;bottom:0;left:0;z-index:20;background:rgba(5,10,25,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center}
 .boot .t{font-family:'Alyamama','Thmanyah',serif;font-size:46px;line-height:1.7;max-width:1000px}
 </style>
 </head>
@@ -179,7 +202,7 @@ var IC = {
   prayer: '<svg viewBox="0 0 24 24" fill="none" stroke="#F2C879" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10M4 6h2M19 21V10M18 6h2M8 21v-5a4 4 0 0 1 8 0v5M8.5 13.5c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/></svg>',
   parking: '<svg viewBox="0 0 24 24" fill="none" stroke="#6FA8FF" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3" stroke-linecap="round"/></svg>',
   fuel: '<svg viewBox="0 0 24 24" fill="none" stroke="#5AD1A0" stroke-width="2" stroke-linecap="round"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M7 7h4"/></svg>',
-  voice: '<svg viewBox="0 0 24 24" fill="none" stroke="#FF8FB1" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  voice: '<svg viewBox="0 0 24 24" fill="none" stroke="#6FA8FF" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
   profile: '<svg viewBox="0 0 24 24" fill="none" stroke="#7FD4FF" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
   maint: '<svg viewBox="0 0 24 24" fill="none" stroke="#9FB0CC" stroke-width="2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>'
 };
@@ -198,7 +221,7 @@ var DOCK_ITEMS = {
   fuel: { label: 'الوقود', href: 'fuel.html' },
   maint: { label: 'الصيانة', href: 'maintenance.html' },
   profile: { label: 'التخطيط', go: function () { cycleProfile(); } },
-  voice: { label: 'أمر صوتي', go: function () { if (window.onVoiceKey) window.onVoiceKey(); else toast('فعّل الأوامر الصوتية من الإعدادات ▸ النظام', 'فتح', function () { openPage('settings.html'); }); } },
+  voice: { label: 'تحدّث', go: function () { if (window.onVoiceKey) window.onVoiceKey(); else toast('فعّل الأوامر الصوتية من الإعدادات ▸ النظام', 'فتح', function () { openPage('settings.html'); }); } },
   settings: { label: 'الإعدادات', href: 'settings.html' }
 };
 var appCache = {};
@@ -223,6 +246,7 @@ function openPage(url){
   var f = document.createElement('iframe');
   f.id = 'restFrame'; f.src = url;
   _ovl = { rest: /^rest\.html/.test(url), digits: prefs.digits, h24: prefs.h24, voice: !!nat('voiceEnabled') };
+  nat('setOverlay', true);
   if (_ovl.rest) { nat('setRestOpen', true); lsSet('carlauncher.restWanted', Date.now()); nat('logEvent', 'فتح الاستراحة' + (/auto=1/.test(url) ? ' تلقائياً' : '')); }
   document.getElementById('stage').appendChild(f);
   // نخفي الرئيسية خلف النافذة حتى لا تستهلك الذاكرة والرسم
@@ -234,6 +258,7 @@ window.closeRest = function () {
   var f = document.getElementById('restFrame');
   if (f) { try { f.src = 'about:blank'; } catch (e) {} f.remove(); }
   var o = _ovl || {}; _ovl = null;
+  nat('setOverlay', false);
   if (o.rest) { nat('setRestOpen', false); lsSet('carlauncher.restWanted', 0); nat('logEvent', 'خروج من الاستراحة'); }
   nat('keepOn', false);
   lastTouch = Date.now();
@@ -283,6 +308,7 @@ function renderDock(){
     } else {
       var it = DOCK_ITEMS[id]; if (!it) return;
       b.innerHTML = (IC[id] || IC.apps) + '<span>' + it.label + '</span>';
+      if (id === 'voice') b.classList.add('dk-voice');
       b.onclick = it.go || function () { openPage(it.href); };
     }
     d.appendChild(b);
@@ -306,23 +332,36 @@ var SI = {
 function renderStatus(){
   var el = document.getElementById('status'), si = Object.assign({ bt: true, wifi: true, gps: true }, prefs.statusIcons || {});
   var tb = Object.assign({}, DEFAULT_PREFS.topBar, prefs.topBar || {});
-  el.className = 'status sz-' + (tb.size || 'm');
+  var sty = prefs.iconStyle && prefs.iconStyle !== 'auto' ? prefs.iconStyle : (/^lux/.test(prefs.skin || '') ? 'capsule' : 'plain');
   var order = (tb.order || DEFAULT_PREFS.topBar.order).filter(function (k) { return k !== 'clean'; });
   ['gps', 'wifi', 'bt'].forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
   renderActs();
   var s = HAS_NATIVE ? (natJSON('status') || {}) : {}, t = HAS_NATIVE ? (natJSON('trip') || {}) : {};
+  // «عند الحاجة»: تظهر الأيقونة فقط إذا كانت حالتها غير طبيعية
+  var issue = { gps: !t.gps, wifi: !s.internet, bt: s.bt !== 'connected' };
+  var only = (prefs.iconMode || 'issues') === 'issues';
+  var lbl = function (k, txt) { return sty === 'label' ? '<small>' + txt + '</small>' : ''; };
   var B = {
-    gps: function () { return si.gps ? '<button class="st' + (t.gps ? '' : ' off') + '" style="color:' + (t.gps ? '#5AD1A0' : '#fff') + '" onclick="nat(\'openSystem\',\'gps\')" aria-label="GPS ' + (t.gps ? 'متصل' : 'يبحث') + '">' + SI.gps + '</button>' : ''; },
-    wifi: function () { return si.wifi ? '<button class="st' + (s.wifi ? '' : ' off') + '" style="color:' + (s.internet ? '#fff' : '#F2C879') + '" onclick="nat(\'openSystem\',\'wifi\')" aria-label="واي فاي">' + SI.wifi(s.wifi ? (s.wifiLevel == null ? 3 : s.wifiLevel) : -1) + '</button>' : ''; },
-    bt: function () { return si.bt ? '<button class="st' + (s.bt === 'connected' || s.bt === 'on' ? '' : ' off') + '" style="color:' + (s.bt === 'connected' ? '#6FA8FF' : '#fff') + '" onclick="nat(\'openSystem\',\'bt\')" aria-label="بلوتوث">' + SI.bt + '</button>' : ''; }
+    gps: function () { return '<button class="st' + (t.gps ? '' : ' off') + '" style="color:' + (t.gps ? '#5AD1A0' : '#F2C879') + '" onclick="nat(\'openSystem\',\'gps\')" aria-label="GPS ' + (t.gps ? 'متصل' : 'يبحث') + '">' + SI.gps + lbl('gps', t.gps ? 'GPS' : 'يبحث') + '</button>'; },
+    wifi: function () { return '<button class="st' + (s.wifi ? '' : ' off') + '" style="color:' + (s.internet ? '#fff' : '#F2C879') + '" onclick="nat(\'openSystem\',\'wifi\')" aria-label="واي فاي">' + SI.wifi(s.wifi ? (s.wifiLevel == null ? 3 : s.wifiLevel) : -1) + lbl('wifi', s.internet ? 'إنترنت' : 'بلا إنترنت') + '</button>'; },
+    bt: function () { return '<button class="st' + (s.bt === 'connected' || s.bt === 'on' ? '' : ' off') + '" style="color:' + (s.bt === 'connected' ? '#6FA8FF' : '#fff') + '" onclick="nat(\'openSystem\',\'bt\')" aria-label="بلوتوث">' + SI.bt + lbl('bt', s.bt === 'connected' ? 'متصل' : 'غير متصل') + '</button>'; }
   };
   var html = '';
-  order.forEach(function (k) { if (B[k]) html += B[k](); });
+  order.forEach(function (k) { if (B[k] && si[k] && (!only || !HAS_NATIVE || issue[k])) html += B[k](); });
+  var cls = 'status sz-' + (tb.size || 'm') + ' ic-' + sty + (prefs.iconDim !== false && isDriving() ? ' drv' : '');
+  if (el.className !== cls) el.className = cls;
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
 }
 /* زر «إغلاق» (وزر «تحدّث» يضيفه ملف الأوامر الصوتية) */
 function renderActs(){
   var a = document.getElementById('acts'); if (!a) return;
+  var mb = document.getElementById('micBtn');
+  if (prefs.micBtn === false && mb) mb.remove();
+  else if (prefs.micBtn !== false && !mb && window.onVoiceKey) {
+    mb = document.createElement('button'); mb.id = 'micBtn'; mb.className = 'act mic'; mb.setAttribute('aria-label', 'أمر صوتي');
+    mb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>تحدّث</span>';
+    mb.onclick = function () { window.onVoiceKey(); }; a.insertBefore(mb, a.firstChild);
+  }
   var c = document.getElementById('clsBtn');
   if (prefs.cleanBtn === false) { if (c) c.remove(); return; }
   if (!c) {
@@ -389,25 +428,9 @@ var CLOCK_RENDER = {
   },
   /* عقارب فاخرة بأرقام عربية وأربعة ألوان للقرص */
   lux: function (d, o) {
-    var t = clockDates(d, o), D = LUX_DIALS[prefs.clockDial] || LUX_DIALS.gold, uid = 'lx' + (_luxN++ % 2);
-    var h = d.getHours() % 12, m = d.getMinutes(), sec = d.getSeconds();
-    var ha = h * 30 + m * 0.5, ma = m * 6 + sec * 0.1, sa = sec * 6, ticks = '', nums = '';
-    for (var i = 0; i < 60; i++) { var big = i % 5 === 0; if (big) continue; ticks += '<line x1="100" y1="13" x2="100" y2="17" stroke="' + D.tick + '" stroke-opacity=".55" stroke-width="1" transform="rotate(' + i * 6 + ' 100 100)"/>'; }
-    var AR = ['١٢', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '١٠', '١١'];
-    for (var k = 0; k < 12; k++) {
-      var an = k * 30 * Math.PI / 180, x = 100 + Math.sin(an) * 70, y = 100 - Math.cos(an) * 70 + 7;
-      nums += '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" fill="' + D.num + '" font-size="' + (k % 3 === 0 ? 21 : 17) + '" font-weight="700" font-family="Tahoma,sans-serif">' + AR[k] + '</text>';
-      nums += '<rect x="99" y="10" width="2" height="9" rx="1" fill="' + D.num + '" transform="rotate(' + k * 30 + ' 100 100)"/>';
-    }
-    var hand = function (a, len, w, col) { return '<path d="M' + (100 - w) + ' 104 L100 ' + (100 - len) + ' L' + (100 + w) + ' 104 Z" fill="' + col + '" transform="rotate(' + a + ' 100 100)"/>'; };
-    var wide = cardWide();
+    var t = clockDates(d, o), wide = cardWide();
     return '<div style="display:flex;flex-direction:' + (wide ? 'row' : 'column') + ';align-items:center;justify-content:center;gap:' + (wide ? '1.2em' : '.4em') + ';height:100%;min-height:0;text-align:center" ondblclick="openRest()">' +
-      '<svg viewBox="0 0 200 200" style="' + (wide ? 'height:100%' : 'flex:1;min-height:0;width:100%') + ';aspect-ratio:1;max-width:100%" aria-label="' + clockStr(d) + '"><defs>' +
-      '<radialGradient id="' + uid + 'd" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="' + D.dial[0] + '"/><stop offset="1" stop-color="' + D.dial[1] + '"/></radialGradient>' +
-      '<linearGradient id="' + uid + 'b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + D.bezel[0] + '"/><stop offset=".5" stop-color="' + D.bezel[1] + '"/><stop offset="1" stop-color="' + D.bezel[0] + '"/></linearGradient></defs>' +
-      '<circle cx="100" cy="100" r="98" fill="url(#' + uid + 'b)"/><circle cx="100" cy="100" r="91" fill="url(#' + uid + 'd)"/>' + ticks + nums +
-      hand(ha, 46, 4.2, D.hand) + hand(ma, 70, 3.2, D.hand) + '<line x1="100" y1="118" x2="100" y2="22" stroke="' + D.sec + '" stroke-width="1.2" transform="rotate(' + sa + ' 100 100)"/>' +
-      '<circle cx="100" cy="100" r="5" fill="' + D.sec + '"/><circle cx="100" cy="100" r="2" fill="' + D.dial[1] + '"/></svg>' +
+      luxDialSvg(d, prefs.clockDial, wide ? 'height:100%' : 'flex:1;min-height:0;width:100%') +
       '<div style="min-width:0;flex:none">' + (wide ? '<div class="k-big" style="font-size:2.2em">' + clockStr(d) + ampmHtml(d, o) + '</div>' : '') + t.greg + t.hijri + '</div></div>';
   },
   /* كبسولة زجاجية: أرقام نحيفة وثوانٍ صغيرة والتاريخ تحت خط */
@@ -437,13 +460,6 @@ var CLOCK_RENDER = {
       '<div class="k-big" style="font-size:2.4em">' + pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60) + '</div><div class="k-sub">' + np.timeFmt + '</div></div></div>';
   }
 };
-var LUX_DIALS = {
-  gold:   { dial: ['#1b1b1d', '#050506'], bezel: ['#8a6a2a', '#f3d78e'], num: '#E7C77A', tick: '#E7C77A', hand: '#F1D48A', sec: '#E0B65C' },
-  silver: { dial: ['#2a2c30', '#0d0e10'], bezel: ['#7d838b', '#eef1f4'], num: '#E6E9EE', tick: '#C9CED6', hand: '#F2F4F7', sec: '#D9B46A' },
-  green:  { dial: ['#145a40', '#05241a'], bezel: ['#8a6a2a', '#f3d78e'], num: '#E7C77A', tick: '#E7C77A', hand: '#F1D48A', sec: '#E0B65C' },
-  blue:   { dial: ['#1a4590', '#06142e'], bezel: ['#7d838b', '#eef1f4'], num: '#E6E9EE', tick: '#C9CED6', hand: '#F2F4F7', sec: '#D9B46A' }
-};
-var _luxN = 0;
 /* رقم بسبع قطع (LED) */
 var SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
 function segDigit(n, x){
@@ -528,8 +544,8 @@ card('speed', 'عداد السرعة', function (o) {
     var pc = Math.min(v, max) / max, C = 2 * Math.PI * 70;
     return '<div class="k-row"><span class="k-lbl">السرعة</span><span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span></div>' +
       '<div style="position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center"><div style="position:relative;height:100%;aspect-ratio:1;max-width:100%">' +
-      '<img src="skins/red/ring.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain">' +
-      '<svg viewBox="0 0 200 200" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="6"/>' +
+      '<img src="skins/red/ring.png" alt="" style="position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:contain">' +
+      '<svg viewBox="0 0 200 200" style="position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%"><circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="6"/>' +
       '<circle cx="100" cy="100" r="70" fill="none" stroke="' + (over ? '#F02A48' : '#C8102E') + '" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + (C * pc).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(135 100 100)" style="filter:drop-shadow(0 0 4px #F02A48)"/>' +
       '<text x="100" y="108" text-anchor="middle" fill="#fff" font-size="44" font-weight="700">' + v + '</text><text x="100" y="132" text-anchor="middle" fill="#B7BEC5" font-size="12">كم/س</text></svg></div></div>';
   }
@@ -681,6 +697,8 @@ function buildPages(){
   var stage = document.getElementById('stage');
   stage.classList.remove('L-classic', 'L-grid', 'L-side', 'L-minimal');
   stage.classList.add('L-' + prefs.layout);
+  var G = { s: [16, 12, 14, 18], m: [26, 20, 20, 24], l: [36, 28, 26, 30] }[prefs.cardGap || 'm'] || [26, 20, 20, 24];
+  stage.style.setProperty('--cg', G[0] + 'px'); stage.style.setProperty('--cgg', G[1] + 'px'); stage.style.setProperty('--dg', G[2] + 'px'); stage.style.setProperty('--dtop', G[3] + 'px');
   var pagesEl = document.getElementById('pages'); pagesEl.innerHTML = ''; cardEls = [];
   var pages = homePages();
   if (prefs.layout === 'minimal') pages = pages.slice(0, 1);
@@ -899,7 +917,6 @@ function bootAction(){
   var last = null; try { last = localStorage.getItem('carlauncher.lastBoot'); } catch (e) {}
   if (String(last) === String(id)) return;
   try { localStorage.setItem('carlauncher.lastBoot', String(id)); } catch (e) {}
-  if (prefs.ramOnBoot) setTimeout(function () { nat('freeRam'); }, 20000);
   var a = prefs.bootAction;
   if (a === 'dua') { var o = document.getElementById('boot'); o.style.display = 'flex'; setTimeout(function () { o.style.display = 'none'; }, 10000); }
   else if (a === 'maps') setTimeout(function () { openRole('maps'); }, 1500);
@@ -960,7 +977,7 @@ if (!LITE && ((HAS_NATIVE && nat('voiceEnabled')) || lsGet('carlauncher.voiceTes
 <script>
 if (FIRST_RUN) setTimeout(function () { openPage('wizard.html'); }, 700);
 safe('inbox', processInbox); safe('pages', buildPages); safe('dock', renderDock); safe('status', renderStatus);
-safe('tick', tick); safe('glass', buildGlass); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
+safe('tick', tick); safe('glass', buildGlass); setTimeout(function () { nat('ready'); }, 250); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
 every(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
 every(function () { if (!document.hidden) renderStatus(); }, 5000);
 autoDetectPerf();

@@ -71,8 +71,7 @@ var F = [
   ['adhan', 'تنبيه الصلاة', 'يعمل في الخلفية'],
   ['g', 'الثبات'],
   ['watchdog', 'إعادة فتح الواجهة إن أُغلقت', ''],
-  ['ramOnRest', 'تحرير الذاكرة عند الاستراحة', ''],
-  ['ramOnBoot', 'تحرير الذاكرة عند التشغيل', '']
+
 ];
 function isOn(k){ if (k === 'voice') return !!nat('voiceEnabled'); var v = getP(k); if (v === undefined) { var d = k.split('.'); v = d.length > 1 ? (DEFAULT_PREFS[d[0]] || {})[d[1]] : DEFAULT_PREFS[k]; } return v !== false && !!v; }
 function render(){
@@ -92,8 +91,8 @@ function render(){
   });
 }
 document.getElementById('lite').onclick = function () {
-  ['weatherFx', 'occasions', 'driveSimple.on', 'zoneSpeed.on', 'obdAuto', 'autoProfile.on', 'ramOnBoot'].forEach(function (k) { setP(k, false); });
-  prefs.voiceWake = false; prefs.perf = 'on'; prefs.ramOnRest = true; nat('setVoiceEnabled', false);
+  ['weatherFx', 'occasions', 'driveSimple.on', 'zoneSpeed.on', 'obdAuto', 'autoProfile.on'].forEach(function (k) { setP(k, false); });
+  prefs.voiceWake = false; prefs.perf = 'on'; nat('setVoiceEnabled', false);
   savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); render(); toast('فُعّل الوضع الخفيف: أُطفئت المزايا الثقيلة ووضع الأداء مفعّل');
 };
 document.getElementById('def').onclick = function () {
