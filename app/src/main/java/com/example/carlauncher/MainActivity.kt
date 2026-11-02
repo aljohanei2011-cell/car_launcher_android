@@ -147,8 +147,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        // محرك الصفحات مُغلق (بعد الاستراحة الخفيفة): سيُعاد بناؤه، فنحفظ الطلب ليفتح الصفحة المطلوبة
-        if (needRebuild) { if (intent != null) setIntent(intent); return }
         // زر الأوامر الصوتية في الشاشة (إن اختير رفيق الطريق لها)
         if (intent?.action == Intent.ACTION_VOICE_COMMAND) {
             if (Voice.enabled(this)) { Voice.keySeen(this); webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null) }

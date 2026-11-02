@@ -159,8 +159,7 @@ function nativeRestConfig(){
     pos: p.restClockPos || 'c', look: p.restClockLook === 'thin' || p.restClockLook === 'lux' || p.restClockLook === 'capsule' ? 'thin' : (p.restClockLook || ''),
     shade: +p.restShadeV || 0, dim: p.restDim || 'night', nightVideo: p.restNightVideo || 'dim', pauseMove: p.restPauseMove !== false,
     restReturn: +p.restReturn || 0, dua: show.dua, prayer: show.prayer, date: show.date, duas: duaList(), duaSec: +p.duaSec || 15,
-    accent: /^#[0-9a-f]{6}$/i.test(p.accent || '') ? p.accent : '#F2C879',
-    media: p.restMedia !== false, weather: p.weatherOn !== false, exitSpeed: +p.restExitSpeed || 0, nightBright: !!p.restNightBright
+    accent: /^#[0-9a-f]{6}$/i.test(p.accent || '') ? p.accent : '#F2C879'
   });
 }
 function nativeRestOk(){
@@ -226,7 +225,7 @@ var DEFAULT_PREFS = {
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
   alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true, resumeNav: true,
   /* الشريط العلوي */
-  restEngine: 'native', restMedia: true, restNightBright: false, restExitSpeed: 0, quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
+  restEngine: 'native', quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
   topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){

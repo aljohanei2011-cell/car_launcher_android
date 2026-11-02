@@ -1057,12 +1057,6 @@ function renderRest(){
   s.appendChild(el('span', 'note', 'نوع الاستراحة:'));
   opts(s, [['native', 'خفيفة (موصى بها: أقل استهلاك للذاكرة بكثير)'], ['web', 'كاملة (كل الأنماط، أثقل)']], prefs.restEngine || 'native', function (k) { prefs.restEngine = k; upd(); }, true);
   s.appendChild(el('span', 'note', 'الخفيفة تدعم: كلاسيكي، ساعة فقط، فاخرة، مع الصورة أو الفيديو. الزخرفة والمعرض والقيلولة تعمل بالكاملة تلقائياً.'));
-  if ((prefs.restEngine || 'native') === 'native') {
-    toggle(s, 'الموسيقى في الاستراحة (اسم المقطع وتشغيل/إيقاف)', 'restMedia');
-    toggle(s, 'تخفيض سطوع الشاشة ليلاً أثناء الاستراحة', 'restNightBright');
-    s.appendChild(el('span', 'note', 'الرجوع للرئيسية عند بدء القيادة:'));
-    opts(s, [[0, 'لا'], [20, 'فوق 20 كم/س'], [40, 'فوق 40 كم/س']], +prefs.restExitSpeed || 0, function (k) { prefs.restExitSpeed = k; upd(); }, true);
-  }
   toggle(s, 'ابقَ في الاستراحة', 'stayRest', 'إذا أخرجها النظام بدون لمس منك (أو أُغلقت الواجهة) ترجع لها تلقائياً. مع إذن «إغلاق التطبيقات» تعود حتى لو ظهرت قائمة التطبيقات الأخيرة.');
 
   s = section('الأدعية', 'اضغط على الدعاء لإخفائه أو إظهاره، وأضف أدعيتك.');

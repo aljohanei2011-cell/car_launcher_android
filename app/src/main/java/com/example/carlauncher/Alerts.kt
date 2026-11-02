@@ -47,9 +47,6 @@ object Alerts {
         val o = JSONObject().put("type", type).put("title", title).put("sub", sub).put("page", page ?: "").put("at", System.currentTimeMillis())
         if (extra != null) o.put("extra", extra)
         if (MainActivity.visible) { push(o); return }
-        // الاستراحة الخفيفة ظاهرة: التنبيه داخلها مباشرة (لا يحتاج إذن الظهور فوق التطبيقات)
-        val r = RestActivity.inst
-        if (RestActivity.visible && r != null) { main.post { r.showAlert(type, title, sub, page) }; return }
         val cfg = Prefs.config(c)
         if (cfg.optBoolean("glassOverlay", true) && Settings.canDrawOverlays(c)) {
             main.post { try { overlay(c.applicationContext, o, cfg) } catch (e: Exception) { notify(c, title, sub, page) } }
