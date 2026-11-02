@@ -595,7 +595,7 @@ function renderVoice(){
   if (prefs.voiceWake && wk) toggle(s, 'إيقاف الاستماع الدائم أثناء تشغيل الموسيقى', 'wakePauseMusic');
   s = section('تخصيص الصوت', 'طريقة الاستماع والرد، واختصاراتك الخاصة.');
   s.appendChild(el('span', 'note', 'طريقة الاستماع:'));
-  opts(s, [['auto', 'تلقائي (نافذة Google إذا فشلت المدمجة)'], ['builtin', 'المدمجة دائماً'], ['google', 'نافذة Google دائماً']], prefs.voiceMode || 'auto', function (k) { prefs.voiceMode = k; if (k !== 'google') lsSet('carlauncher.voiceFails', 0); upd(); }, true);
+  opts(s, [['auto', 'تلقائي (موصى به)'], ['builtin', 'المدمجة دائماً'], ['google', 'نافذة Google دائماً']], prefs.voiceMode || 'auto', function (k) { prefs.voiceMode = k; if (k !== 'google') lsSet('carlauncher.voiceFails', 0); upd(); }, true);
   s.appendChild(el('span', 'note', 'زر «تحدّث»:'));
   opts(s, [['tap', 'ضغطة واحدة (يستمع حتى تسكت)'], ['hold', 'اضغط وتكلّم (يستمع ما دام إصبعك على الزر)']], prefs.voiceBtn || 'tap', function (k) { prefs.voiceBtn = k; upd(); }, true);
   if (prefs.voiceBtn !== 'hold') { s.appendChild(el('span', 'note', 'مدة الانتظار قبل انتهاء الاستماع:')); opts(s, [['s', 'قصيرة'], ['m', 'متوسطة'], ['l', 'طويلة (إذا تتوقف بين الكلمات)']], prefs.voiceWait || 'm', function (k) { prefs.voiceWait = k; upd(); }, true); }

@@ -62,6 +62,7 @@ object Voice {
             .put("tts", sp(c).getString("tts", "unknown"))
             .put("key", sp(c).getBoolean("key", false))
             .put("on", enabled(c)).put("wake", wake)
+            .put("services", JSONArray().apply { services(c).forEach { put(it.packageName) } })
             .put("google", try { c.packageManager.getPackageInfo("com.google.android.googlequicksearchbox", 0); true } catch (e: Exception) { false })
         return o.toString()
     }
@@ -127,7 +128,9 @@ object Voice {
         try { rec?.destroy() } catch (e: Exception) {}
         rec = null
         if (ContextCompat.checkSelfPermission(c, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { state = "error"; err = 9; seq++; return }
-        val r0: SpeechRecognizer? = try { SpeechRecognizer.createSpeechRecognizer(c) } catch (e: Exception) { null }
+        // بعض الشاشات تجعل خدمة التعرف الافتراضية خدمة الشركة المصنّعة (لا تسمع شيئاً)، فنختار خدمة Google صراحةً إن وُجدت
+        val comp = googleService(c)
+        val r0: SpeechRecognizer? = try { if (comp != null) SpeechRecognizer.createSpeechRecognizer(c, comp) else SpeechRecognizer.createSpeechRecognizer(c) } catch (e: Exception) { null }
         if (r0 == null) { state = "error"; err = 5; seq++; return }
         val r: SpeechRecognizer = r0
         rec = r; wakeMode = isWake
@@ -151,7 +154,7 @@ object Voice {
                 // لم يصل للميكروفون أي صوت إطلاقاً (غالباً تطبيق آخر يمسكه أو الصوت يذهب للبلوتوث)
                 val noAudio = (code == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || code == SpeechRecognizer.ERROR_NO_MATCH || code == SpeechRecognizer.ERROR_AUDIO) && rmsMax < 1f
                 err = if (noAudio && !isWake) 100 else code; state = "error"; seq++
-                if (!isWake) Events.add(c, "أمر صوتي: خطأ " + err + (if (noAudio) " (لم يصل صوت للميكروفون)" else ""))
+                if (!isWake) Events.add(c, "أمر صوتي: خطأ " + err + (if (noAudio) " (لم يصل صوت للميكروفون)" else "") + " · الخدمة: " + (comp?.packageName ?: "افتراضية"))
                 release(); again(if (code == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || code == SpeechRecognizer.ERROR_CLIENT) 2500 else 500)
             }
         })
@@ -171,6 +174,17 @@ object Voice {
             i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, if (opts.optBoolean("hold")) 30_000L else 2_000L)
         }
         try { r.startListening(i) } catch (e: Exception) { state = "error"; err = 5; seq++; release() }
+    }
+
+    /** خدمات التعرف على الكلام في الجهاز، مع تفضيل Google */
+    fun services(c: Context): List<android.content.ComponentName> = try {
+        c.packageManager.queryIntentServices(Intent(android.speech.RecognitionService.SERVICE_INTERFACE), 0)
+            .map { android.content.ComponentName(it.serviceInfo.packageName, it.serviceInfo.name) }
+    } catch (e: Exception) { emptyList() }
+    private fun googleService(c: Context): android.content.ComponentName? {
+        val all = services(c)
+        return all.firstOrNull { it.packageName == "com.google.android.googlequicksearchbox" }
+            ?: all.firstOrNull { it.packageName.startsWith("com.google.") }
     }
 
     private fun release() { main.post { try { rec?.destroy() } catch (e: Exception) {}; rec = null } }

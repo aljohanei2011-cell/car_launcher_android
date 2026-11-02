@@ -342,6 +342,7 @@ function voicePollFast(){
       _vSeq = st.seq; clearInterval(_vPoll); _vPoll = null;
       if (st.state === 'error' || !st.results || !st.results.length) {
         // لم يصل صوت أو لم يسمع شيئاً: نعيد المحاولة تلقائياً مرة واحدة
+        if (!_vRetry && st.err === 100 && prefs.voiceMode !== 'builtin') lsSet('carlauncher.voiceFails', 2); // الميكروفون لا يصل للمدمجة في هذه الشاشة: نافذة Google مباشرة بعد الآن
         if (!_vRetry && (st.err === 100 || st.err === 6 || st.err === 7 || st.err === 5)) { voiceStart(true); return; }
         voiceBeep(false); voiceMusicResume();
         lsSet('carlauncher.voiceFails', +lsGet('carlauncher.voiceFails', 0) + 1);
@@ -350,7 +351,7 @@ function voicePollFast(){
         nat('logEvent', 'أمر صوتي فشل: ' + (VERR[st.err] || st.err) + lvl + ((natJSON('status') || {}).internet === false ? ' بدون إنترنت' : ''));
         voiceShow(VERR[st.err] || 'لم أسمع شيئاً', (st.err === 100 ? 'افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google»' : st.err === 2 ? 'لا يوجد إنترنت: نزّل العربي بدون إنترنت من «اختبار الميكروفون»' : 'تكلّم بعد النغمة مباشرة وبصوت واضح') + lvl, true);
       }
-      else { voiceBeep(false); if (prefs.voiceMode !== 'google' && +lsGet('carlauncher.voiceFails', 0) < 2) lsSet('carlauncher.voiceFails', 0); voiceHandle(st.results, false); voiceMusicResume(); }
+      else { voiceBeep(false); if (prefs.voiceMode !== 'google' && !_vRetry && +lsGet('carlauncher.voiceFails', 0) < 2) lsSet('carlauncher.voiceFails', 0); voiceHandle(st.results, false); voiceMusicResume(); }
     }
   }, 180);
 }
