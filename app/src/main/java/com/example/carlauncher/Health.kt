@@ -1,8 +1,11 @@
 package com.example.carlauncher
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import java.io.File
 import java.text.SimpleDateFormat
@@ -118,5 +121,36 @@ object RestGuard {
             c.startActivity(Intent(c, if (nativeRest) RestActivity::class.java else MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
         } catch (e: Exception) { Events.add(c, "تعذّرت إعادة الفتح: " + e.message) }
+    }
+}
+
+/**
+ * استكمال الملاحة: إذا أُطفئت السيارة والخرائط مفتوحة ثم شُغّلت خلال 30 دقيقة،
+ * نفتح تطبيق الملاحة نفسه ليكمل الطريق (بعد تشغيل الشاشة فقط، مرة واحدة).
+ */
+object NavResume {
+    private val PKGS = setOf("com.google.android.apps.maps", "com.waze", "com.here.app.maps", "ru.yandex.yandexnavi",
+        "com.sygic.aura", "net.osmand", "net.osmand.plus", "app.organicmaps", "com.mapswithme.maps.pro", "com.tomtom.gplay.navapp")
+    @Volatile private var checked = false
+    private fun sp(c: Context) = c.getSharedPreferences("navresume", Context.MODE_PRIVATE)
+    fun isNav(pkg: String) = pkg in PKGS || pkg.contains("waze") || pkg.contains("navi") || pkg.endsWith(".maps")
+    fun mark(c: Context, pkg: String?) { if (!pkg.isNullOrEmpty() && isNav(pkg)) sp(c).edit().putString("pkg", pkg).putLong("at", System.currentTimeMillis()).apply() }
+    fun clear(c: Context) { sp(c).edit().remove("pkg").apply() }
+    /** تُستدعى دورياً من الخدمة: آخر وقت كانت فيه الشاشة تعمل */
+    fun alive(c: Context) { sp(c).edit().putLong("alive", System.currentTimeMillis()).apply() }
+
+    /** عند ظهور الواجهة: إن كانت الشاشة شُغّلت للتو وكانت الملاحة مفتوحة قبل الإطفاء، نفتحها */
+    fun checkOnBoot(a: Activity): Boolean {
+        if (checked) return false
+        checked = true
+        val s = sp(a); val pkg = s.getString("pkg", null) ?: return false
+        if (android.os.SystemClock.elapsedRealtime() > 10 * 60_000L) return false
+        val alive = s.getLong("alive", 0L)
+        if (alive == 0L || System.currentTimeMillis() - alive > 30 * 60_000L || System.currentTimeMillis() < alive) return false
+        if (!Prefs.config(a).optBoolean("resumeNav", true)) return false
+        val i = a.packageManager.getLaunchIntentForPackage(pkg) ?: return false
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        Handler(Looper.getMainLooper()).postDelayed({ try { a.startActivity(i); Events.add(a, "استكمال الملاحة بعد التشغيل: $pkg") } catch (e: Exception) {} }, 2500)
+        return true
     }
 }

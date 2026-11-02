@@ -36,6 +36,7 @@ import java.util.TimeZone
 class RestActivity : Activity() {
     companion object {
         @Volatile var visible = false
+        @Volatile var inst: RestActivity? = null
         fun start(c: Context, cfg: String) {
             c.getSharedPreferences("launcher", Context.MODE_PRIVATE).edit().putString("rest_cfg", cfg).apply()
             RestGuard.nativeRest = true
@@ -58,6 +59,15 @@ class RestActivity : Activity() {
     private var duaIdx = 0
     private var openedAt = System.currentTimeMillis()
     private var accent = Color.parseColor("#F2C879")
+    private lateinit var root: FrameLayout
+    private lateinit var col: LinearLayout
+    private lateinit var brandView: TextView
+    private var wx: TextView? = null
+    private var mediaRow: LinearLayout? = null
+    private var mediaText: TextView? = null
+    private var mediaPlay: TextView? = null
+    private var alertView: View? = null
+    private var fastCount = 0
 
     private fun px(v: Float) = v * k
     private fun tv(size: Float, color: Int = Color.WHITE, bold: Boolean = false, light: Boolean = false): TextView = TextView(this).apply {
@@ -78,7 +88,8 @@ class RestActivity : Activity() {
         RestGuard.restOpen = true; RestGuard.nativeRest = true
         Events.add(this, "فتح الاستراحة الخفيفة")
 
-        val root = FrameLayout(this); root.setBackgroundColor(Color.BLACK)
+        inst = this
+        root = FrameLayout(this); root.setBackgroundColor(Color.BLACK)
         bgImg = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         root.addView(bgImg, FrameLayout.LayoutParams(-1, -1))
         loadBackground(root)
@@ -88,10 +99,10 @@ class RestActivity : Activity() {
         // الشريط العلوي: اسم السيارة
         val brand = tv(26f, Color.WHITE, bold = true); brand.text = cfg.optString("brand", ""); brand.letterSpacing = 0.12f
         val bl = FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.RIGHT); bl.topMargin = px(28f).toInt(); bl.rightMargin = px(40f).toInt()
-        root.addView(brand, bl)
+        root.addView(brand, bl); brandView = brand
 
         // المحتوى
-        val col = LinearLayout(this); col.orientation = LinearLayout.VERTICAL; col.gravity = Gravity.CENTER_HORIZONTAL
+        col = LinearLayout(this); col.orientation = LinearLayout.VERTICAL; col.gravity = Gravity.CENTER_HORIZONTAL
         val style = cfg.optString("style", "classic")
         val look = cfg.optString("look", if (style == "lux") "thin" else "bold")
         clock = tv(if (style == "clock") 230f else if (style == "lux") 180f else 150f, Color.WHITE, bold = look == "bold", light = look != "bold")
@@ -99,6 +110,7 @@ class RestActivity : Activity() {
         if (style == "lux") clock.setTextColor(Color.parseColor("#F6EBD3"))
         col.addView(clock)
         dates = tv(22f, Color.parseColor("#E4E8F2")); col.addView(dates, lp(top = 6f))
+        if (cfg.optBoolean("weather", true) && style != "clock") { val w = tv(20f, Color.parseColor("#D8DEEA")); wx = w; col.addView(w, lp(top = 4f)) }
         dua = tv(30f, Color.WHITE); dua.maxLines = 1; dua.ellipsize = android.text.TextUtils.TruncateAt.END
         try { dua.typeface = Typeface.createFromAsset(assets, "fonts/alyamama-regular.ttf") } catch (e: Exception) {}
         val showDua = cfg.optBoolean("dua", true) && style == "classic" && duas.length() > 0
@@ -126,13 +138,136 @@ class RestActivity : Activity() {
         }
         val hl = FrameLayout.LayoutParams(-2, px(60f).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL); hl.bottomMargin = px(26f).toInt()
         root.addView(home, hl)
+        if (cfg.optBoolean("media", true)) buildMedia()
         setContentView(root)
+        // سطوع أقل ليلاً أثناء الاستراحة فقط (يعود وحده عند الخروج، بدون أي إذن)
+        applyBrightness()
 
         tick(); rotateDua()
         h.post(object : Runnable { override fun run() { tick(); h.postDelayed(this, 1000) } })
         val ds = cfg.optInt("duaSec", 15).coerceIn(5, 120) * 1000L
         if (showDua) h.postDelayed(object : Runnable { override fun run() { rotateDua(); h.postDelayed(this, ds) } }, ds)
-        h.postDelayed(object : Runnable { override fun run() { mediaState(); h.postDelayed(this, 3000) } }, 3000)
+        h.postDelayed(object : Runnable { override fun run() { mediaState(); mediaInfo(); driveExit(); h.postDelayed(this, 3000) } }, 1500)
+        // حماية الشاشة: إزاحة بسيطة غير ملحوظة كل 3 دقائق حتى لا تحترق الصورة الثابتة
+        h.postDelayed(object : Runnable { override fun run() { shift(); h.postDelayed(this, 180_000) } }, 180_000)
+    }
+
+    private fun shift() {
+        val r = java.util.Random()
+        val dx = px((r.nextInt(17) - 8).toFloat()); val dy = px((r.nextInt(13) - 6).toFloat())
+        listOf<View?>(col, brandView, mediaRow).forEach { v -> v?.animate()?.translationX(dx)?.translationY(dy)?.setDuration(2000)?.start() }
+    }
+
+    private fun applyBrightness() {
+        try {
+            val lpw = window.attributes
+            lpw.screenBrightness = if (cfg.optBoolean("nightBright", false) && isNight()) 0.12f else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            window.attributes = lpw
+        } catch (e: Exception) {}
+    }
+
+    // ===== الطقس من آخر تحديث محفوظ (بدون اتصال جديد) =====
+    private fun weatherLine() {
+        val w = wx ?: return
+        try {
+            val o = JSONObject(Weather.get(this))
+            if (!o.optBoolean("ok") || System.currentTimeMillis() - o.optLong("at") > 3 * 3600_000L) { w.visibility = View.GONE; return }
+            val code = o.optInt("code"); val t = Math.round(o.optDouble("temp"))
+            val d = when (code) { 0 -> "صحو"; 1, 2 -> "غائم جزئياً"; 3 -> "غائم"; 45, 48 -> "ضباب"; in 51..57 -> "رذاذ"; in 61..67 -> "مطر"; in 71..77 -> "ثلج"; in 80..82 -> "زخات مطر"; in 95..99 -> "عاصفة رعدية"; else -> "" }
+            w.text = "$t°" + (if (d.isNotEmpty()) "  ·  $d" else ""); w.visibility = View.VISIBLE
+        } catch (e: Exception) { w.visibility = View.GONE }
+    }
+
+    // ===== الموسيقى: اسم المقطع مع تشغيل/إيقاف والتالي =====
+    private fun buildMedia() {
+        val row = LinearLayout(this); row.orientation = LinearLayout.HORIZONTAL; row.gravity = Gravity.CENTER_VERTICAL
+        row.layoutDirection = View.LAYOUT_DIRECTION_RTL
+        row.background = GradientDrawable().apply { cornerRadius = px(30f); setColor(Color.argb(90, 0, 0, 0)); setStroke(px(1.2f).toInt(), Color.argb(70, 255, 255, 255)) }
+        row.setPadding(px(18f).toInt(), 0, px(8f).toInt(), 0)
+        val t = tv(19f, Color.WHITE); t.maxLines = 1; t.ellipsize = android.text.TextUtils.TruncateAt.END; t.maxWidth = px(330f).toInt(); t.setShadowLayer(0f, 0f, 0f, 0)
+        row.addView(t)
+        fun btn(label: String, cmd: String): TextView = TextView(this).apply {
+            text = label; setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_PX, px(24f)); gravity = Gravity.CENTER
+            setOnClickListener { mediaCmd(cmd) }
+        }
+        val play = btn("⏸", "toggle"); val nx = btn("⏭", "next")
+        row.addView(play, LinearLayout.LayoutParams(px(60f).toInt(), px(60f).toInt()))
+        row.addView(nx, LinearLayout.LayoutParams(px(60f).toInt(), px(60f).toInt()))
+        val l = FrameLayout.LayoutParams(-2, px(60f).toInt(), Gravity.BOTTOM or Gravity.RIGHT); l.bottomMargin = px(26f).toInt(); l.rightMargin = px(30f).toInt()
+        row.visibility = View.GONE
+        root.addView(row, l)
+        mediaRow = row; mediaText = t; mediaPlay = play
+    }
+
+    private fun controller(): android.media.session.MediaController? = try {
+        val msm = getSystemService(Context.MEDIA_SESSION_SERVICE) as android.media.session.MediaSessionManager
+        val list = msm.getActiveSessions(android.content.ComponentName(this, MediaListener::class.java))
+        list.firstOrNull { it.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING } ?: list.firstOrNull()
+    } catch (e: Exception) { null }
+
+    private fun mediaInfo() {
+        val row = mediaRow ?: return
+        val c = controller()
+        val title = c?.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE) ?: ""
+        if (c == null || title.isEmpty()) { row.visibility = View.GONE; return }
+        val artist = c.metadata?.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        val playing = c.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING
+        mediaText?.text = "♪  " + title + (if (artist.isNotEmpty()) " — $artist" else "")
+        mediaPlay?.text = if (playing) "⏸" else "▶"
+        row.visibility = View.VISIBLE
+    }
+
+    private fun mediaCmd(cmd: String) {
+        try {
+            val c = controller() ?: return; val t = c.transportControls
+            when (cmd) {
+                "next" -> t.skipToNext()
+                else -> if (c.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING) t.pause() else t.play()
+            }
+            h.postDelayed({ mediaInfo() }, 600)
+        } catch (e: Exception) {}
+    }
+
+    // ===== التنبيهات داخل الاستراحة (التذكيرات، الصلاة، المباريات) =====
+    fun showAlert(type: String, title: String, sub: String, page: String?) {
+        try {
+            alertView?.let { root.removeView(it) }
+            val colors = mapOf("rem" to "#F2C879", "note" to "#7FB8FF", "match" to "#5AD1A0", "prayer" to "#C9B6FF", "drive" to "#FF9E80")
+            val icons = mapOf("rem" to "🔔", "note" to "📝", "match" to "⚽", "prayer" to "🕌", "drive" to "🚗")
+            val c = try { Color.parseColor(colors[type] ?: "#F2C879") } catch (e: Exception) { accent }
+            val box = LinearLayout(this); box.orientation = LinearLayout.HORIZONTAL; box.gravity = Gravity.CENTER_VERTICAL
+            box.layoutDirection = View.LAYOUT_DIRECTION_RTL
+            box.background = GradientDrawable().apply { cornerRadius = px(26f); setColor(Color.argb(215, 14, 20, 34)); setStroke(px(1.5f).toInt(), c) }
+            box.setPadding(px(22f).toInt(), px(14f).toInt(), px(14f).toInt(), px(14f).toInt())
+            val ic = tv(34f); ic.text = icons[type] ?: "🔔"; ic.setShadowLayer(0f, 0f, 0f, 0)
+            box.addView(ic)
+            val txt = LinearLayout(this); txt.orientation = LinearLayout.VERTICAL
+            val a = tv(24f, Color.WHITE, bold = true); a.text = title; a.gravity = Gravity.RIGHT; a.maxLines = 2; a.setShadowLayer(0f, 0f, 0f, 0)
+            val b = tv(19f, Color.parseColor("#C9D2E3")); b.text = sub; b.gravity = Gravity.RIGHT; b.maxLines = 2; b.setShadowLayer(0f, 0f, 0f, 0)
+            txt.addView(a); if (sub.isNotEmpty() && sub != title) txt.addView(b)
+            val tl = LinearLayout.LayoutParams(0, -2, 1f); tl.marginStart = px(14f).toInt(); tl.marginEnd = px(14f).toInt()
+            box.addView(txt, tl)
+            val ok = TextView(this).apply {
+                text = if (page.isNullOrEmpty() || type == "prayer") "حسناً" else "فتح"; setTextColor(Color.parseColor("#0A0F1F")); setTextSize(TypedValue.COMPLEX_UNIT_PX, px(20f)); gravity = Gravity.CENTER
+                background = GradientDrawable().apply { cornerRadius = px(20f); setColor(c) }
+                setPadding(px(24f).toInt(), 0, px(24f).toInt(), 0)
+                setOnClickListener { hideAlert(); if (!page.isNullOrEmpty() && type != "prayer") leave(true, page) }
+            }
+            box.addView(ok, LinearLayout.LayoutParams(-2, px(54f).toInt()))
+            val l = FrameLayout.LayoutParams(px(720f).toInt(), -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL); l.topMargin = px(24f).toInt()
+            box.alpha = 0f; box.translationY = -px(30f)
+            root.addView(box, l); alertView = box
+            box.animate().alpha(1f).translationY(0f).setDuration(300).start()
+            box.setOnClickListener { hideAlert() }
+            // التذكير يبقى حتى تلمسه، والباقي يختفي بعد 20 ثانية
+            if (type != "rem") h.postDelayed({ if (alertView === box) hideAlert() }, 20_000)
+            openedAt = System.currentTimeMillis()
+        } catch (e: Exception) {}
+    }
+
+    private fun hideAlert() {
+        val v = alertView ?: return; alertView = null
+        v.animate().alpha(0f).setDuration(250).withEndAction { try { root.removeView(v) } catch (e: Exception) {} }.start()
     }
 
     private fun lp(top: Float): LinearLayout.LayoutParams { val p = LinearLayout.LayoutParams(-2, -2); p.topMargin = px(top).toInt(); p.gravity = Gravity.CENTER_HORIZONTAL; return p }
@@ -209,7 +344,7 @@ class RestActivity : Activity() {
                 next.setTextColor(Color.WHITE)
             }
             renderStrip(p, nx?.second ?: 0L)
-            applyDim()
+            applyDim(); weatherLine(); applyBrightness()
         }
         // العودة للرئيسية تلقائياً بعد مدة (إن اختيرت)
         val r = cfg.optInt("restReturn", 0)
@@ -258,11 +393,21 @@ class RestActivity : Activity() {
         try { if (stop && v.isPlaying) v.pause() else if (!stop && !v.isPlaying) v.start() } catch (e: Exception) {}
     }
 
-    private fun leave(user: Boolean) {
+    /** الرجوع للرئيسية وحده عند بدء القيادة (إن اختير): سرعة أعلى من الحد مرتين متتاليتين */
+    private fun driveExit() {
+        val lim = cfg.optInt("exitSpeed", 0); if (lim <= 0) return
+        val speed = try { TripStore.state(this).optDouble("speed", 0.0) } catch (e: Exception) { 0.0 }
+        fastCount = if (speed > lim) fastCount + 1 else 0
+        if (fastCount >= 2) { Events.add(this, "خروج من الاستراحة: بدء القيادة"); leave(true) }
+    }
+
+    private fun leave(user: Boolean, page: String? = null) {
         if (isFinishing) return
         if (user) { RestGuard.restOpen = false; RestGuard.nativeRest = false; Events.add(this, "خروج من الاستراحة الخفيفة") }
         try {
-            startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+            val i = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            if (!page.isNullOrEmpty()) i.putExtra("page", page)
+            startActivity(i)
         } catch (e: Exception) {}
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -283,7 +428,7 @@ class RestActivity : Activity() {
         try { video?.pause() } catch (e: Exception) {}
         if (!isFinishing) Events.add(this, "اختفت الاستراحة الخفيفة" + (if (System.currentTimeMillis() - RestGuard.lastTouch < 4000) " بعد لمس" else " بدون لمس"))
     }
-    override fun onDestroy() { h.removeCallbacksAndMessages(null); try { video?.stopPlayback() } catch (e: Exception) {}; super.onDestroy() }
+    override fun onDestroy() { if (inst === this) inst = null; h.removeCallbacksAndMessages(null); try { video?.stopPlayback() } catch (e: Exception) {}; super.onDestroy() }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideBars() }
 
     private fun hideBars() {

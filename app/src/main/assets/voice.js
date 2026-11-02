@@ -308,6 +308,12 @@ function voiceStart(retry){
   var c = natJSON('voiceCaps') || {};
   if (!c.perm) { nat('voicePerm'); toast('اسمح باستخدام الميكروفون ثم اضغط الزر مرة أخرى'); return; }
   _vRetry = !!retry;
+  // بدون إنترنت: رسالة فورية بدل محاولة تفشل (إلا إذا اخترت العمل بدون إنترنت ونزّلت العربي)
+  if (!retry && !prefs.voiceOffline && (natJSON('status') || {}).internet === false) {
+    voiceUI(true).className = 'on';
+    voiceShow('لا يوجد اتصال بالإنترنت', 'الأوامر الصوتية تحتاج إنترنت. اتصل بنقطة اتصال جوالك ثم حاول مرة أخرى', true);
+    return;
+  }
   clearTimeout(_vHide);
   voicePushOpts();
   var o = voiceUI(true); o.className = 'on';

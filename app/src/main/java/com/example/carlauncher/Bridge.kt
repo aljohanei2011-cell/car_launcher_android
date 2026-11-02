@@ -73,6 +73,7 @@ class Bridge(private val act: MainActivity) {
     fun launch(pkg: String): Boolean {
         val i = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return false
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        NavResume.mark(ctx, pkg)
         return try { act.runOnUiThread { act.startActivity(i) }; true } catch (e: Exception) { false }
     }
 
@@ -273,7 +274,7 @@ class Bridge(private val act: MainActivity) {
         tries.add(Intent(Intent.ACTION_VIEW, geo))
         for (i in tries) {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (i.resolveActivity(ctx.packageManager) != null) { act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
+            val rc = i.resolveActivity(ctx.packageManager); if (rc != null) { NavResume.mark(ctx, rc.packageName); act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
         }
         return false
     }
@@ -285,7 +286,7 @@ class Bridge(private val act: MainActivity) {
         tries.add(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("geo:$lat,$lng?q=$lat,$lng(" + android.net.Uri.encode(label) + ")")))
         for (i in tries) {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (i.resolveActivity(ctx.packageManager) != null) { act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
+            val rc = i.resolveActivity(ctx.packageManager); if (rc != null) { NavResume.mark(ctx, rc.packageName); act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
         }
         return false
     }
@@ -345,7 +346,7 @@ class Bridge(private val act: MainActivity) {
         for (pkg in listOf("com.whatsapp", "com.whatsapp.w4b", "")) {
             val i = Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (pkg.isNotEmpty()) i.setPackage(pkg)
-            if (i.resolveActivity(ctx.packageManager) != null) { act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
+            val rc = i.resolveActivity(ctx.packageManager); if (rc != null) { NavResume.mark(ctx, rc.packageName); act.runOnUiThread { try { act.startActivity(i) } catch (e: Exception) {} }; return true }
         }
         return false
     }
@@ -375,7 +376,10 @@ class Bridge(private val act: MainActivity) {
     }
     @JavascriptInterface fun openVoiceData() {
         act.runOnUiThread {
-            val tries = listOf(Intent("com.google.android.voicesearch.action.SETTINGS"), Intent("android.speech.action.LANGUAGE_DETAILS"), Intent(Settings.ACTION_SETTINGS))
+            val tries = listOf(
+                Intent().setClassName("com.google.android.googlequicksearchbox", "com.google.android.voicesearch.greco3.languagepack.InstallActivity"),
+                Intent("com.google.android.voicesearch.action.SETTINGS"), Intent("android.speech.action.LANGUAGE_DETAILS"),
+                Intent(Settings.ACTION_VOICE_INPUT_SETTINGS), Intent(Settings.ACTION_SETTINGS))
             for (i in tries) { try { act.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); break } catch (e: Exception) {} }
         }
     }
