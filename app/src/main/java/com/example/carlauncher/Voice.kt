@@ -98,7 +98,7 @@ object Voice {
 
     fun listen(c: Context, preferOffline: Boolean) {
         appCtx = c.applicationContext; offline = preferOffline
-        main.post { startInternal(false) }
+        main.post { startInternal(false, 0) }
     }
 
     fun stop() {
@@ -123,15 +123,17 @@ object Voice {
         else if (wake) main.postDelayed({ if (wake && rec == null) startInternal(true) }, 800)
     }
 
-    private fun startInternal(isWake: Boolean) {
+    private fun startInternal(isWake: Boolean, alt: Int = 0) {
+        val t0 = System.currentTimeMillis()
         val c = appCtx ?: return
         try { rec?.destroy() } catch (e: Exception) {}
         rec = null
         if (ContextCompat.checkSelfPermission(c, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { state = "error"; err = 9; seq++; return }
-        // كما في الإصدار الأول: خدمة الكلام الافتراضية للشاشة
-        val comp: android.content.ComponentName? = null
-        val r0: SpeechRecognizer? = try { SpeechRecognizer.createSpeechRecognizer(c) } catch (e: Exception) { null }
-        if (r0 == null) { state = "error"; err = 5; seq++; return }
+        // المحاولة الأولى: خدمة الكلام الافتراضية للشاشة (كالإصدار الأول).
+        // إذا رفضت فوراً بدون أن تسمع: نجرب خدمة Google بالاسم، ثم بإعدادات لغة أبسط
+        val comp: android.content.ComponentName? = if (alt == 0) null else googleService(c)
+        val r0: SpeechRecognizer? = try { if (comp != null) SpeechRecognizer.createSpeechRecognizer(c, comp) else SpeechRecognizer.createSpeechRecognizer(c) } catch (e: Exception) { null }
+        if (r0 == null) { if (!isWake && alt < 2) { startInternal(false, alt + 1); return }; state = "error"; err = 5; seq++; return }
         val r: SpeechRecognizer = r0
         rec = r; wakeMode = isWake
         partial = ""; results = JSONArray(); err = 0; state = "listening"; rmsMax = -100f
@@ -151,21 +153,32 @@ object Voice {
                 release(); again()
             }
             override fun onError(code: Int) {
+                // رفض فوري بدون أي صوت: نجرب الطريقة البديلة قبل إظهار الخطأ للمستخدم
+                val quick = System.currentTimeMillis() - t0 < 3000 && rmsMax <= -99f
+                if (!isWake && quick && alt < 2 && code != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                    Events.add(c, "أمر صوتي: رفض فوري رمز " + code + " (محاولة " + (alt + 1) + ")، أجرب طريقة أخرى")
+                    try { r.destroy() } catch (e: Exception) {}
+                    if (rec === r) rec = null
+                    main.postDelayed({ startInternal(false, alt + 1) }, 250)
+                    return
+                }
                 // لم يصل للميكروفون أي صوت إطلاقاً (غالباً تطبيق آخر يمسكه أو الصوت يذهب للبلوتوث)
                 val noAudio = (code == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || code == SpeechRecognizer.ERROR_NO_MATCH || code == SpeechRecognizer.ERROR_AUDIO) && rmsMax < 1f
                 err = if (noAudio && !isWake) 100 else code; state = "error"; seq++
-                if (!isWake) Events.add(c, "أمر صوتي: خطأ " + err + (if (noAudio) " (لم يصل صوت للميكروفون)" else "") + " · الخدمة: " + (comp?.packageName ?: "افتراضية"))
+                if (!isWake) Events.add(c, "أمر صوتي: خطأ " + code + " بعد " + (System.currentTimeMillis() - t0) + "ms محاولة " + (alt + 1) + (if (noAudio) " (لم يصل صوت للميكروفون)" else "") + " · الخدمة: " + (comp?.packageName ?: "افتراضية"))
                 release(); again(if (code == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || code == SpeechRecognizer.ERROR_CLIENT) 2500 else 500)
             }
         })
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, opts.optString("lang", "ar-SA"))
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, opts.optString("lang", "ar-SA"))
-            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, c.packageName)
-        if (offline) i.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+        if (alt < 2) {
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, opts.optString("lang", "ar-SA"))
+             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, opts.optString("lang", "ar-SA"))
+             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        } else i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar")
+        if (offline && alt < 2) i.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
         // مدة الصبر قبل انتهاء الاستماع (قصيرة/متوسطة/طويلة)
         val wait = if (isWake) 0L else opts.optLong("waitMs", 0L)
         if (wait > 0) {
@@ -181,6 +194,12 @@ object Voice {
         c.packageManager.queryIntentServices(Intent(android.speech.RecognitionService.SERVICE_INTERFACE), 0)
             .map { android.content.ComponentName(it.serviceInfo.packageName, it.serviceInfo.name) }
     } catch (e: Exception) { emptyList() }
+    private fun googleService(c: Context): android.content.ComponentName? {
+        val all = services(c)
+        return all.firstOrNull { it.packageName == "com.google.android.googlequicksearchbox" }
+            ?: all.firstOrNull { it.packageName.startsWith("com.google.") }
+    }
+
     /** نغمة قصيرة من أندرويد نفسه، تُغلق فور انتهائها (لا يبقى مسار صوت مفتوح) */
     fun tone(up: Boolean) {
         main.post {
