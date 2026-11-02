@@ -137,7 +137,15 @@ object NavResume {
     fun mark(c: Context, pkg: String?) { if (!pkg.isNullOrEmpty() && isNav(pkg)) sp(c).edit().putString("pkg", pkg).putLong("at", System.currentTimeMillis()).apply() }
     fun clear(c: Context) { sp(c).edit().remove("pkg").apply() }
     /** تُستدعى دورياً من الخدمة: آخر وقت كانت فيه الشاشة تعمل */
-    fun alive(c: Context) { sp(c).edit().putLong("alive", System.currentTimeMillis()).apply() }
+    fun alive(c: Context) {
+        val s = sp(c); val now = System.currentTimeMillis()
+        val bootAt = now - android.os.SystemClock.elapsedRealtime()
+        val last = s.getLong("alive", 0L)
+        // أول تسجيل بعد التشغيل: نحفظ آخر وقت قبل الإطفاء
+        val e = s.edit().putLong("alive", now)
+        if (last in 1 until bootAt) e.putLong("aliveBefore", last)
+        e.apply()
+    }
 
     /** عند ظهور الواجهة: إن كانت الشاشة شُغّلت للتو وكانت الملاحة مفتوحة قبل الإطفاء، نفتحها */
     fun checkOnBoot(a: Activity): Boolean {
@@ -145,8 +153,13 @@ object NavResume {
         checked = true
         val s = sp(a); val pkg = s.getString("pkg", null) ?: return false
         if (android.os.SystemClock.elapsedRealtime() > 10 * 60_000L) return false
-        val alive = s.getLong("alive", 0L)
-        if (alive == 0L || System.currentTimeMillis() - alive > 30 * 60_000L || System.currentTimeMillis() < alive) return false
+        // آخر وقت كانت الشاشة تعمل «قبل» هذا التشغيل (وقت الإطفاء)، لا الوقت الحالي
+        val bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
+        val a1 = s.getLong("alive", 0L)
+        val alive = if (a1 in 1 until bootAt) a1 else s.getLong("aliveBefore", 0L)
+        if (alive == 0L || alive > bootAt || bootAt - alive > 30 * 60_000L) return false
+        // لا نغطي الاستراحة أو صفحة طُلبت
+        if (RestGuard.restOpen) return false
         if (!Prefs.config(a).optBoolean("resumeNav", true)) return false
         val i = a.packageManager.getLaunchIntentForPackage(pkg) ?: return false
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
