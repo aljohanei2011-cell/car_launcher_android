@@ -570,6 +570,7 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun logEvent(msg: String) = Events.add(ctx, msg.take(160))
     @JavascriptInterface fun setRestOpen(open: Boolean) { RestGuard.restOpen = open }
     @JavascriptInterface fun ready() = act.pageReady()
+    @JavascriptInterface fun openNativeRest(cfg: String) = act.openNativeRest(cfg)
     @JavascriptInterface fun restKilledRecently(): Boolean =
         System.currentTimeMillis() - ctx.getSharedPreferences("watchdog", Context.MODE_PRIVATE).getLong("restKill", 0L) < 6 * 3600_000L
     @JavascriptInterface fun setOverlay(open: Boolean) { act.overlayOpen = open }

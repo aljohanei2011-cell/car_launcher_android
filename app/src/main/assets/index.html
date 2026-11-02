@@ -255,6 +255,8 @@ function openPage(url){
 window.openPage = openPage;
 /* الاستراحة صفحة مستقلة: الرئيسية تُفرَّغ من الذاكرة تماماً أثناءها (كان اجتماعهما يملأ الذاكرة) */
 function openRest(q){
+  // الاستراحة الخفيفة: أصلية، ومحرك الصفحات يُغلق أثناءها لتوفير الذاكرة
+  if (nativeRestOk() && !/style=/.test(q || '')) { lsSet('carlauncher.restWanted', 0); mirrorSave(true); nat('logEvent', 'فتح الاستراحة الخفيفة' + (/auto=1/.test(q || '') ? ' تلقائياً' : '')); nat('openNativeRest', nativeRestConfig()); return; }
   lsSet('carlauncher.restWanted', Date.now());
   nat('setRestOpen', true); nat('logEvent', 'فتح الاستراحة' + (/auto=1/.test(q || '') ? ' تلقائياً' : ''));
   mirrorSave(true);

@@ -141,6 +141,32 @@ function openRadioApp(){
 }
 function isRadioMedia(m){ var r = findRadioApp(); return !!(m && r && m.pkg === r); }
 
+/* ===== الاستراحة الخفيفة (أصلية بدون محرك الصفحات) =====
+   تُستخدم للأنماط: كلاسيكي، ساعة فقط، فاخرة. الزخرفة والمعرض والقيلولة تبقى بالاستراحة الكاملة */
+function nativeRestConfig(){
+  var p = loadPrefs(), th = effectiveTheme(p), bg;
+  if (p.restBg && p.restBg !== 'auto') bg = themeBg(p.restBg, 'rest'); else bg = th.indexOf('user:') === 0 ? themeBg(th, 'home') : themeBg(th, 'rest');
+  var vids = []; try { vids = JSON.parse(nat('videos') || '[]'); } catch (e) {}
+  var vpath = function (n) { var v = vids.filter(function (x) { return x.name === n; })[0]; return v ? String(v.url).replace('file://', '') : ''; };
+  var vid = p.restVideo, vidN = p.restVideoNight;
+  if (p.restVideoRotate && vids.length) { vid = vids[Math.floor(Math.random() * vids.length)].name; vidN = ''; }
+  var killed = nat('restKilledRecently') === true;
+  var brand = p.brand === 'none' ? '' : p.brand === 'text' ? (p.brandText || 'رفيق الطريق') : p.brand === 'image' ? '' : (BRANDS[p.brand] || BRANDS.toyota).text;
+  var show = Object.assign({ dua: true, prayer: true, date: true }, p.restShow || {});
+  return JSON.stringify({
+    style: p.restStyle === 'night' ? 'clock' : (p.restStyle || 'classic'), bg: bg, brand: brand, h24: !!p.h24,
+    video: LITE || killed ? '' : vpath(vid), videoNight: LITE || killed ? '' : vpath(vidN),
+    pos: p.restClockPos || 'c', look: p.restClockLook === 'thin' || p.restClockLook === 'lux' || p.restClockLook === 'capsule' ? 'thin' : (p.restClockLook || ''),
+    shade: +p.restShadeV || 0, dim: p.restDim || 'night', nightVideo: p.restNightVideo || 'dim', pauseMove: p.restPauseMove !== false,
+    restReturn: +p.restReturn || 0, dua: show.dua, prayer: show.prayer, date: show.date, duas: duaList(), duaSec: +p.duaSec || 15,
+    accent: /^#[0-9a-f]{6}$/i.test(p.accent || '') ? p.accent : '#F2C879'
+  });
+}
+function nativeRestOk(){
+  var p = loadPrefsCached(), st = p.restStyle || 'classic';
+  return HAS_NATIVE && p.restEngine !== 'web' && ['classic', 'clock', 'night', 'lux'].indexOf(st) >= 0 && typeof Native.openNativeRest === 'function';
+}
+
 /* ===== حماية الإعدادات: نسخة ثانية داخل التطبيق =====
    عند فتح الرئيسية: إذا كانت الإعدادات مفقودة أو تالفة ووُجدت نسخة محفوظة، نستعيد كل شيء بصمت ونسجّل ذلك. */
 (function mirrorRestore(){
@@ -199,7 +225,7 @@ var DEFAULT_PREFS = {
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
   alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true,
   /* الشريط العلوي */
-  quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
+  restEngine: 'native', quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
   topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){

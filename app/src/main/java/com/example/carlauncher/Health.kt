@@ -99,6 +99,7 @@ object Events {
  */
 object RestGuard {
     @Volatile var restOpen = false
+    @Volatile var nativeRest = false
     @Volatile var lastTouch = 0L
     @Volatile var pausedAt = 0L
     fun enabled(c: Context) = Prefs.config(c).optBoolean("stayRest", true)
@@ -109,12 +110,12 @@ object RestGuard {
     }
     fun shouldReturn(c: Context): Boolean {
         val now = System.currentTimeMillis()
-        return enabled(c) && restOpen && !MainActivity.visible && now - pausedAt < 15_000 && now - lastTouch > 4_000
+        return enabled(c) && restOpen && !MainActivity.visible && !RestActivity.visible && now - pausedAt < 15_000 && now - lastTouch > 4_000
     }
     fun bringBack(c: Context, why: String) {
         Events.add(c, "إعادة فتح الاستراحة ($why)")
         try {
-            c.startActivity(Intent(c, MainActivity::class.java)
+            c.startActivity(Intent(c, if (nativeRest) RestActivity::class.java else MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
         } catch (e: Exception) { Events.add(c, "تعذّرت إعادة الفتح: " + e.message) }
     }

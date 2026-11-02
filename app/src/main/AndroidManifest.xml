@@ -88,6 +88,14 @@
             </intent-filter>
         </activity>
 
+        <!-- الاستراحة الخفيفة: بدون محرك الصفحات -->
+        <activity
+            android:name=".RestActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/Theme.CarLauncher" />
+
         <service
             android:name=".TripService"
             android:exported="false"

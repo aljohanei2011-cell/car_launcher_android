@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
         showSnapshot(root)
         // رجوع هادئ: إن أُغلقت الواجهة والاستراحة مفتوحة نعود للاستراحة مباشرة
-        webView.loadUrl(base + pageFrom(intent, if (RestGuard.restOpen) "rest.html?auto=1" else "index.html"))
+        webView.loadUrl(base + pageFrom(intent, if (RestGuard.restOpen && !RestGuard.nativeRest) "rest.html?auto=1" else "index.html"))
         if (intent?.action == Intent.ACTION_VOICE_COMMAND && Voice.enabled(this))
             webView.postDelayed({ webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null) }, 3000)
 
@@ -198,6 +198,22 @@ class MainActivity : AppCompatActivity() {
             iv.postDelayed({ pageReady() }, 5000) // احتياط إن تأخرت الواجهة
         } catch (e: Exception) {}
     }
+    /** الاستراحة الخفيفة: نفتحها ثم نغلق محرك الصفحات لتفريغ الذاكرة، ويُعاد بناؤه عند الرجوع */
+    fun openNativeRest(cfg: String) {
+        runOnUiThread {
+            saveSnapshot()
+            RestActivity.start(this, cfg)
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+            webView.postDelayed({
+                if (RestActivity.visible && !resumed) {
+                    try { (webView.parent as? android.view.ViewGroup)?.removeView(webView); webView.destroy() } catch (e: Exception) {}
+                    needRebuild = true
+                    Events.add(this, "أُغلق محرك الصفحات أثناء الاستراحة لتوفير الذاكرة")
+                }
+            }, 1500)
+        }
+    }
+
     /** تستدعيها الواجهة عندما تجهز: نخفي الصورة بتلاشٍ سريع */
     fun pageReady() {
         runOnUiThread {
