@@ -159,7 +159,8 @@ function nativeRestConfig(){
     pos: p.restClockPos || 'c', look: p.restClockLook === 'thin' || p.restClockLook === 'lux' || p.restClockLook === 'capsule' ? 'thin' : (p.restClockLook || ''),
     shade: +p.restShadeV || 0, dim: p.restDim || 'night', nightVideo: p.restNightVideo || 'dim', pauseMove: p.restPauseMove !== false,
     restReturn: +p.restReturn || 0, dua: show.dua, prayer: show.prayer, date: show.date, duas: duaList(), duaSec: +p.duaSec || 15,
-    accent: /^#[0-9a-f]{6}$/i.test(p.accent || '') ? p.accent : '#F2C879'
+    accent: /^#[0-9a-f]{6}$/i.test(p.accent || '') ? p.accent : '#F2C879',
+    media: p.restMedia !== false, weather: p.weatherOn !== false, exitSpeed: +p.restExitSpeed || 0, nightBright: !!p.restNightBright
   });
 }
 function nativeRestOk(){
@@ -223,9 +224,9 @@ var DEFAULT_PREFS = {
   voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: true, emptyAlt: 'times', activeProfile: '',
   perf: 'auto', perfDetected: null, watchdog: true,
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
-  alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true,
+  alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true, resumeNav: true,
   /* الشريط العلوي */
-  restEngine: 'native', quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
+  restEngine: 'native', restMedia: true, restNightBright: false, restExitSpeed: 0, quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
   topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){
@@ -256,7 +257,7 @@ function pushConfig(p){
   nat('setConfig', JSON.stringify({ adhan: p.adhan, preMin: +p.preMin, sound: p.sound, duck: p.duck,
     rest: p.rest, restMin: +p.restMin, travel: p.travel, travelKm: +p.travelKm,
     speedOn: p.speedOn, speedLimit: +p.speedLimit, customSound: p.customSound, watchdog: p.watchdog !== false,
-    glassOverlay: p.glassOverlay !== false, stayRest: p.stayRest !== false, alertSec: +p.alertSec || 6, alertPos: p.alertPos || 'tc',
+    glassOverlay: p.glassOverlay !== false, stayRest: p.stayRest !== false, resumeNav: p.resumeNav !== false, alertSec: +p.alertSec || 6, alertPos: p.alertPos || 'tc',
     alertPos_rem: (p.alertPosT || {}).rem || '', alertPos_note: (p.alertPosT || {}).note || '', alertPos_match: (p.alertPosT || {}).match || '',
     alertPos_prayer: (p.alertPosT || {}).prayer || '', alertPos_drive: (p.alertPosT || {}).drive || '' }));
 }
@@ -572,7 +573,7 @@ function nextPrayer(d){
 function pushPrayerSchedule(){
   if (!HAS_NATIVE) return;
   var out = [], now = new Date();
-  [0, 1].forEach(function (k) {
+  [0, 1, 2].forEach(function (k) {
     var d = new Date(now.getTime() + k * 86400000);
     var s = new Date(d.getTime() + TZ * 3600000);
     var mid = Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate()) - TZ * 3600000;

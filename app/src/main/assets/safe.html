@@ -59,7 +59,7 @@ function restore(name){
   setTimeout(go, 900);
 }
 (function () {
-  var list = []; try { list = JSON.parse(N ? N.autoBackups() : '[]'); } catch (e) {}
+  var list = []; try { list = JSON.parse(N ? N.autoBackups() : '[]') || []; } catch (e) {}
   $('baks').innerHTML = list.length ? '' : '<p>لا توجد نسخ تلقائية بعد.</p>';
   list.forEach(function (b) {
     var d = new Date(b.at), btn = document.createElement('button');

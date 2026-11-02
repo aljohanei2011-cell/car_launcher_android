@@ -75,6 +75,7 @@ class TripService : Service() {
             TripStore.closeIfIdle(this@TripService)
             Watchdog.relaunchIfNeeded(this@TripService)
             checkPrayerAlarms()
+            NavResume.alive(this@TripService)
             try { Matches.tick(this@TripService) } catch (e: Exception) {}
             checkTripAlerts()
             main.postDelayed(this, 20_000)
