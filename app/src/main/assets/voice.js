@@ -289,7 +289,9 @@ function voiceUI(show){
 /* ---------- تخصيص الصوت ---------- */
 var VWAIT = { s: 1200, m: 2200, l: 3600 };
 function voicePushOpts(){
-  nat('voiceOpts', JSON.stringify({ lang: prefs.voiceLang || 'ar-SA', waitMs: prefs.voiceBtn === 'hold' ? 6000 : (VWAIT[prefs.voiceWait || 'm'] || 2200), hold: prefs.voiceBtn === 'hold',
+  // المتوسط = إعداد خدمة الكلام الافتراضي (بعض الإصدارات تنهي الاستماع مبكراً إذا أرسلنا مدة)
+  var w = prefs.voiceBtn === 'hold' ? 6000 : (prefs.voiceWait && prefs.voiceWait !== 'm' ? VWAIT[prefs.voiceWait] : 0);
+  nat('voiceOpts', JSON.stringify({ lang: prefs.voiceLang || 'ar-SA', waitMs: w, hold: prefs.voiceBtn === 'hold',
     rate: +prefs.voiceRate || 1, pitch: +prefs.voicePitch || 1, vol: prefs.voiceVol == null ? 1 : +prefs.voiceVol }));
 }
 var _beepCtx = null;
@@ -322,7 +324,8 @@ function voiceStart(retry){
   document.getElementById('voN').textContent = (prefs.voiceName || 'رفيق') + ' يسمعك…';
   document.getElementById('voP').textContent = retry ? 'لم يصلني صوت، أعد كلامك' : (prefs.voiceBtn === 'hold' ? 'تكلّم وأنت ضاغط على الزر' : 'تكلّم الآن');
   var st = natJSON('voiceState') || {}; _vSeq = st.seq || 0;
-  setTimeout(function () { nat('voiceListen', !!prefs.voiceOffline); }, retry ? 400 : 150);
+  var net = (natJSON('status') || {}).internet;
+  setTimeout(function () { nat('voiceListen', !!prefs.voiceOffline || net === false); }, retry ? 500 : (prefs.voiceBeep === false ? 150 : 450));
   voicePollFast();
 }
 function voiceCancel(){ nat('voiceStop'); clearInterval(_vPoll); _vPoll = null; voiceUI(false); voiceMusicResume(); if (_vWakeOn) voiceWakeLoop(); }
@@ -339,7 +342,9 @@ function voicePollFast(){
         if (!_vRetry && (st.err === 100 || st.err === 6)) { voiceStart(true); return; }
         voiceBeep(false); voiceMusicResume();
         voiceLogAdd('—', VERR[st.err] || 'لم أسمع شيئاً');
-        voiceShow(VERR[st.err] || 'لم أسمع شيئاً', st.err === 100 ? 'افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google»' : '', true);
+        var lvl = st.rmsMax == null ? '' : ' (مستوى الصوت الواصل: ' + Math.max(0, Math.round((st.rmsMax + 2) * 10)) + '%)';
+        nat('logEvent', 'أمر صوتي فشل: ' + (VERR[st.err] || st.err) + lvl + ((natJSON('status') || {}).internet === false ? ' بدون إنترنت' : ''));
+        voiceShow(VERR[st.err] || 'لم أسمع شيئاً', (st.err === 100 ? 'افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google»' : st.err === 2 ? 'لا يوجد إنترنت: نزّل العربي بدون إنترنت من «اختبار الميكروفون»' : 'تكلّم بعد النغمة مباشرة وبصوت واضح') + lvl, true);
       }
       else { voiceBeep(false); voiceHandle(st.results, false); voiceMusicResume(); }
     }
