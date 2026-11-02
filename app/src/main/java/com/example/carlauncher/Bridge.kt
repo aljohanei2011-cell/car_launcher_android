@@ -359,6 +359,7 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun setVoiceEnabled(on: Boolean) = Voice.setEnabled(ctx, on)
     @JavascriptInterface fun voicePerm() = Voice.requestPermission(act)
     @JavascriptInterface fun voiceListen(preferOffline: Boolean) = Voice.listen(ctx, preferOffline)
+    @JavascriptInterface fun voiceTone(up: Boolean) = Voice.tone(up)
     @JavascriptInterface fun voiceStop() = Voice.stop()
     @JavascriptInterface fun voiceStopListening() = Voice.stopListening()
     @JavascriptInterface fun voiceListenUi() { act.runOnUiThread { Voice.startUi(act) { i -> act.speechUi.launch(i) } } }

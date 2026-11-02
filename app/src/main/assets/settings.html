@@ -599,9 +599,7 @@ function renderVoice(){
   s.appendChild(el('span', 'note', 'زر «تحدّث»:'));
   opts(s, [['tap', 'ضغطة واحدة (يستمع حتى تسكت)'], ['hold', 'اضغط وتكلّم (يستمع ما دام إصبعك على الزر)']], prefs.voiceBtn || 'tap', function (k) { prefs.voiceBtn = k; upd(); }, true);
   if (prefs.voiceBtn !== 'hold') { s.appendChild(el('span', 'note', 'مدة الانتظار قبل انتهاء الاستماع:')); opts(s, [['s', 'قصيرة'], ['m', 'متوسطة'], ['l', 'طويلة (إذا تتوقف بين الكلمات)']], prefs.voiceWait || 'm', function (k) { prefs.voiceWait = k; upd(); }, true); }
-  toggle(s, 'نغمة عند بدء الاستماع وانتهائه', 'voiceBeep');
-  s.appendChild(el('span', 'note', 'الموسيقى أثناء الاستماع:'));
-  opts(s, [['pause', 'توقف مؤقتاً ثم تعود'], ['none', 'تبقى كما هي']], prefs.voiceMusic || 'pause', function (k) { prefs.voiceMusic = k; upd(); }, true);
+  toggle(s, 'نغمة عند انتهاء الاستماع', 'voiceBeep');
   s.appendChild(el('span', 'note', 'اللهجة (تحسّن الفهم):'));
   opts(s, [['ar-SA', 'سعودي'], ['ar-AE', 'خليجي'], ['ar-EG', 'مصري'], ['ar', 'عربي فصيح']], prefs.voiceLang || 'ar-SA', function (k) { prefs.voiceLang = k; upd(); }, true);
   s.appendChild(el('span', 'note', 'سرعة الرد بالصوت:'));

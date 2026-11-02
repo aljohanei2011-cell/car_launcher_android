@@ -294,17 +294,8 @@ function voicePushOpts(){
   nat('voiceOpts', JSON.stringify({ lang: prefs.voiceLang || 'ar-SA', waitMs: w, hold: prefs.voiceBtn === 'hold',
     rate: +prefs.voiceRate || 1, pitch: +prefs.voicePitch || 1, vol: prefs.voiceVol == null ? 1 : +prefs.voiceVol }));
 }
-var _beepCtx = null;
-function voiceBeep(up){
-  if (prefs.voiceBeep === false) return;
-  try {
-    _beepCtx = _beepCtx || new (window.AudioContext || window.webkitAudioContext)();
-    var o = _beepCtx.createOscillator(), g = _beepCtx.createGain(), t = _beepCtx.currentTime;
-    o.frequency.setValueAtTime(up ? 660 : 880, t); o.frequency.linearRampToValueAtTime(up ? 990 : 590, t + 0.12);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-    o.connect(g); g.connect(_beepCtx.destination); o.start(t); o.stop(t + 0.18);
-  } catch (e) {}
-}
+/* النغمة من أندرويد نفسه وتُغلق فوراً (محرك صوت الصفحة كان يبقى مفتوحاً ويمنع وصول الميكروفون للمدمجة) */
+function voiceBeep(up){ if (prefs.voiceBeep === false) return; nat('voiceTone', !!up); }
 /* الموسيقى أثناء الاستماع: توقف مؤقت ثم تعود */
 var _vPaused = false;
 function voiceMusicPause(){ if ((prefs.voiceMusic || 'pause') !== 'pause') return; var m = natJSON('media'); if (m && m.playing) { nat('mediaKey', 'pause'); _vPaused = true; } }
@@ -318,7 +309,6 @@ function voiceStart(retry){
   if (!c.perm) { nat('voicePerm'); toast('اسمح باستخدام الميكروفون ثم اضغط الزر مرة أخرى'); return; }
   _vRetry = !!retry;
   clearTimeout(_vHide);
-  if (!retry) { voiceMusicPause(); voiceBeep(true); }
   voicePushOpts();
   var o = voiceUI(true); o.className = 'on';
   document.getElementById('voN').textContent = (prefs.voiceName || 'رفيق') + ' يسمعك…';
@@ -328,7 +318,7 @@ function voiceStart(retry){
   // طريقة الاستماع: المدمجة، أو نافذة Google (تُستخدم تلقائياً إذا فشلت المدمجة مرتين متتاليتين)
   var useUi = prefs.voiceMode === 'google' || (prefs.voiceMode !== 'builtin' && (retry || +lsGet('carlauncher.voiceFails', 0) >= 2));
   if (useUi) { document.getElementById('voP').textContent = 'تكلّم في نافذة Google'; setTimeout(function () { nat('voiceListenUi'); }, retry ? 300 : 250); }
-  else setTimeout(function () { nat('voiceListen', !!prefs.voiceOffline || net === false); }, retry ? 500 : (prefs.voiceBeep === false ? 150 : 450));
+  else nat('voiceListen', !!prefs.voiceOffline || net === false); // كما في الإصدار الأول: يبدأ فوراً بدون نغمة ولا إيقاف للموسيقى
   voicePollFast();
 }
 function voiceCancel(){ nat('voiceStop'); clearInterval(_vPoll); _vPoll = null; voiceUI(false); voiceMusicResume(); if (_vWakeOn) voiceWakeLoop(); }
@@ -402,6 +392,8 @@ document.addEventListener('pointerdown', function (e) {
 }, true);
 ['pointerup', 'pointercancel'].forEach(function (ev) { document.addEventListener(ev, function () { if (prefs.voiceBtn === 'hold' && _vPoll && Date.now() - _holdAt < 60000) { _holdAt = Date.now(); nat('voiceStopListening'); } }, true); });
 if (HAS_NATIVE) voicePushOpts();
+// إعادة تجربة المدمجة بعد الإصلاح (كانت تتحول لنافذة Google بعد الفشل)
+if (!lsGet('carlauncher.voice55', 0)) { lsSet('carlauncher.voiceFails', 0); lsSet('carlauncher.voice55', 1); }
 
 /* ---------- الاستماع الدائم (اختياري بشروط) ---------- */
 function wakeAllowed(){

@@ -128,9 +128,9 @@ object Voice {
         try { rec?.destroy() } catch (e: Exception) {}
         rec = null
         if (ContextCompat.checkSelfPermission(c, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { state = "error"; err = 9; seq++; return }
-        // بعض الشاشات تجعل خدمة التعرف الافتراضية خدمة الشركة المصنّعة (لا تسمع شيئاً)، فنختار خدمة Google صراحةً إن وُجدت
-        val comp = googleService(c)
-        val r0: SpeechRecognizer? = try { if (comp != null) SpeechRecognizer.createSpeechRecognizer(c, comp) else SpeechRecognizer.createSpeechRecognizer(c) } catch (e: Exception) { null }
+        // كما في الإصدار الأول: خدمة الكلام الافتراضية للشاشة
+        val comp: android.content.ComponentName? = null
+        val r0: SpeechRecognizer? = try { SpeechRecognizer.createSpeechRecognizer(c) } catch (e: Exception) { null }
         if (r0 == null) { state = "error"; err = 5; seq++; return }
         val r: SpeechRecognizer = r0
         rec = r; wakeMode = isWake
@@ -181,10 +181,15 @@ object Voice {
         c.packageManager.queryIntentServices(Intent(android.speech.RecognitionService.SERVICE_INTERFACE), 0)
             .map { android.content.ComponentName(it.serviceInfo.packageName, it.serviceInfo.name) }
     } catch (e: Exception) { emptyList() }
-    private fun googleService(c: Context): android.content.ComponentName? {
-        val all = services(c)
-        return all.firstOrNull { it.packageName == "com.google.android.googlequicksearchbox" }
-            ?: all.firstOrNull { it.packageName.startsWith("com.google.") }
+    /** نغمة قصيرة من أندرويد نفسه، تُغلق فور انتهائها (لا يبقى مسار صوت مفتوح) */
+    fun tone(up: Boolean) {
+        main.post {
+            try {
+                val g = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 45)
+                g.startTone(if (up) android.media.ToneGenerator.TONE_PROP_BEEP else android.media.ToneGenerator.TONE_PROP_ACK, 150)
+                main.postDelayed({ try { g.release() } catch (e: Exception) {} }, 400)
+            } catch (e: Exception) {}
+        }
     }
 
     private fun release() { main.post { try { rec?.destroy() } catch (e: Exception) {}; rec = null } }
