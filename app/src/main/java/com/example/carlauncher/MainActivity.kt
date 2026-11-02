@@ -39,6 +39,10 @@ class MainActivity : AppCompatActivity() {
 
     // اختيار صورة من ذاكرة الجهاز (زر «صورة من الجهاز» في الإعدادات)
     private var fileCallback: ValueCallback<Array<Uri>>? = null
+    /** نافذة Google للتعرف على الكلام (بديل إذا لم تنجح الطريقة المدمجة) */
+    val speechUi = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        Voice.uiResult(r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS))
+    }
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         fileCallback?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
         fileCallback = null

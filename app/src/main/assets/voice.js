@@ -325,7 +325,10 @@ function voiceStart(retry){
   document.getElementById('voP').textContent = retry ? 'لم يصلني صوت، أعد كلامك' : (prefs.voiceBtn === 'hold' ? 'تكلّم وأنت ضاغط على الزر' : 'تكلّم الآن');
   var st = natJSON('voiceState') || {}; _vSeq = st.seq || 0;
   var net = (natJSON('status') || {}).internet;
-  setTimeout(function () { nat('voiceListen', !!prefs.voiceOffline || net === false); }, retry ? 500 : (prefs.voiceBeep === false ? 150 : 450));
+  // طريقة الاستماع: المدمجة، أو نافذة Google (تُستخدم تلقائياً إذا فشلت المدمجة مرتين متتاليتين)
+  var useUi = prefs.voiceMode === 'google' || (prefs.voiceMode !== 'builtin' && (retry || +lsGet('carlauncher.voiceFails', 0) >= 2));
+  if (useUi) { document.getElementById('voP').textContent = 'تكلّم في نافذة Google'; setTimeout(function () { nat('voiceListenUi'); }, retry ? 300 : 250); }
+  else setTimeout(function () { nat('voiceListen', !!prefs.voiceOffline || net === false); }, retry ? 500 : (prefs.voiceBeep === false ? 150 : 450));
   voicePollFast();
 }
 function voiceCancel(){ nat('voiceStop'); clearInterval(_vPoll); _vPoll = null; voiceUI(false); voiceMusicResume(); if (_vWakeOn) voiceWakeLoop(); }
@@ -339,14 +342,15 @@ function voicePollFast(){
       _vSeq = st.seq; clearInterval(_vPoll); _vPoll = null;
       if (st.state === 'error' || !st.results || !st.results.length) {
         // لم يصل صوت أو لم يسمع شيئاً: نعيد المحاولة تلقائياً مرة واحدة
-        if (!_vRetry && (st.err === 100 || st.err === 6)) { voiceStart(true); return; }
+        if (!_vRetry && (st.err === 100 || st.err === 6 || st.err === 7 || st.err === 5)) { voiceStart(true); return; }
         voiceBeep(false); voiceMusicResume();
+        lsSet('carlauncher.voiceFails', +lsGet('carlauncher.voiceFails', 0) + 1);
         voiceLogAdd('—', VERR[st.err] || 'لم أسمع شيئاً');
         var lvl = st.rmsMax == null ? '' : ' (مستوى الصوت الواصل: ' + Math.max(0, Math.round((st.rmsMax + 2) * 10)) + '%)';
         nat('logEvent', 'أمر صوتي فشل: ' + (VERR[st.err] || st.err) + lvl + ((natJSON('status') || {}).internet === false ? ' بدون إنترنت' : ''));
         voiceShow(VERR[st.err] || 'لم أسمع شيئاً', (st.err === 100 ? 'افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google»' : st.err === 2 ? 'لا يوجد إنترنت: نزّل العربي بدون إنترنت من «اختبار الميكروفون»' : 'تكلّم بعد النغمة مباشرة وبصوت واضح') + lvl, true);
       }
-      else { voiceBeep(false); voiceHandle(st.results, false); voiceMusicResume(); }
+      else { voiceBeep(false); if (prefs.voiceMode !== 'google' && +lsGet('carlauncher.voiceFails', 0) < 2) lsSet('carlauncher.voiceFails', 0); voiceHandle(st.results, false); voiceMusicResume(); }
     }
   }, 180);
 }

@@ -76,6 +76,25 @@ object Voice {
     /** «اضغط وتكلّم»: عند رفع الإصبع ننهي الاستماع ونأخذ ما قيل */
     fun stopListening() { main.post { try { rec?.stopListening() } catch (e: Exception) {} } }
 
+    /** بديل: نافذة Google نفسها للتعرف على الكلام (تستخدم مسار الصوت الخاص بها) */
+    fun startUi(a: Activity, launch: (Intent) -> Unit) {
+        appCtx = a.applicationContext
+        try { rec?.cancel(); rec?.destroy() } catch (e: Exception) {}
+        rec = null
+        partial = ""; results = JSONArray(); err = 0; state = "listening"; rmsMax = -100f
+        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, opts.optString("lang", "ar-SA"))
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "تكلّم الآن")
+        try { launch(i) } catch (e: Exception) { state = "error"; err = 5; seq++ }
+    }
+    fun uiResult(list: ArrayList<String>?) {
+        if (list.isNullOrEmpty()) { state = "error"; err = 6; seq++; return }
+        val a = JSONArray(); list.take(3).forEach { a.put(it) }
+        results = a; state = "done"; seq++
+    }
+
     fun listen(c: Context, preferOffline: Boolean) {
         appCtx = c.applicationContext; offline = preferOffline
         main.post { startInternal(false) }

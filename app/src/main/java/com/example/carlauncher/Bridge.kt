@@ -361,6 +361,7 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun voiceListen(preferOffline: Boolean) = Voice.listen(ctx, preferOffline)
     @JavascriptInterface fun voiceStop() = Voice.stop()
     @JavascriptInterface fun voiceStopListening() = Voice.stopListening()
+    @JavascriptInterface fun voiceListenUi() { act.runOnUiThread { Voice.startUi(act) { i -> act.speechUi.launch(i) } } }
     /** اختصار «اتصل بـ…»: يفتح الاتصال بالرقم (تطبيق هاتف الشاشة/البلوتوث) */
     @JavascriptInterface fun dial(number: String) {
         val n = number.filter { it.isDigit() || it == '+' }
