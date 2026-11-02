@@ -101,59 +101,6 @@ object Weather {
     }
 }
 
-/** راديو الإنترنت: تشغيل رابط بث مباشر (mp3/aac) */
-object Radio {
-    private var player: MediaPlayer? = null
-    private var focus: AudioFocusRequest? = null
-    @Volatile var state = "idle"; private set   // idle | buffering | playing | error
-    @Volatile var name = ""; private set
-    @Volatile var url = ""; private set
-
-    private val attrs: AudioAttributes = AudioAttributes.Builder()
-        .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
-
-    @Synchronized
-    fun play(c: Context, u: String, n: String) {
-        stop(c)
-        if (!(u.startsWith("http://") || u.startsWith("https://"))) { state = "error"; return }
-        url = u; name = n; state = "buffering"
-        val am = c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-            .setAudioAttributes(attrs)
-            .setOnAudioFocusChangeListener { ch ->
-                when (ch) {
-                    AudioManager.AUDIOFOCUS_LOSS -> stop(c)
-                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> player?.setVolume(0.25f, 0.25f)
-                    AudioManager.AUDIOFOCUS_GAIN -> player?.setVolume(1f, 1f)
-                }
-            }.build()
-        focus = req
-        am.requestAudioFocus(req)
-        try {
-            val mp = MediaPlayer()
-            mp.setAudioAttributes(attrs)
-            mp.setDataSource(u)
-            mp.setOnPreparedListener { it.start(); state = "playing" }
-            mp.setOnErrorListener { _, _, _ -> state = "error"; true }
-            mp.setOnCompletionListener { state = "idle" }
-            mp.prepareAsync()
-            player = mp
-        } catch (e: Exception) { state = "error" }
-    }
-
-    @Synchronized
-    fun stop(c: Context) {
-        try { player?.stop() } catch (e: Exception) {}
-        try { player?.release() } catch (e: Exception) {}
-        player = null
-        focus?.let { (c.getSystemService(Context.AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it) }
-        focus = null
-        if (state != "error") state = "idle"
-    }
-
-    fun stateJson(): String = JSONObject().put("state", state).put("name", name).put("url", url).toString()
-}
-
 /** صندوق وارد: ملاحظات وتذكيرات ومحطات تصل من الجوال، تأخذها الواجهة وتحفظها */
 object Inbox {
     private fun sp(c: Context) = c.getSharedPreferences("inbox", Context.MODE_PRIVATE)

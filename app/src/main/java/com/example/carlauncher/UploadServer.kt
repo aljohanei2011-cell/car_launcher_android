@@ -189,7 +189,7 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                     ok(out, "")
                 }
                 // ملاحظة / تذكير / محطة راديو من الجوال (نص JSON صغير)
-                method == "POST" && (path == "/note" || path == "/reminder" || path == "/station" || path == "/expense") -> {
+                method == "POST" && (path == "/note" || path == "/reminder" || path == "/expense") -> {
                     if (len <= 0 || len > 64 * 1024) { send(out, 400, "text/plain", "bad".toByteArray()); return }
                     val body = String(readN(inp, len.toInt()), Charsets.UTF_8)
                     val j = try { JSONObject(body) } catch (e: Exception) { null }

@@ -342,20 +342,7 @@ function fridayTick(){
   if (now >= t.dhuhr - fm && now < t.dhuhr - fm + 3 && _friToast !== todayStr()) { _friToast = todayStr(); beep(2); toast('صلاة الجمعة بعد ' + fmtDiff(t.dhuhr - now), 'أقرب جامع', function () { nearby('jami'); }, 20000); }
 }
 
-/* ---------- رسالة الوصول ---------- */
-var ARR_KEY = 'carlauncher.arrive';
-function arriveTick(){
-  var a = prefs.arrive || {}; if (!a.on || !a.phone || typeof a.lat !== 'number') return;
-  var t = natJSON('trip'); if (!t || !t.gps || typeof t.lat !== 'number') return;
-  var st = lsGet(ARR_KEY, { away: false, at: 0 }), d = distKm(t.lat, t.lng, a.lat, a.lng);
-  if (d > 3) { if (!st.away) { st.away = true; lsSet(ARR_KEY, st); } return; }
-  if (st.away && d < 0.35 && (t.speed || 0) < 5) {
-    st.away = false; st.at = Date.now(); lsSet(ARR_KEY, st);
-    toast('وصلت' + (a.place ? ' ' + a.place : '') + '؟ أرسل لـ' + (a.name || 'جهة الاتصال') + ' «' + (a.text || 'وصلت') + '»', 'إرسال بواتساب', function () { if (!nat('whatsapp', a.phone, a.text || 'وصلت الحمد لله ✓')) toast('واتساب غير مثبت'); }, 30000);
-  }
-}
-
-/* ---------- وضع الركاب (الأطفال) ---------- */
+/* ---------- تطبيق الركاب: زره يظهر في وضع الضيف ---------- */
 DOCK_ITEMS.kids = { label: 'الركاب', go: function () { if (prefs.kidsApp && nat('launch', prefs.kidsApp)) return; openPage('apps.html?pick=kids'); } };
 IC.kids = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFB0D9" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="7" r="3.5"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M9.5 7.5h.01M14.5 7.5h.01"/></svg>';
 
@@ -410,7 +397,7 @@ setTimeout(function () { if (HAS_NATIVE && !LITE && prefs.obdAuto) { var o = nat
     'body.skin-light #occ{background:rgba(255,255,255,.7);color:#13202f}';
   document.head.appendChild(css);
   safe('occ', renderOccasion);
-  setInterval(function () { if (!document.hidden) { safe('fri', fridayTick); safe('arrive', arriveTick); safe('obd', obdTick); } }, 5000);
+  setInterval(function () { if (!document.hidden) { safe('fri', fridayTick); safe('obd', obdTick); } }, 5000);
   setInterval(function () { safe('occ', renderOccasion); }, 30 * 60000);
 })();
 

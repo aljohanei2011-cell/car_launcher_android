@@ -15,7 +15,7 @@
 .g4 div{background:rgba(255,255,255,.05);border-radius:16px;padding:12px 14px;text-align:center}
 .g4 b{display:block;font-size:40px;direction:ltr}
 .g4 .warn b{color:#FF6B5A}
-.dtc{display:flex;flex-wrap:wrap;gap:8px}
+.dtc{display:flex;flex-wrap:wrap;gap:8px;max-height:200px;overflow-y:auto;scrollbar-width:none}
 .dtc span{padding:8px 14px;border-radius:12px;background:rgba(255,107,90,.15);border:1px solid #FF6B5A;font-size:18px;direction:ltr}
 </style>
 </head>
@@ -47,11 +47,12 @@
   </div>
 </div>
 <script src="common.js"></script>
+<script src="dtc.js"></script>
 <script>
 var prefs = loadPrefs(); applyPrefs('home', prefs);
 document.body.style.background = '#0a0f1f';
 function $(id){ return document.getElementById(id); }
-var DTC_HINT = { P0300: 'احتراق غير منتظم', P0171: 'خليط فقير', P0420: 'كفاءة الدبة (الكتلايزر)', P0128: 'حرارة المحرك منخفضة (ثرموستات)', P0442: 'تسريب بخار وقود صغير', P0455: 'تسريب بخار وقود (غطاء البنزين)', P0505: 'نظام الهواء الخامل', P0113: 'حساس حرارة الهواء' };
+
 function renderDevs(){
   var list = natJSON('obdDevices') || [], o = natJSON('obd') || {};
   $('devs').innerHTML = list.length ? list.map(function (d) {
@@ -67,7 +68,7 @@ function render(){
   $('vals').innerHTML = cell('حرارة المحرك', o.coolant, '°م', o.coolant >= 105) + cell('البطارية', o.volt ? o.volt.toFixed(1) : null, 'فولت', o.volt && (o.volt < 11.8 || o.volt > 15)) + cell('دورات المحرك', o.rpm, 'د/د') +
     cell('السرعة', o.speed, 'كم/س') + cell('الوقود', o.fuel, '%', o.fuel !== undefined && o.fuel < 12) + cell('حمل المحرك', o.load, '%');
   var d = o.dtcs || [];
-  $('dtc').innerHTML = o.state !== 'on' ? '<span class="pnote" style="background:none;border:none;direction:rtl">اتصل بالقطعة أولاً</span>' : d.length ? d.map(function (c) { return '<span>' + c + (DTC_HINT[c] ? ' · ' + DTC_HINT[c] : '') + '</span>'; }).join('') : '<span class="pnote" style="background:none;border:none;direction:rtl">لا توجد أعطال مسجلة ✓</span>';
+  $('dtc').innerHTML = o.state !== 'on' ? '<span class="pnote" style="background:none;border:none;direction:rtl">اتصل بالقطعة أولاً</span>' : d.length ? d.map(function (c) { var lv = dtcLevel(c); return '<span style="direction:rtl;display:flex;flex-direction:column;gap:2px;width:100%;box-sizing:border-box;border-color:' + (lv === 'high' ? '#FF6B5A' : lv === 'low' ? '#E8C061' : '#FF9F5A') + '"><b style="direction:ltr;text-align:right">' + c + '</b><small style="font-size:15px">' + dtcDesc(c) + (lv === 'high' ? ' — راجع الورشة قريباً' : lv === 'low' ? ' — غير عاجل' : '') + '</small></span>'; }).join('') : '<span class="pnote" style="background:none;border:none;direction:rtl">لا توجد أعطال مسجلة ✓</span>';
 }
 $('bt').onclick = function () { nat('openSystem', 'bt'); };
 $('stop').onclick = function () { nat('obdStop'); setTimeout(render, 300); };

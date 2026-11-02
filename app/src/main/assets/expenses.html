@@ -34,11 +34,17 @@
         <span class="ph">إضافة مصروف</span>
         <input class="inp" id="amt" type="number" inputmode="decimal" placeholder="المبلغ (ريال)">
         <div class="cats" id="cats"></div>
+        <div id="fuelF" style="display:none;gap:8px;flex-wrap:wrap;align-items:center">
+          <input class="inp" id="lit" type="number" step="0.01" inputmode="decimal" placeholder="لترات (اختياري)" style="flex:1;min-width:140px">
+          <input class="inp" id="odo" type="number" inputmode="numeric" placeholder="العداد (اختياري)" style="flex:1;min-width:140px">
+          <label class="pnote" style="display:flex;align-items:center;gap:6px;font-size:17px"><input type="checkbox" id="full" checked style="width:22px;height:22px">تعبئة كاملة</label>
+        </div>
         <input class="inp" id="note" maxlength="120" placeholder="ملاحظة (اختياري)">
         <div class="prow"><button class="pbtn" id="add">إضافة</button><span class="pnote" id="msg"></span></div>
         <span class="pnote" style="margin-top:auto">يمكنك أيضاً الإرسال من الجوال: «الإرسال من الجوال» ▸ مصروف.</span>
       </div>
       <div class="pcard">
+        <div class="tot" id="fuelSum" style="display:none"><div><span class="pnote">استهلاك الوقود</span><b id="kml">—</b></div><div><span class="pnote">لكل 100 كم</span><b id="l100">—</b></div><div><span class="pnote">تكلفة الكيلومتر</span><b id="pkm">—</b></div></div>
         <div class="tot"><div><span class="pnote">هذا الشهر</span><b id="tm">0</b></div><div><span class="pnote">الشهر الماضي</span><b id="tl">0</b></div><div><span class="pnote">هذه السنة</span><b id="ty">0</b></div></div>
         <span class="ph">توزيع هذا الشهر</span>
         <div class="bars" id="bars"></div>
@@ -54,11 +60,17 @@ var prefs = loadPrefs(); applyPrefs('home', prefs);
 document.body.style.background = '#0a0f1f';
 function $(id){ return document.getElementById(id); }
 var cat = 'fuel';
-function renderCats(){ $('cats').innerHTML = Object.keys(EXP_CATS).map(function (k) { return '<button class="' + (k === cat ? 'on' : '') + '" onclick="cat=\'' + k + '\';renderCats()">' + EXP_CATS[k] + '</button>'; }).join(''); }
+function renderCats(){ $('cats').innerHTML = Object.keys(EXP_CATS).map(function (k) { return '<button class="' + (k === cat ? 'on' : '') + '" onclick="cat=\'' + k + '\';renderCats()">' + EXP_CATS[k] + '</button>'; }).join(''); $('fuelF').style.display = cat === 'fuel' ? 'flex' : 'none'; if (cat === 'fuel' && !$('odo').value) { var o = carOdometer(); if (o !== null) $('odo').value = o; } }
 function sum(list, from, to){ return list.reduce(function (a, e) { return a + (e.at >= from && e.at < to ? e.amount : 0); }, 0); }
 function money(v){ return Math.round(v).toLocaleString('en') + ' ر.س'; }
 function render(){
   processInbox();
+  var fs = fuelStats();
+  $('fuelSum').style.display = fs.n ? 'flex' : 'none';
+  $('kml').textContent = fs.kml ? fs.kml.toFixed(1) + ' كم/لتر' : 'تعبئتان كاملتان';
+  $('l100').textContent = fs.kml ? (100 / fs.kml).toFixed(1) + ' لتر' : '—';
+  var fl = fuelFills(), fc = 0, flit = 0; fl.forEach(function (x) { fc += x.cost || 0; flit += x.liters; });
+  $('pkm').textContent = fs.kml && flit > 0 ? ((fc / flit) / fs.kml).toFixed(2) + ' ر.س' : '—';
   var ex = lsGet(EXP_KEY, []).sort(function (a, b) { return b.at - a.at; }), d = new Date();
   var m0 = new Date(d.getFullYear(), d.getMonth(), 1).getTime(), l0 = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime(), y0 = new Date(d.getFullYear(), 0, 1).getTime(), inf = 9e15;
   $('tm').textContent = money(sum(ex, m0, inf)); $('tl').textContent = money(sum(ex, l0, m0)); $('ty').textContent = money(sum(ex, y0, inf));
@@ -72,8 +84,10 @@ function render(){
 function del(id){ lsSet(EXP_KEY, lsGet(EXP_KEY, []).filter(function (e) { return e.id !== id; })); render(); }
 $('add').onclick = function () {
   var a = parseFloat($('amt').value); if (!(a > 0)) { $('msg').textContent = 'اكتب المبلغ'; return; }
-  var ex = lsGet(EXP_KEY, []); ex.push({ id: uid(), amount: a, cat: cat, note: $('note').value.trim(), at: Date.now() }); lsSet(EXP_KEY, ex);
-  $('amt').value = ''; $('note').value = ''; $('msg').textContent = 'أُضيف ✓'; render();
+  var e = { id: uid(), amount: a, cat: cat, note: $('note').value.trim(), at: Date.now() };
+  if (cat === 'fuel') { var l = parseFloat($('lit').value), o = parseInt($('odo').value, 10); if (l > 0 && o > 0) { e.liters = l; e.odo = o; e.full = $('full').checked; if (!e.note) e.note = l + ' لتر'; } }
+  var ex = lsGet(EXP_KEY, []); ex.push(e); lsSet(EXP_KEY, ex);
+  $('amt').value = ''; $('note').value = ''; $('lit').value = ''; $('msg').textContent = 'أُضيف ✓'; render();
 };
 renderCats(); render(); setInterval(render, 15000);
 fitStage();

@@ -42,6 +42,7 @@
     </div>
 
     <div class="list" id="list"></div>
+    <div id="night" style="text-align:center;font-size:18px;color:#8F9AB8;margin-top:-10px"></div>
   </div>
 </div>
 
@@ -83,6 +84,8 @@ function tick(){
       '<span style="font-size:26px;font-weight:700;direction:ltr">' + fmtMin(p.min) + '</span></div>';
   });
   document.getElementById('list').innerHTML = html;
+  var nt = nightTimes(d);
+  document.getElementById('night').textContent = 'قيام الليل: منتصف الليل ' + fmtMin(nt.middle) + ' · الثلث الأخير يبدأ ' + fmtMin(nt.lastThird);
 }
 tick();
 setInterval(tick, 1000);

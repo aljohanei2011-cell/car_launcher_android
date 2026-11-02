@@ -50,7 +50,6 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <button data-m="note">ملاحظة</button>
   <button data-m="rem">تذكير</button>
   <button data-m="exp">مصروف</button>
-  <button data-m="st">محطة راديو</button>
   <button data-m="bak">نسخة احتياطية</button>
   <button data-m="log">سجل الأعطال</button>
 </div>
@@ -132,13 +131,6 @@ a.send{display:flex;align-items:center;justify-content:center;text-decoration:no
   <div class="msg" id="expMsg"></div>
 </section>
 
-<section id="m-st">
-  <div class="box">أضف محطة راديو إنترنت بلصق رابط البث المباشر (ينتهي غالباً بـ mp3 أو aac أو m3u8). تعمل المحطة عندما تكون الشاشة متصلة بالإنترنت.</div>
-  <input id="stName" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:16px system-ui;padding:0 12px;margin-bottom:8px" placeholder="اسم المحطة">
-  <input id="stUrl" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#0e1630;color:#fff;font:14px monospace;padding:0 12px;direction:ltr" placeholder="https://...">
-  <button class="send" id="stSend" style="margin-top:12px">إرسال المحطة</button>
-  <div class="msg" id="stMsg"></div>
-</section>
 
 <section id="m-log">
   <div class="box">ملف نصي بأي أخطاء حدثت في التطبيق. أرسله للمطوّر ليعرف سبب المشكلة.</div>
@@ -342,11 +334,6 @@ document.getElementById('remSend').onclick = function () {
   if (remKind !== 'start') r.time = document.getElementById('remTime').value || '09:00';
   if (remKind === 'once') r.date = document.getElementById('remDate').value;
   postJSON('/reminder', r, 'remMsg', 'وصل التذكير ✓'); document.getElementById('remTxt').value = '';
-};
-document.getElementById('stSend').onclick = function () {
-  var u = document.getElementById('stUrl').value.trim(), n = document.getElementById('stName').value.trim();
-  if (!/^https?:\/\//.test(u)) { var m = document.getElementById('stMsg'); m.className = 'msg err'; m.textContent = 'الرابط يجب أن يبدأ بـ http'; return; }
-  postJSON('/station', { name: n || 'محطة', url: u }, 'stMsg', 'وصلت المحطة ✓');
 };
 window.addEventListener('resize', function () { var o = outSize(); frame.style.height = (frame.clientWidth * o.h / o.w) + 'px'; });
 setup();

@@ -50,7 +50,6 @@ var F = [
   ['drowsy', 'تنبيه النعاس ليلاً', 'بعد ساعتين قيادة متواصلة'],
   ['qasrNote', 'ملاحظة القصر والجمع في السفر', ''],
   ['miqat', 'تنبيه المواقيت للحج والعمرة', 'عند الاقتراب من الميقات'],
-  ['arrive.on', 'رسالة الوصول بواتساب', 'تحتاج حفظ المكان والرقم'],
   ['g', 'الاتصال والإشعارات'],
   ['callCard', 'بطاقة المكالمة الواردة', 'تحتاج الوصول إلى الإشعارات'],
   ['msgNotify', 'اسم مرسل الرسالة', ''],
@@ -62,7 +61,6 @@ var F = [
   ['weatherAlerts', 'تنبيهات الطقس', 'غبار وأمطار وحرارة'],
   ['occasions', 'زينة المناسبات', ''],
   ['hideEmpty', 'إخفاء بطاقة الموسيقى الفارغة', ''],
-  ['autoProfile.on', 'تبديل التخطيط تلقائياً (سفر/مدينة)', 'يحتاج تخطيطات محفوظة'],
   ['g', 'العبادة'],
   ['ramadanOn', 'وضع رمضان', ''],
   ['fridayOn', 'تذكير صلاة الجمعة', ''],
@@ -91,7 +89,7 @@ function render(){
   });
 }
 document.getElementById('lite').onclick = function () {
-  ['weatherFx', 'occasions', 'driveSimple.on', 'zoneSpeed.on', 'obdAuto', 'autoProfile.on'].forEach(function (k) { setP(k, false); });
+  ['weatherFx', 'occasions', 'driveSimple.on', 'zoneSpeed.on', 'obdAuto'].forEach(function (k) { setP(k, false); });
   prefs.voiceWake = false; prefs.perf = 'on'; nat('setVoiceEnabled', false);
   savePrefs(prefs); _prefsCache = null; applyPrefs('home', prefs); render(); toast('فُعّل الوضع الخفيف: أُطفئت المزايا الثقيلة ووضع الأداء مفعّل');
 };

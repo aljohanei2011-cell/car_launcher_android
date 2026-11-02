@@ -52,7 +52,7 @@ var VOICE = (function () {
   var EXP_MAP = [[/(بنزين|وقود|تعبيه|محطه)/, 'fuel'], [/(غسيل|مغسله)/, 'wash'], [/(صيانه|زيت|ورشه)/, 'service'], [/(قطع|كفر|كفرات|اطار|بطاريه)/, 'parts'], [/(مخالفه|ساهر)/, 'fine'], [/(تامين|استماره|تجديد|فحص)/, 'ins']];
   var OPEN_PAGES = [[/(الاعدادات|الضبط)/, 'settings.html', 'الإعدادات'], [/(التطبيقات)/, 'apps.html', 'التطبيقات'], [/(الملاحظات)/, 'notes.html', 'الملاحظات'], [/(التذكيرات)/, 'reminders.html', 'التذكيرات'],
     [/(الرحله|العداد)/, 'trip.html', 'الرحلة'], [/(مواقيت|الصلاه)/, 'prayer.html', 'مواقيت الصلاة'], [/(الاذكار)/, 'azkar.html', 'الأذكار'], [/(المصاريف|المصروفات)/, 'expenses.html', 'المصاريف'],
-    [/(الصيانه)/, 'maintenance.html', 'الصيانة'], [/(الموقف|مكان السياره)/, 'parking.html', 'الموقف'], [/(الوقود)/, 'fuel.html', 'سجل الوقود'], [/(الراديو)/, 'radio.html', 'الراديو'], [/(obd|بيانات السياره)/, 'obd.html', 'بيانات السيارة']];
+    [/(الصيانه)/, 'maintenance.html', 'الصيانة'], [/(الموقف|مكان السياره)/, 'parking.html', 'الموقف'], [/(الوقود|المصاريف)/, 'expenses.html', 'المصاريف والوقود'], [/(obd|بيانات السياره)/, 'obd.html', 'بيانات السيارة']];
 
   function has(fn){ return typeof window[fn] === 'function'; }
   function say(t){ return t; }
@@ -172,14 +172,13 @@ var VOICE = (function () {
       return { label: 'الملاحة إلى: ' + q2, run: function () { var ll = myLatLng(); nat('mapSearch', q2, ll[0], ll[1], prefs.mapsApp || ''); return 'أبحث عن ' + q2; } };
     }
 
-    // الإذاعة
-    if ((m = n.match(/^(شغل|افتح|حط)\s+(اذاعه|محطه|راديو|الراديو|الاذاعه|اف ام)\s*(.*)/))) {
-      var nm = m[3], st = loadStations();
-      var pick = nm ? st.filter(function (x) { return norm(x.name).indexOf(nm) >= 0 || nm.indexOf(norm(x.name)) >= 0; })[0] : null;
-      if (!pick && /قران/.test(nm)) pick = st.filter(function (x) { return /قران/.test(norm(x.name)); })[0];
-      if (pick) return { label: 'تشغيل ' + pick.name, run: function () { nat('radioPlay', pick.url, pick.name); return 'شغلت ' + pick.name; } };
-      return { label: 'فتح الراديو', run: function () { if (/اف ام/.test(m[2])) openRadioApp(); else pagesGo('radio.html'); return nm ? 'ما لقيت محطة باسم ' + nm + '، أضفها من صفحة الراديو' : 'هذا الراديو'; } };
-    }
+    // ورد اليوم بصوت قارئ
+    if (/^(اقرا|اقرالي|اقرا لي|شغل|سمعني)\s*(ورد اليوم|الورد|ورد)$/.test(n)) return { label: 'تلاوة ورد اليوم', run: function () { if (!wirdAyah()) return 'ورد اليوم حديث وليس آية'; quranPlay(wirdAyah(), function (st) { if (st === 'error') toast('تعذّر التشغيل. الاستماع يحتاج إنترنت'); }); return ''; } };
+    if (/^(وقف|اوقف)\s*(التلاوه|الورد|القران)$/.test(n)) return { label: 'إيقاف التلاوة', run: function () { quranStop(); return ''; } };
+    // الراديو (FM)
+    if (/^(شغل|افتح|حط)\s+(اذاعه|محطه|راديو|الراديو|الاذاعه|اف ام)/.test(n)) return { label: 'فتح الراديو', run: function () { openRadioApp(); return 'هذا الراديو'; } };
+    if (/^(المحطه|محطه)\s+(التاليه|الجايه)$/.test(n)) return { label: 'المحطة التالية', run: function () { nat('mediaKey', 'next'); return ''; } };
+    if (/^(المحطه|محطه)\s+(السابقه|اللي قبل)$/.test(n)) return { label: 'المحطة السابقة', run: function () { nat('mediaKey', 'prev'); return ''; } };
 
     // الموسيقى
     if (/^(شغل|كمل|تشغيل|شغل الموسيقي|شغل الاغنيه|كمل الاغنيه)$/.test(n)) return { label: 'تشغيل', run: function () { nat('mediaCmd', 'play'); return ''; } };

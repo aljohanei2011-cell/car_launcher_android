@@ -368,6 +368,9 @@ class Bridge(private val act: MainActivity) {
         act.runOnUiThread { try { act.startActivity(Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:$n")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) {} }
     }
     @JavascriptInterface fun voiceOpts(json: String) { try { Voice.opts = JSONObject(json) } catch (e: Exception) {} }
+    @JavascriptInterface fun openTtsSettings() {
+        act.runOnUiThread { try { act.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { try { act.startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (x: Exception) {} } }
+    }
     @JavascriptInterface fun openVoiceData() {
         act.runOnUiThread {
             val tries = listOf(Intent("com.google.android.voicesearch.action.SETTINGS"), Intent("android.speech.action.LANGUAGE_DETAILS"), Intent(Settings.ACTION_SETTINGS))
@@ -429,9 +432,6 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun weatherRefresh(lat: Double, lng: Double) = Weather.refresh(ctx, lat, lng)
 
     // ===== راديو الإنترنت =====
-    @JavascriptInterface fun radioPlay(url: String, name: String) = Radio.play(ctx, url, name)
-    @JavascriptInterface fun radioStop() = Radio.stop(ctx)
-    @JavascriptInterface fun radioState(): String = Radio.stateJson()
 
     // ===== ما يصل من الجوال (ملاحظات، تذكيرات، محطات) =====
     @JavascriptInterface fun inbox(): String = Inbox.take(ctx)

@@ -34,7 +34,7 @@
       <div class="steps">
         <div class="step"><span class="n">1</span><span>تأكد أن الشاشة متصلة بنقطة اتصال جوالك (أو بنفس شبكة الواي فاي).</span></div>
         <div class="step"><span class="n">2</span><span>امسح الباركود بكاميرا الجوال.</span></div>
-        <div class="step"><span class="n">3</span><span>اختر ما تريد: صورة، تطبيق APK، صوت التنبيه، ملاحظة، تذكير، محطة راديو، أو النسخة الاحتياطية.</span></div>
+        <div class="step"><span class="n">3</span><span>اختر ما تريد: صورة، تطبيق APK، صوت التنبيه، ملاحظة، تذكير، مصروف، استراحة متحركة، أو النسخة الاحتياطية.</span></div>
         <div class="sub" style="font-size:17px">أو افتح في متصفح الجوال: <span class="addr" id="addr"></span></div>
         <div class="ok" id="ok"></div>
         <div class="sub" style="font-size:15px">النقل داخل السيارة فقط، بدون إنترنت. تتوقف الخدمة عند الخروج من هذه الصفحة أو بعد 15 دقيقة.</div>
@@ -71,10 +71,10 @@ else {
     }
   }, 15000);
   var seen = nat('uploadCount') || 0;
-  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «تثبيت تطبيقات مرفوعة».', sound: 'وصل صوت التنبيه ✓', font: 'وصل الخط ✓ تجده في الإعدادات ▸ المظهر ▸ الخطوط.', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', station: 'وصلت محطة الراديو ✓', expense: 'وصل المصروف ✓' };
+  var LABEL = { apk: 'وصل التطبيق ✓ ثبّته من صفحة «تثبيت تطبيقات مرفوعة».', sound: 'وصل صوت التنبيه ✓', font: 'وصل الخط ✓ تجده في الإعدادات ▸ المظهر ▸ الخطوط.', token: 'حُفظ رمز التحديث ✓', backup: 'نُزّلت النسخة الاحتياطية إلى الجوال ✓', restore: 'استُعيدت النسخة الاحتياطية ✓ جارٍ التطبيق…', note: 'وصلت الملاحظة ✓', reminder: 'وصل التذكير ✓', video: 'وصل الفيديو ✓ اختره من الإعدادات ▸ الاستراحة ▸ الخلفية المتحركة.', expense: 'وصل المصروف ✓' };
   setInterval(function () {
     var ev = natJSON('uploadLast') || {}, c = ev.count || 0;
-    if (c > seen && (ev.type === 'note' || ev.type === 'reminder' || ev.type === 'station' || ev.type === 'expense')) processInbox();
+    if (c > seen && (ev.type === 'note' || ev.type === 'reminder' || ev.type === 'expense')) processInbox();
     if (c > seen && ev.type && ev.type !== 'image') {
       seen = c;
       var ok0 = document.getElementById('ok'); ok0.style.display = 'block'; ok0.textContent = LABEL[ev.type] || 'تم ✓';

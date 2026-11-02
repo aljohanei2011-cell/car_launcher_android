@@ -209,7 +209,7 @@ var IC = {
 var DOCK_ITEMS = {
   maps: { label: 'الخرائط', go: function () { openRole('maps'); } },
   music: { label: 'الموسيقى', go: function () { openRole('music'); } },
-  radio: { label: 'الراديو', href: 'radio.html' },
+  radio: { label: 'الراديو', go: function () { openRadioApp(); } },
   apps: { label: 'التطبيقات', href: 'apps.html' },
   rest: { label: 'الاستراحة', go: function () { openRest(); } },
   azkar: { label: 'الأذكار', href: 'azkar.html' },
@@ -218,7 +218,7 @@ var DOCK_ITEMS = {
   notes: { label: 'الملاحظات', href: 'notes.html' },
   reminders: { label: 'التذكيرات', href: 'reminders.html' },
   parking: { label: 'الموقف', href: 'parking.html' },
-  fuel: { label: 'الوقود', href: 'fuel.html' },
+  fuel: { label: 'الوقود', href: 'expenses.html' },
   maint: { label: 'الصيانة', href: 'maintenance.html' },
   profile: { label: 'التخطيط', go: function () { cycleProfile(); } },
   voice: { label: 'تحدّث', go: function () { if (window.onVoiceKey) window.onVoiceKey(); else toast('فعّل الأوامر الصوتية من الإعدادات ▸ النظام', 'فتح', function () { openPage('settings.html'); }); } },
@@ -303,8 +303,10 @@ function esc(s){ var d = document.createElement('div'); d.textContent = s == nul
 function renderDock(){
   setTimeout(placeGlass, 80);
   var d = document.getElementById('dock'); d.innerHTML = '';
-  var items = (prefs.dock || []).slice();
+  var items = (prefs.dock || []).filter(function (x) { return x !== 'kids'; });
   if (items.indexOf('settings') < 0) items.push('settings');
+  // وضع الضيف: زر تطبيق الركاب أولاً (إن اخترته)
+  if (prefs.guest && prefs.kidsApp) items.unshift('kids');
   items.forEach(function (id) {
     var b = document.createElement('button'); b.className = 'glass dk';
     if (id.indexOf('app:') === 0) {
@@ -651,26 +653,26 @@ card('maint', 'الصيانة القادمة', function () {
   return h + '<div class="k-mid" style="color:' + (best.s.due ? '#FFE6A8' : '#fff') + '">' + esc(best.it.name) + '</div><div class="k-sub">' + txt + '</div></a>';
 });
 card('fuel', 'الوقود', function () {
-  var items = lsGet('carlauncher.fuel', []).slice().sort(function (a, b) { return a.odo - b.odo; });
-  var last = null, lit = 0, km = 0, L = 0;
-  items.forEach(function (it) { if (last) lit += it.liters; if (it.full) { if (last && it.odo > last.odo && lit > 0) { km += it.odo - last.odo; L += lit; } last = it; lit = 0; } });
-  return '<a href="fuel.html" style="display:contents"><span class="k-lbl">الوقود</span>' +
-    (L ? '<div><span class="k-big">' + (km / L).toFixed(1) + '</span><span class="k-sub"> كم/لتر</span></div>' : '<div class="k-sub">سجّل تعبئتين كاملتين</div>') + '<div class="k-sub">' + items.length + ' تعبئة مسجلة</div></a>';
+  var c = fuelStats();
+  return '<a href="expenses.html" style="display:contents"><span class="k-lbl">الوقود</span>' +
+    (c.kml ? '<div><span class="k-big">' + c.kml.toFixed(1) + '</span><span class="k-sub"> كم/لتر</span></div>' : '<div class="k-sub" style="white-space:normal">سجّل تعبئتين كاملتين في المصاريف (مع اللترات والعداد)</div>') + '<div class="k-sub">' + c.n + ' تعبئة مسجلة</div></a>';
 });
 card('wird', 'ورد اليوم', function () {
-  var w = todayWird();
-  return '<span class="k-lbl" style="color:#F2C879">ورد اليوم</span><div class="k-clamp font-dua" style="font-size:1.45em">' + w[0] + '</div><div class="k-sub">' + w[1] + '</div>';
+  var w = todayWird(), ref = wirdAyah(w);
+  return '<span class="k-lbl" style="color:#F2C879">ورد اليوم</span><div class="k-clamp font-dua" style="font-size:1.45em">' + w[0] + '</div>' +
+    '<div class="k-row"><span class="k-sub">' + w[1] + '</span>' + (ref ? '<button class="k-btn" onclick="wirdToggle()">' + (quranPlaying() ? '⏸ إيقاف' : '▶ استمع') + '</button>' : '') + '</div>';
 });
+function wirdToggle(){
+  if (quranPlaying()) { quranStop(); later(); return; }
+  quranPlay(wirdAyah(), function (st) { if (st === 'error') toast('تعذّر التشغيل. الاستماع يحتاج إنترنت'); later(); });
+}
 card('radio', 'الراديو', function () {
-  var r = natJSON('radioState') || { state: 'idle' }, st = loadStations();
-  var h = '<div class="k-row"><span class="k-lbl" style="color:#FF9F5A">الراديو</span><a class="k-sub" href="radio.html" style="font-size:.95em">المحطات</a></div>';
-  if (r.state === 'playing' || r.state === 'buffering') {
-    return h + '<div><div class="k-mid">' + esc(r.name) + '</div><div class="k-sub">' + (r.state === 'buffering' ? 'جارٍ الاتصال…' : 'يُبث الآن') + '</div></div><button class="k-btn" style="align-self:flex-start" onclick="nat(\'radioStop\');later()">إيقاف</button>';
-  }
-  h += '<div style="display:flex;flex-wrap:wrap;gap:.5em">';
-  h += '<button class="k-btn" onclick="openRadioApp()">راديو FM</button>';
-  st.slice(0, 3).forEach(function (s) { h += '<button class="k-btn" onclick="playStation(\'' + s.id + '\')">' + esc(s.name) + '</button>'; });
-  return h + '</div>' + (r.state === 'error' ? '<div class="k-sub" style="color:#FFB59A">تعذّر التشغيل (تحقق من الإنترنت)</div>' : '<div></div>');
+  // إن كان تطبيق الراديو يرسل معلوماته: اسم المحطة وأزرار التنقل، وإلا زر كبير يفتحه
+  var m = natJSON('media'), on = isRadioMedia(m);
+  var h = '<div class="k-row"><span class="k-lbl" style="color:#FF9F5A">الراديو</span><span class="k-sub" style="font-size:.95em">' + (on && m.playing ? 'يعمل الآن' : 'FM') + '</span></div>';
+  if (on) return h + '<div class="k-mid" style="white-space:normal">' + esc(m.title || m.artist || 'الراديو') + '</div>' +
+    '<div style="display:flex;gap:.6em;justify-content:center"><button class="k-btn" onclick="nat(\'mediaKey\',\'prev\');later()" aria-label="المحطة السابقة">⏮</button><button class="k-btn" onclick="nat(\'mediaKey\',\'' + (m.playing ? 'pause' : 'play') + '\');later()">' + (m.playing ? '⏸' : '▶') + '</button><button class="k-btn" onclick="nat(\'mediaKey\',\'next\');later()" aria-label="المحطة التالية">⏭</button><button class="k-btn" onclick="openRadioApp()">فتح</button></div>';
+  return h + '<div></div><button class="k-btn" style="align-self:stretch;height:3.2em;font-size:1.2em" onclick="openRadioApp()">تشغيل الراديو</button>';
 });
 card('parking', 'موقف السيارة', function () {
   return '<a href="parking.html" style="display:contents"><span class="k-lbl">موقف السيارة</span><div class="k-sub" style="white-space:normal">احفظ مكان وقوفك وأرسله لجوالك بالباركود</div><span class="k-btn" style="align-self:flex-start">فتح</span></a>';
@@ -685,8 +687,6 @@ card('ram', 'الذاكرة', function () {
     '<div><div class="k-big" style="color:' + col + '">' + m.pct + '%</div><div style="height:.5em;border-radius:.25em;background:rgba(255,255,255,.15);overflow:hidden;margin-top:.4em;direction:ltr"><div style="width:' + m.pct + '%;height:100%;background:' + col + '"></div></div></div>' +
     '<div class="k-row"><span class="k-sub">' + res + '</span><button class="k-btn" onclick="nat(\'freeRam\');later();setTimeout(tick,2500)">تحرير</button></div>';
 });
-function openRadioApp(){ if (prefs.radioApp && nat('launch', prefs.radioApp)) return; openPage('apps.html?pick=radio'); }
-function playStation(id){ var s = loadStations().filter(function (x) { return x.id === id; })[0]; if (s) { nat('radioPlay', s.url, s.name); later(); } }
 function later(){ setTimeout(function () { forceCards = true; tick(); forceCards = false; }, 500); setTimeout(function () { forceCards = true; tick(); forceCards = false; }, 1500); }
 
 /* ================= رسم الصفحات ================= */
@@ -863,17 +863,7 @@ function loadEditor(cb){
   var sc = document.createElement('script'); sc.src = 'editor.js'; sc.onload = cb; document.body.appendChild(sc);
 }
 
-/* ================= التبديل التلقائي بين تخطيط السفر والمدينة ================= */
-function autoProfileCheck(){
-  var ap = prefs.autoProfile || {}; if (!ap.on || (!ap.travel && !ap.city)) return;
-  var t = natJSON('trip'); if (!t || !t.gps || typeof t.lat !== 'number') return;
-  var home = CITIES[prefs.city]; if (!home) return;
-  var d = distKm(t.lat, t.lng, home.lat, home.lng);
-  var want = d > 60 ? ap.travel : d < 30 ? ap.city : null;
-  if (!want || want === prefs.activeProfile) return;
-  var pr = applyProfile(want);
-  if (pr) { window.onPageResume(); toast('تم التبديل إلى «' + pr.name + '»'); }
-}
+/* ================= التخطيطات المحفوظة: التبديل يدوي ================= */
 function cycleProfile(){
   var l = loadProfiles(); if (!l.length) { toast('لا توجد تخطيطات محفوظة', 'حفظ من الإعدادات', function () { openPage('settings.html'); }); return; }
   var i = 0; l.forEach(function (x, k) { if (x.id === prefs.activeProfile) i = k + 1; });
@@ -1037,7 +1027,6 @@ setTimeout(function () {
   if (w && prefs.stayRest !== false && Date.now() - w < 3 * 3600000 && !restOpen()) { nat('logEvent', 'رجوع للاستراحة بعد إغلاق الواجهة'); openRest('?auto=1'); }
   else if (w) lsSet('carlauncher.restWanted', 0);
 }, 1200);
-every(function () { if (!restOpen() && !document.getElementById('cardEd')) safe('profile', autoProfileCheck); }, 60000);
 every(function () { if (_ovl && _ovl.rest) lsSet('carlauncher.restWanted', Date.now()); if (!restOpen()) { applyPrefs('home', prefs); renderWeatherFx(); buildGlass(); } pushPrayerSchedule(); pushReminderAlarms(); renderBanner(); applyBrightness(); weatherRefreshIfStale(); }, 60000);
 /* الواجهة فُتحت بنجاح: نصفّر عداد وضع الأمان، ونأخذ نسخة احتياطية تلقائية أسبوعياً وعند تغيّر الإصدار */
 var BOOT_T0 = window.BOOT_T0 || 0;

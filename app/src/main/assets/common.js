@@ -96,7 +96,7 @@ var HAS_NATIVE = typeof window.Native !== 'undefined';
 window.addEventListener('error', function (e) {
   try { if (HAS_NATIVE && Native.logError) Native.logError((location.pathname.split('/').pop() || '') + ': ' + (e.message || '') + ' @' + (e.lineno || 0)); } catch (x) {}
 });
-var _natCache = {}, NAT_READS = { autoBackups: 1, memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, radioState: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
+var _natCache = {}, NAT_READS = { autoBackups: 1, memKills: 1, memKillsWeek: 1, trip: 1, media: 1, status: 1, weather: 1, memInfo: 1, park: 1, ramResult: 1, version: 1, notifs: 1, volume: 1, brightness: 1, canWriteSettings: 1, isDefaultHome: 1, updateState: 1, tripLog: 1, obd: 1, obdDevices: 1, fonts: 1, images: 1, bootId: 1, hasLocation: 1 };
 /* قراءات سريعة التغير: لا تُحفظ ولا تلغي المحفوظ */
 var NAT_FRESH = { alertsTake: 1, matchesState: 1, matchesConfig: 1, matchesTeams: 1, events: 1, cleanAvail: 1, cleanResult: 1, voiceState: 1, voiceCaps: 1, voiceEnabled: 1, apps: 1, appIcon: 1, updChannel: 1, isLite: 1 };
 function nat(fn){
@@ -125,6 +125,22 @@ function natJSONraw(fn){
 var LITE = (function () { if (HAS_NATIVE) return nat('isLite') === true; try { return localStorage.getItem('carlauncher.liteTest') === '1'; } catch (e) { return false; } })();
 /* ===== الإعدادات المحفوظة (آمنة إن فشل التخزين) ===== */
 var PREFS_KEY = 'carlauncher.prefs';
+/* ===== راديو السيارة الأصلي (FM) =====
+   نتعرف على تطبيق راديو الشاشة من الأسماء المعروفة، وإلا يختاره المستخدم مرة واحدة */
+var RADIO_HINTS = ['radio', 'fmradio', 'fm.radio', 'syu.radio', 'tw.radio', 'ts.radio', 'microntek.radio', 'hct.radio', 'nwd.radio', 'autochips.radio', 'carradio', 'fyt.radio', 'android.fm', 'qf.radio', 'mediatek.fmradio'];
+function findRadioApp(){
+  var p = loadPrefsCached(); if (p.radioApp) return p.radioApp;
+  var apps = natJSON('apps') || [], hit = null;
+  apps.some(function (a) { var k = (a.pkg || '').toLowerCase(), l = a.label || ''; if (/راديو|radio|\bfm\b|إذاعة/i.test(l) || RADIO_HINTS.some(function (h) { return k.indexOf(h) >= 0; })) { hit = a.pkg; return true; } });
+  return hit;
+}
+function openRadioApp(){
+  var pkg = findRadioApp();
+  if (pkg && nat('launch', pkg)) { var p = loadPrefs(); if (!p.radioApp) { p.radioApp = pkg; savePrefs(p); } return; }
+  if (window.openPage) openPage('apps.html?pick=radio'); else location.href = 'apps.html?pick=radio';
+}
+function isRadioMedia(m){ var r = findRadioApp(); return !!(m && r && m.pkg === r); }
+
 /* ===== حماية الإعدادات: نسخة ثانية داخل التطبيق =====
    عند فتح الرئيسية: إذا كانت الإعدادات مفقودة أو تالفة ووُجدت نسخة محفوظة، نستعيد كل شيء بصمت ونسجّل ذلك. */
 (function mirrorRestore(){
@@ -178,12 +194,12 @@ var DEFAULT_PREFS = {
   driveSimple: { on: false, speed: 80 }, zoneSpeed: { on: false, city: 80, hwy: 120, margin: 10 }, drowsy: true, weatherAlerts: true, ramadanOn: true, qasrNote: true, callCard: true, msgNotify: true,
   khatma: null, quranApp: '', kidsApp: '', fridayOn: true, fridayMin: 45, azkarAuto: true, occasions: true, arrive: { on: false, phone: '', name: '', text: 'وصلت الحمد لله ✓', place: 'البيت', lat: null, lng: null }, obdAuto: false,
   stretch: true, miqat: true, guest: false, fuelPrice: 2.33, kmpl: null,
-  voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: true, emptyAlt: 'times', activeProfile: '', autoProfile: { on: false, travel: '', city: '' },
+  voiceName: 'رفيق', voiceReply: true, voiceOffline: false, voiceWake: false, wakePauseMusic: true, cardsLocked: false, hideEmpty: true, emptyAlt: 'times', activeProfile: '',
   perf: 'auto', perfDetected: null, watchdog: true,
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
   alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true,
   /* الشريط العلوي */
-  clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
+  quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
   topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){
@@ -195,6 +211,8 @@ function loadPrefs(){
     if (['ring', 'flip', 'words'].indexOf(p.clockStyle) >= 0) p.clockStyle = 'digital';
     // تحرير الذاكرة يدوي فقط
     p.ramOnRest = false; p.ramOnBoot = false;
+    // مزايا محذوفة: التبديل التلقائي للتخطيط، ورسالة الوصول
+    delete p.autoProfile; if (p.arrive) p.arrive.on = false;
     // استبدال بطاقة الموسيقى الفارغة يصير افتراضياً (مرة واحدة)
     if (!p._v31) { p._v31 = 1; p.hideEmpty = true; if (!p.emptyAlt) p.emptyAlt = 'times'; }
     if (p.restStyle === 'night') { p.restStyle = 'clock'; p.restDim = 'always'; }
@@ -504,6 +522,11 @@ function prayerTimes(d){
     fajr: m(noon - H(-18.5)), sunrise: m(noon - H(-0.833)), dhuhr: m(noon),
     asr: m(noon + H(asrAlt)), maghrib: maghrib, isha: (maghrib + (isRamadan(d) ? 120 : 90)) % 1440
   };
+}
+/* قيام الليل: الليل من المغرب حتى فجر اليوم التالي */
+function nightTimes(d){
+  var t = prayerTimes(d), f2 = prayerTimes(new Date(d.getTime() + 86400000)).fajr + 1440, len = f2 - t.maghrib;
+  return { middle: Math.round(t.maghrib + len / 2) % 1440, lastThird: Math.round(t.maghrib + len * 2 / 3) % 1440 };
 }
 var PRAYER_NAMES = [['fajr', 'الفجر'], ['dhuhr', 'الظهر'], ['asr', 'العصر'], ['maghrib', 'المغرب'], ['isha', 'العشاء']];
 function prayerMinutes(d){
@@ -877,7 +900,7 @@ function isDriving(){ return loadPrefsCached().safeMode && currentSpeed() > 10; 
 function lsGet(k, def){ try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : def; } catch (e) { return def; } }
 function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-var NOTES_KEY = 'carlauncher.notes', REM_KEY = 'carlauncher.reminders', ST_KEY = 'carlauncher.stations';
+var NOTES_KEY = 'carlauncher.notes', REM_KEY = 'carlauncher.reminders';
 function loadNotes(){ return lsGet(NOTES_KEY, []); }
 /* نوع الملاحظة ولونها: يُستنتج من الكلمات، ويمكن تغييره */
 var NOTE_CATS = { buy: ['مشتريات', '#7FB8FF'], car: ['السيارة', '#5AD1A0'], imp: ['مهم', '#F2C879'], gen: ['عامة', '#B9C3D6'] };
@@ -893,8 +916,6 @@ function noteCat(n){
 function sortedNotes(l){ return (l || loadNotes()).slice().sort(function (a, b) { return (!!b.pin - !!a.pin) || (b.at - a.at); }); }
 function noteLines(n){ return (n.text || '').split(/\n|،|,/).map(function (x) { return x.replace(/^\s*[-•*✓]\s*/, '').trim(); }).filter(Boolean); }
 function saveNotes(l){ lsSet(NOTES_KEY, l); mirrorSave(); }
-function loadStations(){ return lsGet(ST_KEY, []); }
-function saveStations(l){ lsSet(ST_KEY, l); }
 function loadRems(){ return lsGet(REM_KEY, []); }
 function saveRems(l){ lsSet(REM_KEY, l); pushReminderAlarms(); mirrorSave(); }
 
@@ -902,21 +923,31 @@ function saveRems(l){ lsSet(REM_KEY, l); pushReminderAlarms(); mirrorSave(); }
 function processInbox(){
   var items = natJSON('inbox');
   if (!items || !items.length) return 0;
-  var notes = loadNotes(), rems = loadRems(), st = loadStations();
+  var notes = loadNotes(), rems = loadRems();
   items.forEach(function (it) {
     var d = it.data || {};
     if (it.type === 'note' && d.text) notes.unshift({ id: uid(), text: String(d.text).slice(0, 4000), at: it.at || Date.now() });
     if (it.type === 'reminder' && d.text) rems.push(Object.assign({ id: uid(), kind: 'once' }, d));
-    if (it.type === 'station' && d.url) st.push({ id: uid(), name: d.name || 'محطة', url: d.url });
     if (it.type === 'expense' && +d.amount > 0) { var ex = lsGet(EXP_KEY, []); ex.push({ id: uid(), amount: +d.amount, cat: EXP_CATS[d.cat] ? d.cat : 'other', note: String(d.note || '').slice(0, 120), at: +d.at || it.at || Date.now() }); lsSet(EXP_KEY, ex); }
   });
-  saveNotes(notes); saveStations(st); saveRems(rems);
+  saveNotes(notes); saveRems(rems);
   return items.length;
 }
 
 /* ===== مصاريف السيارة ===== */
 var EXP_KEY = 'carlauncher.expenses';
 var EXP_CATS = { fuel: 'وقود', wash: 'غسيل', service: 'صيانة', parts: 'قطع', fine: 'مخالفة', ins: 'تأمين وتجديد', other: 'أخرى' };
+/* الوقود صار جزءاً من المصاريف: التعبئة = مصروف «وقود» مع اللترات والعداد (اختياريان).
+   نقل السجل القديم مرة واحدة */
+function fuelFills(){ return lsGet(EXP_KEY, []).filter(function (e) { return e.cat === 'fuel' && e.liters > 0 && e.odo > 0; }).map(function (e) { return { liters: e.liters, odo: e.odo, full: e.full !== false, cost: e.amount, date: e.at }; }); }
+(function migrateFuel(){
+  try {
+    var old = localStorage.getItem('carlauncher.fuel'); if (!old) return;
+    var list = JSON.parse(old) || [], ex = lsGet(EXP_KEY, []);
+    list.forEach(function (f) { if (!f || !f.liters) return; ex.push({ id: uid(), amount: +f.cost || 0, cat: 'fuel', note: f.liters + ' لتر', at: f.date || Date.now(), liters: f.liters, odo: f.odo, full: f.full !== false }); });
+    lsSet(EXP_KEY, ex); localStorage.removeItem('carlauncher.fuel');
+  } catch (e) {}
+})();
 var WD_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 function todayStr(d){ d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function atTime(day, time){ var p = (time || '09:00').split(':'); var d = new Date(day); d.setHours(+p[0], +p[1], 0, 0); return d; }
@@ -1069,6 +1100,23 @@ var WIRD = [
   ['الدين النصيحة', 'رواه مسلم'],
   ['إن الله رفيق يحب الرفق في الأمر كله', 'متفق عليه']
 ];
+/* ورد اليوم بصوت قارئ (عند الطلب فقط، يحتاج إنترنت وقت الاستماع). المصدر: alquran.cloud */
+var SURA_NO = { 'البقرة': 2, 'هود': 11, 'يوسف': 12, 'الرعد': 13, 'طه': 20, 'غافر': 40, 'الحديد': 57, 'الطلاق': 65, 'الشرح': 94 };
+var RECITERS = [['ar.alafasy', 'مشاري العفاسي'], ['ar.husary', 'محمود خليل الحصري'], ['ar.minshawi', 'محمد صديق المنشاوي'], ['ar.abdulbasitmurattal', 'عبد الباسط عبد الصمد'], ['ar.mahermuaiqly', 'ماهر المعيقلي'], ['ar.saoodshuraym', 'سعود الشريم']];
+function wirdAyah(w){ var m = /^(.+?):\s*(\d+)$/.exec((w || todayWird())[1] || ''); return m && SURA_NO[m[1].trim()] ? SURA_NO[m[1].trim()] + ':' + m[2] : null; }
+var _qAudio = null;
+function quranStop(){ if (_qAudio) { try { _qAudio.pause(); _qAudio.removeAttribute('src'); _qAudio.load(); } catch (e) {} _qAudio = null; } }
+function quranPlay(ref, onState){
+  quranStop(); if (!ref) { if (onState) onState('none'); return; }
+  var rc = loadPrefsCached().quranReciter || 'ar.alafasy', cb = onState || function () {};
+  cb('loading');
+  fetch('https://api.alquran.cloud/v1/ayah/' + ref + '/' + rc).then(function (r) { return r.json(); }).then(function (j) {
+    var url = j && j.data && (j.data.audio || (j.data.audioSecondary || [])[0]); if (!url) throw 0;
+    var a = new Audio(url); _qAudio = a; a.onended = function () { _qAudio = null; cb('done'); }; a.onerror = function () { cb('error'); };
+    var p = a.play(); if (p && p.catch) p.catch(function () { cb('error'); }); cb('playing');
+  }).catch(function () { cb('error'); });
+}
+function quranPlaying(){ return !!(_qAudio && !_qAudio.paused); }
 function todayWird(){
   var d = new Date(), start = new Date(d.getFullYear(), 0, 0);
   return WIRD[Math.floor((d - start) / 86400000) % WIRD.length];
@@ -1101,7 +1149,7 @@ var CARD_CATALOG = [
   ['clock', 'الساعة'], ['prayer', 'الصلاة القادمة'], ['times', 'مواقيت اليوم'], ['media', 'الموسيقى'],
   ['speed', 'عداد السرعة'], ['trip', 'الرحلة'], ['qibla', 'القبلة'], ['weather', 'الطقس'],
   ['apps', 'تطبيقاتي المفضلة'], ['notes', 'الملاحظات'], ['reminders', 'تذكيراتي'], ['sysrem', 'تذكيرات اليوم'],
-  ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)'],
+  ['maint', 'الصيانة القادمة'], ['fuel', 'الوقود'], ['wird', 'ورد اليوم'], ['radio', 'الراديو (FM)'], ['parking', 'موقف السيارة'], ['ram', 'الذاكرة (RAM)'],
   ['nearby', 'أقرب مكان'], ['ramadan', 'رمضان'], ['khatma', 'وردي من القرآن'], ['wallet', 'وثائق السيارة'], ['expenses', 'مصاريف السيارة'], ['obd', 'بيانات السيارة (OBD)'], ['matches', 'المباريات']
 ];
 if (LITE) CARD_CATALOG = CARD_CATALOG.filter(function (c) { return c[0] !== 'obd'; });
@@ -1310,12 +1358,18 @@ function applyProfile(id){
 /* ===== تكلفة الوقود ===== */
 /* استهلاك السيارة كم/لتر: من سجل الوقود (تعبئتان كاملتان على الأقل)، وإلا الرقم المدخل يدوياً */
 function kmPerLiter(){
-  var items = lsGet('carlauncher.fuel', []).slice().sort(function (a, b) { return a.odo - b.odo; });
-  var last = null, lit = 0, km = 0, L = 0;
-  items.forEach(function (it) { if (last) lit += it.liters; if (it.full) { if (last && it.odo > last.odo && lit > 0) { km += it.odo - last.odo; L += lit; } last = it; lit = 0; } });
+  var c = fuelStats();
+  var km = c.km, L = c.L;
   if (L > 0 && km / L > 3 && km / L < 40) return { v: km / L, src: 'log' };
   var p = loadPrefsCached();
   return { v: +p.kmpl || 12, src: p.kmpl ? 'manual' : 'default' };
+}
+/* الاستهلاك بين تعبئتين كاملتين */
+function fuelStats(){
+  var items = fuelFills().sort(function (a, b) { return a.odo - b.odo; });
+  var last = null, lit = 0, km = 0, L = 0;
+  items.forEach(function (it) { if (last) lit += it.liters; if (it.full) { if (last && it.odo > last.odo && lit > 0) { km += it.odo - last.odo; L += lit; } last = it; lit = 0; } });
+  return { n: items.length, km: km, L: L, kml: L > 0 ? km / L : null };
 }
 function fuelCost(km){ var p = loadPrefsCached(), k = kmPerLiter().v; return km / k * (+p.fuelPrice || 2.33); }
 function sar(v){ return (v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString('en')) + ' ر.س'; }

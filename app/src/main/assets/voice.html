@@ -36,6 +36,7 @@
         <div class="act" id="act"></div>
         <div class="prow" style="justify-content:center"><button class="pbtn g" id="tts">تجربة الرد بالصوت</button><button class="pbtn g" id="offl">العربي بدون إنترنت</button></div>
         <span class="pnote" id="st" style="text-align:center"></span>
+        <span class="pnote" id="ttsNote" style="text-align:center"></span>
         <span class="ph" style="font-size:17px">آخر الأوامر</span>
         <div id="vlog" style="flex:1;min-height:0;overflow-y:auto;font-size:15px;line-height:1.7;color:#C3D1E8"></div>
       </div>
@@ -97,6 +98,14 @@ $('mic').onclick = function () {
   }, 200);
 };
 $('offl').onclick = function () { nat('openVoiceData'); };
+(function () {
+  var c = natJSON('voiceCaps') || {};
+  var n = $('ttsNote');
+  n.innerHTML = (c.tts === 'ok' ? 'صوت الرد: يعمل ✓.' : 'صوت الرد غير متاح: ثبّت «خدمات النطق من Google» ونزّل العربية.') +
+    ' للرد بدون إنترنت: نزّل العربية في محرك النطق، أو ثبّت أي محرك نطق عربي يعمل بدون إنترنت؛ رفيق الطريق يستخدم المحرك الافتراضي تلقائياً. ';
+  var b = document.createElement('button'); b.className = 'pbtn g'; b.textContent = 'إعدادات محرك النطق'; b.style.marginTop = '6px'; b.onclick = function () { nat('openTtsSettings'); };
+  n.appendChild(document.createElement('br')); n.appendChild(b);
+})();
 function renderLog(){
   var l = lsGet('carlauncher.voiceLog', []);
   $('vlog').innerHTML = l.length ? '' : 'لا توجد أوامر بعد.';
