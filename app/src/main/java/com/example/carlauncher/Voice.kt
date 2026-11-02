@@ -185,7 +185,7 @@ object Voice {
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, c.packageName)
         i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         if (pick.second.isNotEmpty()) i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, pick.second).putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, pick.second)
-        if (offline) i.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+        if (offline && alt == 0) i.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
         // مدة الصبر قبل انتهاء الاستماع (قصيرة/متوسطة/طويلة)
         val wait = if (isWake) 0L else opts.optLong("waitMs", 0L)
         if (wait > 0) {
