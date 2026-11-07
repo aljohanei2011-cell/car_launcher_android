@@ -128,7 +128,7 @@ object Apks {
 /** صوت تنبيه الصلاة الذي يرفعه المستخدم */
 object Sounds {
     fun dir(c: Context) = File(c.filesDir, "sounds").apply { mkdirs() }
-    fun current(c: Context): File? = dir(c).listFiles()?.firstOrNull { it.isFile && it.length() > 0 }
+    fun current(c: Context): File? = dir(c).listFiles()?.firstOrNull { it.isFile && it.length() > 0 && !it.name.endsWith(".tmp") }
 }
 
 /**

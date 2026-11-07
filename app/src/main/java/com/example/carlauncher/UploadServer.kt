@@ -12,7 +12,9 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
+import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
@@ -26,6 +28,11 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
         const val PORT = 8765
         private const val MAX_BYTES = 12 * 1024 * 1024
         private const val LIFETIME = 15 * 60_000L
+        /** أقصى عدد اتصالات في نفس الوقت (الشاشات الضعيفة لا تتحمل أكثر) */
+        private const val MAX_CONN = 4
+        /** بعد هذا العدد من الرموز الخاطئة يُغلق الخادم؛ يُفتح برمز جديد من شاشة «رفع من الجوال» */
+        private const val MAX_BAD_TOKENS = 30
+        private const val MAX_HEADERS = 64
 
         fun localIps(): List<String> {
             val out = ArrayList<String>()
@@ -54,6 +61,8 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
     @Volatile var lastName = ""; private set
     private fun event(type: String, name: String) { lastType = type; lastName = name; uploads++ }
     @Volatile private var running = false
+    private val active = AtomicInteger(0)
+    @Volatile private var badTokens = 0
     private var server: ServerSocket? = null
     private val startedAt = System.currentTimeMillis()
     /** يُغلق تلقائياً بعد 10 دقائق بدون أي طلب (أمان: لا يبقى مفتوحاً إن نُسيت الصفحة) */
@@ -76,7 +85,22 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                 while (running) {
                     try {
                         val c = s.accept()
-                        thread(isDaemon = true) { handle(c) }
+                        if (!isLocalClient(c)) {
+                            // الخادم للشبكة المحلية فقط (نقطة اتصال الجوال أو واي فاي السيارة)
+                            try { c.close() } catch (e: Exception) {}
+                        } else if (active.incrementAndGet() > MAX_CONN) {
+                            active.decrementAndGet()
+                            try { c.close() } catch (e: Exception) {}
+                        } else {
+                            thread(isDaemon = true) {
+                                // أي استثناء هنا (انقطاع الواي فاي أثناء الرفع، رابط مشوّه، نفاد الذاكرة) لا يجوز أن يغلق التطبيق
+                                try { handle(c) }
+                                catch (t: Throwable) {
+                                    if (t !is java.io.IOException) CrashLog.add(ctx, "upload", android.util.Log.getStackTraceString(t))
+                                }
+                                finally { active.decrementAndGet() }
+                            }
+                        }
                     } catch (e: Exception) { if (!running) break }
                     if (System.currentTimeMillis() - startedAt > LIFETIME) stop()
                 }
@@ -105,15 +129,22 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
             val method = parts[0]
             val target = parts[1]
             var len = 0L
+            var headers = 0
             while (true) {
                 val h = readLine(inp) ?: break
                 if (h.isEmpty()) break
+                if (++headers > MAX_HEADERS) { send(out, 400, "text/plain", "bad".toByteArray()); return }
                 val i = h.indexOf(':')
                 if (i > 0 && h.substring(0, i).trim().equals("content-length", true)) len = h.substring(i + 1).trim().toLongOrNull() ?: 0L
             }
             val path = target.substringBefore('?')
             val q = parseQuery(target.substringAfter('?', ""))
-            if (q["t"] != token) { send(out, 403, "text/plain; charset=utf-8", "الرمز غير صحيح. امسح الباركود من الشاشة مرة أخرى.".toByteArray()); return }
+            // مقارنة ثابتة الزمن، وبعد عدد من المحاولات الخاطئة نغلق الخادم (التخمين مستحيل عملياً مع رمز 48 بت)
+            if (!MessageDigest.isEqual((q["t"] ?: "").toByteArray(), token.toByteArray())) {
+                send(out, 403, "text/plain; charset=utf-8", "الرمز غير صحيح. امسح الباركود من الشاشة مرة أخرى.".toByteArray())
+                if (++badTokens >= MAX_BAD_TOKENS) stop()
+                return
+            }
 
             when {
                 method == "GET" && (path == "/" || path == "/index.html") -> {
@@ -152,9 +183,12 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
                 method == "POST" && path == "/sound" -> {
                     if (len <= 0 || len > 25L * 1024 * 1024) { send(out, 413, "text/plain", "too large".toByteArray()); return }
                     val ext = (q["ext"] ?: "mp3").lowercase().takeIf { it in setOf("mp3", "ogg", "m4a", "aac", "wav", "opus") } ?: "mp3"
-                    Sounds.dir(ctx).listFiles()?.forEach { it.delete() }
+                    // نكتب في ملف مؤقت أولاً: إن انقطع الرفع يبقى الصوت القديم سليماً
+                    val tmp = File(Sounds.dir(ctx), "upload.tmp")
+                    if (!streamToFile(inp, len, tmp)) { tmp.delete(); send(out, 400, "text/plain", "bad".toByteArray()); return }
+                    Sounds.dir(ctx).listFiles()?.filter { it.name != tmp.name }?.forEach { it.delete() }
                     val f = File(Sounds.dir(ctx), "alert.$ext")
-                    if (!streamToFile(inp, len, f)) { f.delete(); send(out, 400, "text/plain", "bad".toByteArray()); return }
+                    if (!tmp.renameTo(f)) { tmp.delete(); send(out, 400, "text/plain", "bad".toByteArray()); return }
                     event("sound", f.name)
                     ok(out, f.name)
                 }
@@ -236,11 +270,17 @@ class UploadServer(private val ctx: Context, private val screenW: Int, private v
         return left == 0L
     }
 
+    /** رابط مشوّه (مثل %zz) يُتجاهل بدل أن يرمي استثناءً */
     private fun parseQuery(q: String): Map<String, String> =
         q.split('&').mapNotNull {
             val k = it.substringBefore('=', ""); if (k.isEmpty()) null
-            else k to java.net.URLDecoder.decode(it.substringAfter('=', ""), "UTF-8")
+            else try { k to java.net.URLDecoder.decode(it.substringAfter('=', ""), "UTF-8") } catch (e: Exception) { null }
         }.toMap()
+
+    private fun isLocalClient(c: Socket): Boolean {
+        val a = c.inetAddress ?: return false
+        return a.isSiteLocalAddress || a.isLinkLocalAddress || a.isLoopbackAddress
+    }
 
     private fun readLine(i: InputStream): String? {
         val b = ByteArrayOutputStream()
