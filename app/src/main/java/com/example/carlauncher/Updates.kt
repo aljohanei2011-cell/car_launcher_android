@@ -205,8 +205,9 @@ object Updater {
                 // ملف واحد لكل الشاشات: نأخذ rafiq.apk دائماً (لم يعد هناك تحويل بين نسختين)
                 val wantLite = false
                 switching = false
-                // قناة واحدة: كل إصدار منشور نهائي ويصل فوراً
-                val beta = true
+                // القناة الثابتة (الافتراضية): الإصدار يصل بعد 48 ساعة من نشره، فإن ظهر فيه خلل يُسحب قبل أن يصل لكل الشاشات.
+                // «إصلاح عاجل» في عنوان الإصدار أو وصفه يصل فوراً، وقناة beta تأخذ كل إصدار فوراً.
+                val beta = forceBeta || channel(c) == "beta"
                 val now = System.currentTimeMillis()
                 var best: JSONObject? = null; var bestN = 0
                 var newest: JSONObject? = null; var newestN = 0
