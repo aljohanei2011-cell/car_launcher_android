@@ -204,7 +204,7 @@ class Bridge(private val act: MainActivity) {
 
     // ===== الإصدار والتحديث =====
     @JavascriptInterface
-    fun version(): String = JSONObject().put("code", BuildConfig.VERSION_CODE).put("name", BuildConfig.VERSION_NAME).put("lite", BuildConfig.LITE).toString()
+    fun version(): String = JSONObject().put("code", BuildConfig.VERSION_CODE).put("name", BuildConfig.VERSION_NAME).put("lite", LightMode.on(ctx)).toString()
     @JavascriptInterface fun hasToken(): Boolean = Updater.hasToken(ctx)
     @JavascriptInterface fun setToken(t: String): Boolean {
         if (!t.trim().matches(Regex("^[A-Za-z0-9_]{20,255}$"))) return false
@@ -214,7 +214,10 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun updateCheck() = Updater.check(ctx)
     @JavascriptInterface fun updateCheckBeta() = Updater.check(ctx, true)
     @JavascriptInterface fun updateSwitch(to: String) = Updater.check(ctx, false, to)
-    @JavascriptInterface fun isLite(): Boolean = BuildConfig.LITE
+    @JavascriptInterface fun isLite(): Boolean = LightMode.on(ctx)
+    @JavascriptInterface fun lightMode(): String = LightMode.mode(ctx)
+    @JavascriptInterface fun lightWeak(): Boolean = LightMode.weak(ctx)
+    @JavascriptInterface fun setLightMode(m: String) = LightMode.setMode(ctx, m)
     @JavascriptInterface fun updChannel(): String = Updater.channel(ctx)
     @JavascriptInterface fun setUpdChannel(ch: String) = Updater.setChannel(ctx, ch)
     @JavascriptInterface fun updateDownload() = Updater.download(ctx)

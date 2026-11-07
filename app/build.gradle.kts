@@ -26,42 +26,34 @@ android {
         buildConfig = true
     }
 
-    // نسختان من نفس الكود ونفس التطبيق (التحويل بينهما يحفظ الإعدادات):
-    // full: كاملة بكل الثيمات والمزايا — lite: خفيفة للشاشات الضعيفة (بدون صور الثيمات)
-    flavorDimensions += "edition"
-    productFlavors {
-        create("full") {
-            dimension = "edition"
-            buildConfigField("boolean", "LITE", "false")
-        }
-        create("lite") {
-            dimension = "edition"
-            versionNameSuffix = "-lite"
-            buildConfigField("boolean", "LITE", "true")
-        }
-    }
+    // ملف واحد لكل الشاشات بكل الثيمات والمزايا. الشاشات الضعيفة تعمل «بالوضع الخفيف» تلقائياً (LightMode)
 
     // مفتاح توقيع ثابت: بدونه لا يقبل أندرويد تثبيت التحديث فوق النسخة السابقة
+    // المفتاح موجود فقط في بناء GitHub Actions الرسمي. بدونه (بناء محلي أو فحص Pull Request)
+    // يُبنى التطبيق بتوقيع debug الافتراضي، ولا يصلح لتحديث نسخة رسمية مثبتة.
     val signProps = Properties().apply {
         val f = rootProject.file("signing/signing.properties")
         if (f.exists()) f.inputStream().use { load(it) }
     }
+    val hasSigning = rootProject.file("signing/release.jks").exists() && signProps.getProperty("storePassword") != null
     signingConfigs {
-        create("fixed") {
-            storeFile = rootProject.file("signing/release.jks")
-            storePassword = signProps.getProperty("storePassword")
-            keyAlias = signProps.getProperty("keyAlias")
-            keyPassword = signProps.getProperty("keyPassword")
+        if (hasSigning) {
+            create("fixed") {
+                storeFile = rootProject.file("signing/release.jks")
+                storePassword = signProps.getProperty("storePassword")
+                keyAlias = signProps.getProperty("keyAlias")
+                keyPassword = signProps.getProperty("keyPassword")
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("fixed")
+            if (hasSigning) signingConfig = signingConfigs.getByName("fixed")
         }
         debug {
-            signingConfig = signingConfigs.getByName("fixed")
+            if (hasSigning) signingConfig = signingConfigs.getByName("fixed")
         }
     }
 

@@ -945,6 +945,16 @@ function saveNotes(l){ lsSet(NOTES_KEY, l); mirrorSave(); }
 function loadRems(){ return lsGet(REM_KEY, []); }
 function saveRems(l){ lsSet(REM_KEY, l); pushReminderAlarms(); mirrorSave(); }
 
+/* معرّف آمن للإدراج داخل onclick (المعرّفات من uid() أحرف وأرقام فقط) */
+function sid(x){ return String(x == null ? '' : x).replace(/[^A-Za-z0-9_-]/g, ''); }
+/* تذكير قادم من الجوال: نأخذ الحقول المعروفة فقط، والمعرّف نولّده نحن (لا نسمح للجوال بتحديده) */
+function cleanRemFromPhone(d){
+  var r = { id: uid(), text: String(d.text).slice(0, 200), kind: ['once', 'daily', 'weekly', 'start'].indexOf(d.kind) >= 0 ? d.kind : 'once' };
+  if (/^\d{1,2}:\d{2}$/.test(String(d.time || ''))) r.time = String(d.time);
+  if (r.kind === 'once') r.date = /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? String(d.date) : todayStr();
+  if (r.kind === 'weekly') r.wd = Math.min(6, Math.max(0, parseInt(d.wd, 10) || 0));
+  return r;
+}
 /* ما يصل من الجوال يُحفظ هنا */
 function processInbox(){
   var items = natJSON('inbox');
@@ -953,7 +963,7 @@ function processInbox(){
   items.forEach(function (it) {
     var d = it.data || {};
     if (it.type === 'note' && d.text) notes.unshift({ id: uid(), text: String(d.text).slice(0, 4000), at: it.at || Date.now() });
-    if (it.type === 'reminder' && d.text) rems.push(Object.assign({ id: uid(), kind: 'once' }, d));
+    if (it.type === 'reminder' && d.text) rems.push(cleanRemFromPhone(d));
     if (it.type === 'expense' && +d.amount > 0) { var ex = lsGet(EXP_KEY, []); ex.push({ id: uid(), amount: +d.amount, cat: EXP_CATS[d.cat] ? d.cat : 'other', note: String(d.note || '').slice(0, 120), at: +d.at || it.at || Date.now() }); lsSet(EXP_KEY, ex); }
   });
   saveNotes(notes); saveRems(rems);

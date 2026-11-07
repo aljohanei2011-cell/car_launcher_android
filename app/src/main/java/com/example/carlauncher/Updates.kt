@@ -128,11 +128,11 @@ object Apks {
 /** صوت تنبيه الصلاة الذي يرفعه المستخدم */
 object Sounds {
     fun dir(c: Context) = File(c.filesDir, "sounds").apply { mkdirs() }
-    fun current(c: Context): File? = dir(c).listFiles()?.firstOrNull { it.isFile && it.length() > 0 }
+    fun current(c: Context): File? = dir(c).listFiles()?.firstOrNull { it.isFile && it.length() > 0 && !it.name.endsWith(".tmp") }
 }
 
 /**
- * التحديث من الشاشة: يقرأ آخر إصدار من GitHub (المستودع خاص، لذلك يحتاج رمز قراءة فقط)،
+ * التحديث من الشاشة: يقرأ آخر إصدار من GitHub (المستودع عام فلا يحتاج رمزاً؛ الرمز اختياري لمن يجعله خاصاً)،
  * يحمّل ملف APK، ويتأكد أنه رفيق الطريق نفسه وبنفس التوقيع، ثم يفتح نافذة التثبيت.
  */
 object Updater {
@@ -202,10 +202,12 @@ object Updater {
                 val code = conn.responseCode
                 if (code != 200) { set("phase" to "error", "error" to httpError(code)); return@thread }
                 val arr = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
-                val wantLite = if (switchTo != null) switchTo == "lite" else BuildConfig.LITE
-                switching = switchTo != null && wantLite != BuildConfig.LITE
-                // قناة واحدة: كل إصدار منشور نهائي ويصل فوراً
-                val beta = true
+                // ملف واحد لكل الشاشات: نأخذ rafiq.apk دائماً (لم يعد هناك تحويل بين نسختين)
+                val wantLite = false
+                switching = false
+                // القناة الثابتة (الافتراضية): الإصدار يصل بعد 48 ساعة من نشره، فإن ظهر فيه خلل يُسحب قبل أن يصل لكل الشاشات.
+                // «إصلاح عاجل» في عنوان الإصدار أو وصفه يصل فوراً، وقناة beta تأخذ كل إصدار فوراً.
+                val beta = forceBeta || channel(c) == "beta"
                 val now = System.currentTimeMillis()
                 var best: JSONObject? = null; var bestN = 0
                 var newest: JSONObject? = null; var newestN = 0

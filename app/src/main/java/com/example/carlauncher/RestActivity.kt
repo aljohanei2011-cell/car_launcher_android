@@ -76,6 +76,7 @@ class RestActivity : Activity() {
         val dm = resources.displayMetrics
         k = maxOf(dm.widthPixels, dm.heightPixels) / 1280f
         RestGuard.restOpen = true; RestGuard.nativeRest = true
+        RestState.opened(this)
         Events.add(this, "فتح الاستراحة الخفيفة")
 
         val root = FrameLayout(this); root.setBackgroundColor(Color.BLACK)
@@ -133,6 +134,8 @@ class RestActivity : Activity() {
         val ds = cfg.optInt("duaSec", 15).coerceIn(5, 120) * 1000L
         if (showDua) h.postDelayed(object : Runnable { override fun run() { rotateDua(); h.postDelayed(this, ds) } }, ds)
         h.postDelayed(object : Runnable { override fun run() { mediaState(); h.postDelayed(this, 3000) } }, 3000)
+        // نبضة كل دقيقة وهي ظاهرة: إن قتل النظام التطبيق نعرف ذلك ونعيد فتحها (RestState.check)
+        h.postDelayed(object : Runnable { override fun run() { if (visible) RestState.beat(this@RestActivity); h.postDelayed(this, 60_000) } }, 60_000)
     }
 
     private fun lp(top: Float): LinearLayout.LayoutParams { val p = LinearLayout.LayoutParams(-2, -2); p.topMargin = px(top).toInt(); p.gravity = Gravity.CENTER_HORIZONTAL; return p }
@@ -141,7 +144,9 @@ class RestActivity : Activity() {
     private fun loadBackground(root: FrameLayout) {
         val night = isNight()
         val v = (if (night) cfg.optString("videoNight", "") else "").ifEmpty { cfg.optString("video", "") }
-        if (v.isNotEmpty() && File(v).exists()) {
+        // الشاشات الضعيفة: بعد قتل سابق أو مع قلة الذاكرة نعرض صورة بدل الفيديو
+        val videoOk = !RestState.killedRecently(this) && !RestState.lowMemory(this)
+        if (v.isNotEmpty() && videoOk && File(v).exists()) {
             try {
                 val vv = VideoView(this)
                 vv.setVideoPath(v)
@@ -158,15 +163,40 @@ class RestActivity : Activity() {
     private fun showImage() {
         val b = cfg.optString("bg", "")
         try {
-            val opts = BitmapFactory.Options().apply { inSampleSize = 1; inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 }
+            // نقيس الأبعاد أولاً ثم نصغّر حسب الشاشة، حتى لا تُحمَّل صورة ضخمة كاملة في الذاكرة
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            when {
+                b.startsWith("file://") -> BitmapFactory.decodeFile(b.removePrefix("file://"), bounds)
+                b.isNotEmpty() -> assets.open(b).use { BitmapFactory.decodeStream(it, null, bounds) }
+            }
+            val opts = BitmapFactory.Options().apply {
+                inSampleSize = sampleFor(bounds.outWidth, bounds.outHeight)
+                inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+            }
             val bm = when {
                 b.startsWith("file://") -> BitmapFactory.decodeFile(b.removePrefix("file://"), opts)
                 b.isNotEmpty() -> assets.open(b).use { BitmapFactory.decodeStream(it, null, opts) }
                 else -> null
             }
             if (bm != null) bgImg.setImageBitmap(bm)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+        } catch (e: OutOfMemoryError) {
+            CrashLog.add(this, "rest", "نفدت الذاكرة أثناء تحميل خلفية الاستراحة")
+        }
     }
+
+    /** أكبر قسمة على قوى 2 تُبقي الصورة بحجم الشاشة أو أكبر */
+    private fun sampleFor(w: Int, h: Int): Int {
+        if (w <= 0 || h <= 0) return 1
+        val dm = resources.displayMetrics
+        val tw = maxOf(dm.widthPixels, dm.heightPixels); val th = minOf(dm.widthPixels, dm.heightPixels)
+        var s = 1
+        while (w / (s * 2) >= tw && h / (s * 2) >= th) s *= 2
+        return s
+    }
+
+    /** الساعة والتاريخ بتوقيت الرياض دائماً (شاشات السيارات كثيراً ما يكون توقيتها خاطئاً) */
+    private fun riyadh(): Calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Riyadh"))
 
     private fun prayersToday(): List<Pair<String, Long>> {
         val arr = Prefs.prayers(this); val out = ArrayList<Pair<String, Long>>()
@@ -176,7 +206,7 @@ class RestActivity : Activity() {
 
     private fun isNight(): Boolean {
         val now = System.currentTimeMillis()
-        val p = prayersToday(); if (p.isEmpty()) { val hr = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); return hr >= 19 || hr < 5 }
+        val p = prayersToday(); if (p.isEmpty()) { val hr = riyadh().get(Calendar.HOUR_OF_DAY); return hr >= 19 || hr < 5 }
         val maghrib = p.lastOrNull { it.first.contains("المغرب") && it.second <= now }
         val fajr = p.firstOrNull { it.first.contains("الفجر") && it.second > now }
         return maghrib != null && (fajr == null || fajr.second > now) && now - maghrib.second < 12 * 3600_000L
@@ -194,12 +224,16 @@ class RestActivity : Activity() {
     private fun tick() {
         val now = System.currentTimeMillis()
         clock.text = fmtTime(now, false)
-        val c = Calendar.getInstance(); val m = c.get(Calendar.MINUTE)
+        val c = riyadh(); val m = c.get(Calendar.MINUTE)
         if (m != lastMin) {
             lastMin = m
             try {
-                val hij = android.icu.text.SimpleDateFormat("EEEE، d MMMM y هـ", android.icu.util.ULocale("ar_SA@calendar=islamic-umalqura;numbers=latn")).format(java.util.Date())
-                val greg = android.icu.text.SimpleDateFormat("d MMMM y م", android.icu.util.ULocale("ar@numbers=latn")).format(java.util.Date())
+                val tz = android.icu.util.TimeZone.getTimeZone("Asia/Riyadh")
+                val fh = android.icu.text.SimpleDateFormat("EEEE، d MMMM y هـ", android.icu.util.ULocale("ar_SA@calendar=islamic-umalqura;numbers=latn"))
+                val fg = android.icu.text.SimpleDateFormat("d MMMM y م", android.icu.util.ULocale("ar@numbers=latn"))
+                fh.setTimeZone(tz); fg.setTimeZone(tz)
+                val hij = fh.format(java.util.Date())
+                val greg = fg.format(java.util.Date())
                 dates.text = if (cfg.optBoolean("date", true)) "$hij  |  $greg" else ""
             } catch (e: Exception) {}
             val p = prayersToday(); val nx = p.firstOrNull { it.second > now }
@@ -219,7 +253,7 @@ class RestActivity : Activity() {
     private fun renderStrip(p: List<Pair<String, Long>>, nextAt: Long) {
         if (cfg.optString("style") != "lux") return
         strip.removeAllViews()
-        val dayStart = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0) }.timeInMillis
+        val dayStart = riyadh().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis
         p.filter { it.second >= dayStart && it.second < dayStart + 86_400_000L }.take(5).forEach { (name, at) ->
             val on = at == nextAt
             val box = LinearLayout(this); box.orientation = LinearLayout.VERTICAL; box.gravity = Gravity.CENTER
@@ -260,6 +294,7 @@ class RestActivity : Activity() {
 
     private fun leave(user: Boolean) {
         if (isFinishing) return
+        RestState.closed(this)
         if (user) { RestGuard.restOpen = false; RestGuard.nativeRest = false; Events.add(this, "خروج من الاستراحة الخفيفة") }
         try {
             startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
@@ -276,9 +311,11 @@ class RestActivity : Activity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    override fun onResume() { super.onResume(); visible = true; hideBars(); try { video?.start() } catch (e: Exception) {} }
+    override fun onResume() { super.onResume(); visible = true; RestState.opened(this); hideBars(); try { video?.start() } catch (e: Exception) {} }
     override fun onPause() {
         super.onPause(); visible = false
+        // اختفت عن الشاشة (قائمة الأخيرة، تطبيق آخر، سحبها من الأخيرة): لا نعيد فتحها إن قُتل التطبيق بعدها
+        RestState.closed(this)
         RestGuard.pausedAt = System.currentTimeMillis()
         try { video?.pause() } catch (e: Exception) {}
         if (!isFinishing) Events.add(this, "اختفت الاستراحة الخفيفة" + (if (System.currentTimeMillis() - RestGuard.lastTouch < 4000) " بعد لمس" else " بدون لمس"))

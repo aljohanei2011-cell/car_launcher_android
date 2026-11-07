@@ -1,0 +1,36 @@
+name: PR check
+
+# فحص كل Pull Request قبل الدمج في main (الدمج في main ينشر إصداراً جديداً على كل الشاشات).
+# لا يستخدم أي أسرار، ولا ينشر شيئاً.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check web assets syntax
+        run: node .github/scripts/check-assets.js
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      # بتوقيع debug الافتراضي (بدون مفتاح الإصدار)
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace

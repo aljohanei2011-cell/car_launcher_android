@@ -46,7 +46,7 @@
 var prefs = loadPrefs(); applyPrefs('home', prefs);
 document.body.style.background = '#0a0f1f';
 var v = natJSON('version');
-document.getElementById('ver').textContent = 'الإصدار ' + (v ? String(v.name).replace('-lite', '') + (v.lite ? ' · النسخة الخفيفة' : ' · النسخة الكاملة') : '—');
+document.getElementById('ver').textContent = 'الإصدار ' + (v ? String(v.name).replace('-lite', '') + (v.lite ? ' · الوضع الخفيف' : '') : '—');
 var s = natJSON('screen');
 document.getElementById('screen').textContent = 'الشاشة ' + (s ? s.w + '×' + s.h : window.screen.width + '×' + window.screen.height);
 fitStage();

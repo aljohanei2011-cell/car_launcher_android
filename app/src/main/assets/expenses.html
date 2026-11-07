@@ -78,7 +78,7 @@ function render(){
   Object.keys(by).forEach(function (k) { mx = Math.max(mx, by[k]); });
   $('bars').innerHTML = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).map(function (k) { return '<div class="bar"><span>' + EXP_CATS[k] + '</span><i style="width:' + Math.max(4, by[k] / mx * 100) + '%"></i><span style="direction:ltr;text-align:right">' + Math.round(by[k]) + '</span></div>'; }).join('') || '<span class="pnote">لا مصاريف هذا الشهر</span>';
   $('lst').innerHTML = ex.slice(0, 60).map(function (e) {
-    return '<div><span>' + fmt({ day: 'numeric', month: 'short' }, 'ar-u-nu-latn', new Date(e.at)) + '</span><span>' + EXP_CATS[e.cat] + '</span><span class="pnote" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (e.note || '').replace(/</g, '&lt;') + '</span><b style="direction:ltr;text-align:right">' + (Math.round(e.amount * 100) / 100) + '</b><button aria-label="حذف" onclick="del(\'' + e.id + '\')">×</button></div>';
+    return '<div><span>' + fmt({ day: 'numeric', month: 'short' }, 'ar-u-nu-latn', new Date(e.at)) + '</span><span>' + EXP_CATS[e.cat] + '</span><span class="pnote" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + String(e.note || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span><b style="direction:ltr;text-align:right">' + (Math.round(e.amount * 100) / 100) + '</b><button aria-label="حذف" onclick="del(\'' + sid(e.id) + '\')">×</button></div>';
   }).join('') || '<span class="pnote">لا توجد مصاريف مسجلة.</span>';
 }
 function del(id){ lsSet(EXP_KEY, lsGet(EXP_KEY, []).filter(function (e) { return e.id !== id; })); render(); }
