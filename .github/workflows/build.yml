@@ -3,7 +3,17 @@ name: Build APK
 on:
   push:
     branches: [main]
+    # تعديل التوثيق وحده لا يصنع إصداراً جديداً يصل لكل الشاشات
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+      - ".github/workflows/pr-check.yml"
   workflow_dispatch:
+
+# بناء واحد في كل مرة، حتى لا يتداخل نشران متتاليان
+concurrency:
+  group: release-build
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -13,6 +23,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
+      # صفحة فيها خطأ صيغة تعني واجهة معطّلة على الشاشة: نوقف قبل البناء والنشر
+      - name: Check web assets syntax
+        run: node .github/scripts/check-assets.js
 
       - uses: actions/setup-java@v5
         with:
