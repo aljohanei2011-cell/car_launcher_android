@@ -311,9 +311,11 @@ class RestActivity : Activity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    override fun onResume() { super.onResume(); visible = true; hideBars(); try { video?.start() } catch (e: Exception) {} }
+    override fun onResume() { super.onResume(); visible = true; RestState.opened(this); hideBars(); try { video?.start() } catch (e: Exception) {} }
     override fun onPause() {
         super.onPause(); visible = false
+        // اختفت عن الشاشة (قائمة الأخيرة، تطبيق آخر، سحبها من الأخيرة): لا نعيد فتحها إن قُتل التطبيق بعدها
+        RestState.closed(this)
         RestGuard.pausedAt = System.currentTimeMillis()
         try { video?.pause() } catch (e: Exception) {}
         if (!isFinishing) Events.add(this, "اختفت الاستراحة الخفيفة" + (if (System.currentTimeMillis() - RestGuard.lastTouch < 4000) " بعد لمس" else " بدون لمس"))
