@@ -1177,7 +1177,7 @@ function renderOverview(){
   var body = document.getElementById('body');
   var v = natJSON('version') || {}, ch = nat('updChannel') || 'stable', m = memText(), us = natJSON('updateState') || {};
   var ov = el('div', 'ov4');
-  [['الإصدار' + (LITE ? ' (النسخة الخفيفة)' : ''), (v.name || '—').replace('-lite', '')],
+  [['الإصدار' + (LITE ? ' (الوضع الخفيف)' : ''), (v.name || '—').replace('-lite', '')],
    ['الذاكرة', m ? m.pct + '% <span style="font-size:14px;opacity:.7">من ' + m.total + ' ج</span>' : '—'],
    ['الثيم', (SKINS[prefs.skin || 'classic'] || SKINS.classic).label],
    ['المدينة', esc0(cityLabel())]].forEach(function (x) { var c = el('div', 'ovc glass'); c.innerHTML = '<span>' + x[0] + '</span><b>' + x[1] + '</b>'; ov.appendChild(c); });
@@ -1199,7 +1199,7 @@ function renderOverview(){
     if (prefs.watchdog !== false && !nat('canOverlay')) items.push(['إذن الظهور فوق التطبيقات', 'لإعادة فتح الواجهة إن أُغلقت', 't1', 'اختياري', 'السماح', function () { nat('openOverlaySettings'); }]);
     if (us.phase === 'available') items.push(['يوجد تحديث جديد (' + us.latest + ')', 'اضغط للتحديث', 't3', 'جديد', 'تحديث', function () { location.href = 'update.html'; }]);
     var mi = natJSON('memInfo') || {}, kk = nat('memKillsWeek') || 0;
-    if (!LITE && ((mi.total && mi.total < 2.3 * 1073741824) || kk >= 2)) items.push(['ننصح بالنسخة الخفيفة لهذه الشاشة', (kk >= 2 ? 'أغلق النظام الواجهة ' + kk + ' مرات هذا الأسبوع' : 'ذاكرة الشاشة محدودة') + '. إعداداتك تبقى كما هي', 't1', 'مقترح', 'التحويل', function () { location.href = 'update.html?switch=lite'; }]);
+    if (!LITE && ((mi.total && mi.total < 2.3 * 1073741824) || kk >= 2)) items.push(['ننصح بالوضع الخفيف لهذه الشاشة', (kk >= 2 ? 'أغلق النظام الواجهة ' + kk + ' مرات هذا الأسبوع' : 'ذاكرة الشاشة محدودة') + '. إعداداتك تبقى كما هي', 't1', 'مقترح', 'تشغيله', function () { location.href = 'update.html?switch=lite'; }]);
     var k = nat('memKillsWeek'); if (k > 0 && !perfOn(prefs)) items.push(['أغلق النظام الواجهة ' + k + ' مرة هذا الأسبوع', 'وضع الأداء يخفف الحمل', 't1', 'ذاكرة', 'تفعيل وضع الأداء', function () { prefs.perf = 'on'; upd(); }]);
   }
   var at = section(items.length ? 'تحتاج انتباهك' : 'كل شيء جاهز ✓');

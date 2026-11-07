@@ -44,7 +44,7 @@
         <span class="h">تحديث رفيق الطريق</span>
         <div class="row"><span class="sub">الإصدار الحالي</span><span class="big" id="cur">—</span></div>
         
-        <div class="row"><span class="sub">النسخة</span><span style="display:flex;gap:8px;align-items:center"><b id="edName"></b><button class="btn g" id="edSw"></button></span></div>
+        <div class="row"><span class="sub">الوضع الخفيف</span><span style="display:flex;gap:8px;align-items:center"><b id="edName"></b><button class="btn g" id="edSw"></button></span></div>
         <span class="note sub" id="edNote" style="font-size:15px;margin-top:-10px"></span>
         <button class="btn" id="check">بحث عن تحديث</button>
         <div class="msg" id="pend" style="display:none"></div>
@@ -102,21 +102,21 @@ function poll(){
   if (s.phase === 'available' && s.switching) { m.textContent = 'جارٍ تحميل النسخة ' + (s.edition === 'lite' ? 'الخفيفة' : 'الكاملة') + '…'; }
 }
 var switchTo = null;
-/* التحويل بين النسخة الكاملة والخفيفة (نفس التطبيق؛ تبقى الإعدادات والبيانات) */
+/* ملف واحد لكل الشاشات، و«الوضع الخفيف» يخفف المزايا الثقيلة: تلقائي (حسب ذاكرة الشاشة) أو مفعّل أو متوقف */
+var LM_NAMES = { auto: 'تلقائي', on: 'مفعّل', off: 'متوقف' };
+function lightModeNow(){ return HAS_NATIVE ? (nat('lightMode') || 'auto') : 'auto'; }
 function renderEd(){
-  $('edName').textContent = LITE ? 'الخفيفة' : 'الكاملة';
-  $('edSw').textContent = LITE ? 'التحويل للكاملة' : 'التحويل للخفيفة';
-  $('edNote').textContent = LITE ? 'الخفيفة: بدون صور الثيمات والأوامر الصوتية وOBD، ووضع الأداء دائماً. للشاشات الضعيفة.' : 'الكاملة: كل الثيمات والمزايا. على الشاشات الضعيفة جرّب الخفيفة؛ إعداداتك تبقى كما هي.';
+  var m = lightModeNow();
+  $('edName').textContent = LM_NAMES[m] + (m === 'auto' ? (LITE ? ' · يعمل الآن' : ' · لا يعمل الآن') : '');
+  $('edSw').textContent = m === 'auto' ? 'تشغيله دائماً' : m === 'on' ? 'إيقافه' : 'تلقائي';
+  $('edNote').textContent = 'الوضع الخفيف يوقف الأوامر الصوتية وOBD والتأثيرات والفيديو، ويُبقي ثيماً واحداً، للشاشات الضعيفة. «تلقائي» يشغّله إذا كانت ذاكرة الشاشة 2.3 جيجا أو أقل. إعداداتك تبقى كما هي.';
 }
-function startSwitch(to){
-  if (!HAS_NATIVE) return;
-  if (!nat('canInstall')) { askInstallPermission(); return; }
-  switchTo = to; nat('clearInstallStatus'); nat('updateSwitch', to); poll();
-}
-$('edSw').onclick = function () { startSwitch(LITE ? 'full' : 'lite'); };
+function setLight(m){ nat('setLightMode', m); location.href = 'update.html'; }
+function startSwitch(to){ setLight(to === 'lite' ? 'on' : 'off'); }
+$('edSw').onclick = function () { var m = lightModeNow(); setLight(m === 'auto' ? 'on' : m === 'on' ? 'off' : 'auto'); };
 renderEd();
 var swq = (location.search.match(/switch=(lite|full)/) || [])[1];
-if (swq && (swq === 'lite') !== LITE) setTimeout(function () { $('edSw').textContent = 'جارٍ التحضير…'; startSwitch(swq); }, 300);
+if (swq && (swq === 'lite') !== LITE) startSwitch(swq);
 $('check').onclick = function () {
   if (!HAS_NATIVE) return;
   if (!nat('canInstall')) { askInstallPermission(); return; }

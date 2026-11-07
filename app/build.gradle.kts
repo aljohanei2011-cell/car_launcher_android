@@ -26,20 +26,7 @@ android {
         buildConfig = true
     }
 
-    // نسختان من نفس الكود ونفس التطبيق (التحويل بينهما يحفظ الإعدادات):
-    // full: كاملة بكل الثيمات والمزايا — lite: خفيفة للشاشات الضعيفة (بدون صور الثيمات)
-    flavorDimensions += "edition"
-    productFlavors {
-        create("full") {
-            dimension = "edition"
-            buildConfigField("boolean", "LITE", "false")
-        }
-        create("lite") {
-            dimension = "edition"
-            versionNameSuffix = "-lite"
-            buildConfigField("boolean", "LITE", "true")
-        }
-    }
+    // ملف واحد لكل الشاشات بكل الثيمات والمزايا. الشاشات الضعيفة تعمل «بالوضع الخفيف» تلقائياً (LightMode)
 
     // مفتاح توقيع ثابت: بدونه لا يقبل أندرويد تثبيت التحديث فوق النسخة السابقة
     // المفتاح موجود فقط في بناء GitHub Actions الرسمي. بدونه (بناء محلي أو فحص Pull Request)

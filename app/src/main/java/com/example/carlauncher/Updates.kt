@@ -202,8 +202,9 @@ object Updater {
                 val code = conn.responseCode
                 if (code != 200) { set("phase" to "error", "error" to httpError(code)); return@thread }
                 val arr = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
-                val wantLite = if (switchTo != null) switchTo == "lite" else BuildConfig.LITE
-                switching = switchTo != null && wantLite != BuildConfig.LITE
+                // ملف واحد لكل الشاشات: نأخذ rafiq.apk دائماً (لم يعد هناك تحويل بين نسختين)
+                val wantLite = false
+                switching = false
                 // قناة واحدة: كل إصدار منشور نهائي ويصل فوراً
                 val beta = true
                 val now = System.currentTimeMillis()

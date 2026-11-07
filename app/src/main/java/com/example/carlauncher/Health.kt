@@ -125,6 +125,22 @@ object RestGuard {
 }
 
 /**
+ * الوضع الخفيف: ملف واحد لكل الشاشات. «تلقائي» يشغّله على الشاشات ذات الذاكرة 2.3 جيجا أو أقل،
+ * ويمكن تشغيله أو إيقافه يدوياً. يعتمد على حجم الذاكرة فقط حتى لا يتبدّل وحده من يوم لآخر.
+ */
+object LightMode {
+    private fun sp(c: Context) = c.getSharedPreferences("lightmode", Context.MODE_PRIVATE)
+    fun mode(c: Context): String = sp(c).getString("mode", "auto") ?: "auto"
+    fun setMode(c: Context, m: String) { sp(c).edit().putString("mode", if (m == "on" || m == "off") m else "auto").apply() }
+    fun weak(c: Context): Boolean = try {
+        val am = c.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi)
+        mi.totalMem in 1L until (2.3 * 1073741824).toLong()
+    } catch (e: Exception) { false }
+    fun on(c: Context): Boolean = when (mode(c)) { "on" -> true; "off" -> false; else -> weak(c) }
+}
+
+/**
  * حالة الاستراحة الأصلية عبر قتل التطبيق: المتغيرات تضيع مع قتل العملية، فنحفظ العلامات في ملف.
  * - RestActivity تكتب: opened عند الفتح، وbeat كل دقيقة وهي ظاهرة، وclosed عند الخروج السليم.
  * - check: عند بدء عملية جديدة، إن وُجدت استراحة «مفتوحة» بلا خروج سليم (ولم يُعَد تشغيل الجهاز) فقد قتل النظام التطبيق.

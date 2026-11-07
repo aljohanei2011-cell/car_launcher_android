@@ -31,6 +31,6 @@ jobs:
         with:
           gradle-version: "8.14.3"
 
-      # نسختا full وlite بتوقيع debug الافتراضي (بدون مفتاح الإصدار)
-      - name: Build debug APKs (full + lite)
-        run: gradle :app:assembleFullDebug :app:assembleLiteDebug --no-daemon --stacktrace
+      # بتوقيع debug الافتراضي (بدون مفتاح الإصدار)
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
