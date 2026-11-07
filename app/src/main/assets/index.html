@@ -633,7 +633,7 @@ card('reminders', 'تذكيراتي', function () {
   var a = activeReminders(), all = loadRems().filter(function (r) { return !r.done; });
   var h = '<div class="k-row"><span class="k-lbl">تذكيراتي</span><a class="k-sub" href="reminders.html" style="font-size:.95em">الكل (' + all.length + ')</a></div><div class="k-list" style="flex:1;margin-top:.4em">';
   if (!a.length) h += '<div class="k-sub" style="white-space:normal">' + (all.length ? 'لا يوجد تذكير الآن' : 'أضف تذكيراً من صفحة التذكيرات') + '</div>';
-  a.slice(0, 4).forEach(function (r) { h += '<div class="k-li on"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.text) + '</span><button class="k-btn" style="height:2em" onclick="dismissReminder(\'' + r.id + '\');tick()">تم</button></div>'; });
+  a.slice(0, 4).forEach(function (r) { h += '<div class="k-li on"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.text) + '</span><button class="k-btn" style="height:2em" onclick="dismissReminder(\'' + sid(r.id) + '\');tick()">تم</button></div>'; });
   return h + '</div>';
 });
 card('sysrem', 'تذكيرات اليوم', function () {
@@ -918,7 +918,7 @@ function showBanner(){
 every(function () { bannerIdx++; showBanner(); }, 8000);
 function renderRemChip(){
   var el = document.getElementById('remChip'), a = activeReminders(), html = '';
-  if (a.length) html = '<div class="chip"><span>' + esc(a[0].text) + (a.length > 1 ? ' (+' + (a.length - 1) + ')' : '') + '</span><button aria-label="تم" onclick="dismissReminder(\'' + a[0].id + '\');renderRemChip()">✓</button></div>';
+  if (a.length) html = '<div class="chip"><span>' + esc(a[0].text) + (a.length > 1 ? ' (+' + (a.length - 1) + ')' : '') + '</span><button aria-label="تم" onclick="dismissReminder(\'' + sid(a[0].id) + '\');renderRemChip()">✓</button></div>';
   else if (prefs.reminders && prefs.remPlace === 'clock') { var s = hijriReminders(); if (s.length) html = '<div class="chip" style="padding-left:16px"><span>' + esc(s[0]) + '</span></div>'; }
   if (el.innerHTML !== html) el.innerHTML = html;
 }
