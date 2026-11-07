@@ -73,6 +73,7 @@ class TripService : Service() {
     private val ticker = object : Runnable {
         override fun run() {
             TripStore.closeIfIdle(this@TripService)
+            RestState.check(this@TripService, true)
             Watchdog.relaunchIfNeeded(this@TripService)
             checkPrayerAlarms()
             NavResume.alive(this@TripService)
@@ -96,7 +97,7 @@ class TripService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startGps()
         // أعاد النظام تشغيل الخدمة بعد إغلاق التطبيق؟ نعيد فتح الواجهة إن كانت ظاهرة
-        if (intent == null) main.postDelayed({ Watchdog.relaunchIfNeeded(this) }, 2500)
+        if (intent == null) main.postDelayed({ RestState.check(this, true); Watchdog.relaunchIfNeeded(this) }, 2500)
         return START_STICKY
     }
 

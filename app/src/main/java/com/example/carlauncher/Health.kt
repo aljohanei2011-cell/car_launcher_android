@@ -125,6 +125,66 @@ object RestGuard {
 }
 
 /**
+ * حالة الاستراحة الأصلية عبر قتل التطبيق: المتغيرات تضيع مع قتل العملية، فنحفظ العلامات في ملف.
+ * - RestActivity تكتب: opened عند الفتح، وbeat كل دقيقة وهي ظاهرة، وclosed عند الخروج السليم.
+ * - check: عند بدء عملية جديدة، إن وُجدت استراحة «مفتوحة» بلا خروج سليم (ولم يُعَد تشغيل الجهاز) فقد قتل النظام التطبيق.
+ *   نسجّل ذلك (فيتوقف الفيديو ست ساعات)، ونعيد فتح الاستراحة إن كانت النبضة حديثة وطلب المستخدم «ابقَ في الاستراحة»،
+ *   وبحد أقصى 3 مرات كل 10 دقائق حتى لا تتكرر الحلقة إن استمر القتل.
+ */
+object RestState {
+    private const val FRESH_MS = 5 * 60_000L
+    private fun sp(c: Context) = c.getSharedPreferences("restwatch", Context.MODE_PRIVATE)
+
+    // الأوقات بساعة «منذ التشغيل» (elapsedRealtime) لأن ساعة شاشات السيارات تقفز عند مزامنة GPS؛ ورقم العملية يميّز العملية الحالية عن السابقة
+    fun opened(c: Context) {
+        sp(c).edit().putBoolean("open", true).putInt("pid", android.os.Process.myPid())
+            .putLong("beatE", android.os.SystemClock.elapsedRealtime()).apply()
+    }
+    fun beat(c: Context) { sp(c).edit().putLong("beatE", android.os.SystemClock.elapsedRealtime()).apply() }
+    fun closed(c: Context) { sp(c).edit().putBoolean("open", false).apply() }
+
+    /** هل قُتل التطبيق أثناء الاستراحة خلال آخر 6 ساعات؟ (يوقف الفيديو لتخفيف الحمل) */
+    fun killedRecently(c: Context): Boolean =
+        System.currentTimeMillis() - c.getSharedPreferences("watchdog", Context.MODE_PRIVATE).getLong("restKill", 0L) < 6 * 3600_000L
+
+    /** الذاكرة المتاحة قليلة: نعرض صورة بدل الفيديو (نفس حد استراحة الويب) */
+    fun lowMemory(c: Context): Boolean = try {
+        val am = c.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi)
+        mi.lowMemory || mi.availMem < 380L * 1048576
+    } catch (e: Exception) { false }
+
+    fun check(c: Context, relaunch: Boolean) {
+        try {
+            val s = sp(c)
+            if (!s.getBoolean("open", false)) return
+            // العلامة كتبتها هذه العملية نفسها (ما زالت حية): لا شيء حدث، حتى لو اختفت الاستراحة من الشاشة
+            if (s.getInt("pid", -1) == android.os.Process.myPid()) return
+            val nowE = android.os.SystemClock.elapsedRealtime()
+            val beatE = s.getLong("beatE", 0L)
+            s.edit().putBoolean("open", false).apply()
+            // إعادة تشغيل الجهاز (إطفاء السيارة) أو علامة قديمة جداً: ليست قتلاً حديثاً من النظام
+            if (beatE <= 0L || nowE < beatE || nowE - beatE > 30 * 60_000L) return
+            val ageMs = nowE - beatE
+            val age = ageMs / 1000L
+            c.getSharedPreferences("watchdog", Context.MODE_PRIVATE).edit().putLong("restKill", System.currentTimeMillis()).apply()
+            CrashLog.add(c, "rest", "أغلق النظام التطبيق أثناء الاستراحة الخفيفة (بعد $age ث من آخر نبضة). سيُستبدل الفيديو بصورة لمدة 6 ساعات.")
+            Events.add(c, "أغلق النظام التطبيق أثناء الاستراحة (بعد $age ث من آخر نبضة)")
+            if (!relaunch || ageMs > FRESH_MS || !RestGuard.enabled(c) || MainActivity.alive) return
+            val now = System.currentTimeMillis()
+            var n = s.getInt("rl_n", 0)
+            if (now - s.getLong("rl_since", 0L) > 10 * 60_000L) { n = 0; s.edit().putLong("rl_since", now).apply() }
+            if (n >= 3) { Events.add(c, "تعذّرت إعادة فتح الاستراحة: تكرر القتل 3 مرات خلال 10 دقائق"); return }
+            s.edit().putInt("rl_n", n + 1).apply()
+            Events.add(c, "إعادة فتح الاستراحة بعد قتل التطبيق")
+            c.startActivity(Intent(c, RestActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        } catch (e: Exception) {
+            CrashLog.add(c, "rest", "RestState.check: " + e)
+        }
+    }
+}
+
+/**
  * استكمال الملاحة: إذا أُطفئت السيارة والخرائط مفتوحة ثم شُغّلت خلال 30 دقيقة،
  * نفتح تطبيق الملاحة نفسه ليكمل الطريق (بعد تشغيل الشاشة فقط، مرة واحدة).
  */

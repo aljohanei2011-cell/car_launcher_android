@@ -52,6 +52,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         CrashLog.install(this)
+        // إن كان التطبيق قد قُتل أثناء الاستراحة نسجّل ذلك (ويتوقف الفيديو) دون إعادة فتحها هنا
+        RestState.check(this, false)
         alive = true
         Events.add(this, "تشغيل الواجهة" + (if (savedInstanceState != null) " (بعد إغلاقها من النظام)" else ""))
         hideSystemBars()
