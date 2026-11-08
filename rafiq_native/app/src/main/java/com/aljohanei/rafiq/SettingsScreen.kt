@@ -25,11 +25,11 @@ import java.util.Locale
  * شاشة الإعدادات الكاملة بألوان الواجهة: أقسام على اليمين وخياراتها على اليسار.
  * كل تغيير يُطبَّق فوراً. تُنشأ عند فتحها فقط وتُحذف عند إغلاقها.
  */
-class SettingsScreen(private val a: MainActivity) {
+class SettingsScreen(private val a: MainActivity, start: Int = 0) {
     private val d = Dialog(a, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen)
     private var pal = a.palNow()
-    private var section = 0
-    private val sections = arrayOf("المظهر", "العداد", "البطاقات", "القائمة السفلية", "الموقع والمدينة", "الصلاة", "التنبيهات", "عام")
+    private var section = start
+    private val sections = arrayOf("المظهر", "العداد", "البطاقات", "القائمة السفلية", "الموقع والمدينة", "الصلاة", "التنبيهات", "المباريات", "عام")
     private lateinit var content: LinearLayout
     private lateinit var side: LinearLayout
     private val T = android.R.style.Theme_DeviceDefault_Dialog_Alert
@@ -78,6 +78,7 @@ class SettingsScreen(private val a: MainActivity) {
             4 -> city()
             5 -> prayer()
             6 -> alerts()
+            7 -> matches()
             else -> general()
         }
         d.setContentView(root)
@@ -241,8 +242,32 @@ class SettingsScreen(private val a: MainActivity) {
             val key = Prefs.ALERTS[k]
             toggle(Prefs.ALERT_NAMES[k], Prefs.alertOn(key)) { Prefs.setAlert(key, it) }
         }
+        note("تنبيهات المباريات وفرقك المفضلة في قسم «المباريات».")
+    }
+
+    private fun matches() {
+        title("المباريات")
         val fav = Prefs.favTeams()
         action("الفرق المفضلة: " + (if (fav.isEmpty()) "لم تُختر" else fav.joinToString("، ")), "اختيار") { pickTeams() }
+        seg("العرض في البطاقة", listOf("كل المباريات", "فرقي فقط"), if (Prefs.matchMode == "fav") 1 else 0) {
+            Prefs.matchMode = if (it == 1) "fav" else "all"; a.forceMatches()
+        }
+        note("الأولوية: مباراة فريقك المباشرة، ثم أي مباراة مباشرة، ثم مباراة فريقك القادمة.")
+        title("البطولات")
+        note("كل بطولة تلغيها تعني طلبات أقل على الإنترنت.")
+        val on = Prefs.leagues()
+        for (i in Prefs.LEAGUE_IDS.indices) {
+            val id = Prefs.LEAGUE_IDS[i]
+            toggle(Prefs.LEAGUE_NAMES[i], id in on) { v ->
+                val s = HashSet(Prefs.leagues()); if (v) s.add(id) else s.remove(id); Prefs.setLeagues(s); a.forceMatches()
+            }
+        }
+        title("تنبيهات فرقك المفضلة")
+        toggle("تنبيهات المباريات", Prefs.alertOn("match")) { Prefs.setAlert("match", it) }
+        for (i in Prefs.MATCH_ALERTS.indices) {
+            val k = Prefs.MATCH_ALERTS[i]
+            toggle(Prefs.MATCH_ALERT_NAMES[i], Prefs.bool(k, true)) { Prefs.putBool(k, it) }
+        }
     }
 
     private fun pickTeams() {
@@ -263,14 +288,12 @@ class SettingsScreen(private val a: MainActivity) {
         action("عرض اسم المقطع في بطاقة الموسيقى", "إذن الإشعارات") { open("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS") }
         action("اجعله الواجهة الرئيسية للشاشة", "فتح") { open(Settings.ACTION_HOME_SETTINGS) }
         action("كمبيوتر الرحلة", "تصفير") { Trip.reset(); changed() }
+        title("التحديث")
         val ver = try { a.packageManager.getPackageInfo(a.packageName, 0).versionName } catch (e: Exception) { "" }
-        line("الإصدار: $ver")
-        action("تحميل آخر إصدار", "تحديث") {
-            try {
-                a.startActivity(Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://github.com/aljohanei2011-cell/car_launcher_android/releases/download/rafiq-native/rafiq-native.apk")))
-            } catch (e: Exception) { a.toast("لا يوجد متصفح") }
-        }
+        line("الإصدار المثبّت: $ver")
+        toggle("الفحص اليومي عن تحديث", Prefs.autoUpdate) { Prefs.autoUpdate = it }
+        toggle("التحميل عبر الواي فاي فقط", Prefs.wifiOnly) { Prefs.wifiOnly = it }
+        action("التحقق من وجود تحديث", "تحقق الآن") { a.checkUpdate(true) }
     }
 
     private fun open(action: String) {

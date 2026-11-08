@@ -8,9 +8,9 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-/** الطلبات الوحيدة على الإنترنت: الطقس والمباريات، وكلها تعمل فقط والشاشة ظاهرة */
+/** الطلبات الوحيدة على الإنترنت: الطقس والمباريات والتحديث، وكلها قصيرة وعند الحاجة فقط */
 object Net {
-    private fun get(url: String): JSONObject {
+    fun get(url: String): JSONObject {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 10000; conn.readTimeout = 15000
         conn.setRequestProperty("User-Agent", "RafiqNative/1")
@@ -20,9 +20,8 @@ object Net {
         } finally { conn.disconnect() }
     }
 
-    // ---------------- الطقس (Open-Meteo بدون مفتاح) ----------------
-    class Weather(val temp: Int, val desc: String, val city: String, val severe: Boolean)
-    class Day(val max: Int, val min: Int, val desc: String)
+    // ============================ الطقس (Open-Meteo بدون مفتاح) ============================
+    class Weather(val temp: Int, val desc: String, val city: String, val severe: Boolean, val pm10: Int)
 
     fun desc(code: Int): String = when (code) {
         0 -> "صافٍ"
@@ -38,6 +37,20 @@ object Net {
     }
     private fun severe(code: Int) = code == 65 || code == 67 || code == 82 || code >= 95
 
+    fun dustLevel(pm10: Int): String = when {
+        pm10 < 0 -> ""
+        pm10 < 50 -> "جيد"
+        pm10 < 150 -> "متوسط"
+        pm10 < 300 -> "غبار"
+        else -> "غبار شديد"
+    }
+
+    private fun pm10(lat: Double, lon: Double): Int = try {
+        val j = get(String.format(Locale.US,
+            "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.3f&longitude=%.3f&current=pm10", lat, lon))
+        Math.round(j.getJSONObject("current").getDouble("pm10")).toInt()
+    } catch (e: Exception) { -1 }
+
     fun weather(lat: Double, lon: Double, city: String): Weather? {
         return try {
             val j = get(String.format(Locale.US,
@@ -45,23 +58,68 @@ object Net {
             val cur = j.getJSONObject("current")
             val t = Math.round(cur.getDouble("temperature_2m")).toInt()
             val code = cur.optInt("weather_code", -1)
-            Weather(t, desc(code), city, severe(code))
+            Weather(t, desc(code), city, severe(code), pm10(lat, lon))
         } catch (e: Exception) { null }
     }
 
-    /** توقعات 3 أيام: طلب واحد عند الضغط على بطاقة الطقس فقط */
-    fun forecast(lat: Double, lon: Double): List<Day> {
-        return try {
-            val j = get(String.format(Locale.US,
-                "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f&daily=temperature_2m_max,temperature_2m_min,weather_code&forecast_days=3&timezone=auto", lat, lon))
-            val d = j.getJSONObject("daily")
-            val mx = d.getJSONArray("temperature_2m_max"); val mn = d.getJSONArray("temperature_2m_min"); val wc = d.getJSONArray("weather_code")
-            List(mx.length()) { Day(Math.round(mx.getDouble(it)).toInt(), Math.round(mn.getDouble(it)).toInt(), desc(wc.optInt(it, -1))) }
-        } catch (e: Exception) { emptyList() }
+    class Hour(val time: String, val temp: Int, val rain: Int)
+    class Day(val day: String, val max: Int, val min: Int, val desc: String, val rain: Int)
+    class Full(
+        val temp: Int, val feels: Int, val humidity: Int, val wind: Int, val windDir: String, val desc: String,
+        val hours: List<Hour>, val days: List<Day>, val sunrise: String, val sunset: String, val uv: Int,
+        val pm10: Int, val wave: Double
+    )
+
+    private fun dir(deg: Int): String {
+        val n = arrayOf("شمالية", "شمالية شرقية", "شرقية", "جنوبية شرقية", "جنوبية", "جنوبية غربية", "غربية", "شمالية غربية")
+        return n[((deg + 22) % 360) / 45]
     }
 
-    // ---------------- المباريات (بيانات ESPN العامة) ----------------
-    class Match(val league: String, val home: String, val away: String, val hs: String, val aws: String,
+    /** شاشة الطقس: طلب واحد يجمع الآن والساعات والأيام، وطلب صغير للغبار، وللبحر في المدن الساحلية فقط */
+    fun full(lat: Double, lon: Double, coastal: Boolean): Full? {
+        return try {
+            val j = get(String.format(Locale.US,
+                "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f" +
+                    "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code" +
+                    "&hourly=temperature_2m,precipitation_probability&forecast_hours=12" +
+                    "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,sunrise,sunset" +
+                    "&forecast_days=5&timezone=auto", lat, lon))
+            val c = j.getJSONObject("current")
+            val hr = j.getJSONObject("hourly")
+            val ht = hr.getJSONArray("time"); val htemp = hr.getJSONArray("temperature_2m"); val hrain = hr.optJSONArray("precipitation_probability")
+            val hours = List(ht.length()) {
+                Hour(ht.getString(it).takeLast(5), Math.round(htemp.getDouble(it)).toInt(), hrain?.optInt(it, 0) ?: 0)
+            }
+            val d = j.getJSONObject("daily")
+            val dt = d.getJSONArray("time"); val mx = d.getJSONArray("temperature_2m_max"); val mn = d.getJSONArray("temperature_2m_min")
+            val wc = d.getJSONArray("weather_code"); val pr = d.optJSONArray("precipitation_probability_max")
+            val dayNames = arrayOf("الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت")
+            val inF = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val days = List(dt.length()) {
+                val cal = java.util.Calendar.getInstance()
+                try { cal.time = inF.parse(dt.getString(it)) ?: Date() } catch (e: Exception) {}
+                val name = when (it) { 0 -> "اليوم"; 1 -> "غداً"; else -> dayNames[cal.get(java.util.Calendar.DAY_OF_WEEK) - 1] }
+                Day(name, Math.round(mx.getDouble(it)).toInt(), Math.round(mn.getDouble(it)).toInt(), desc(wc.optInt(it, -1)), pr?.optInt(it, 0) ?: 0)
+            }
+            var wave = -1.0
+            if (coastal) {
+                try {
+                    val m = get(String.format(Locale.US, "https://marine-api.open-meteo.com/v1/marine?latitude=%.3f&longitude=%.3f&current=wave_height", lat, lon))
+                    wave = m.getJSONObject("current").optDouble("wave_height", -1.0)
+                } catch (e: Exception) {}
+            }
+            Full(
+                Math.round(c.getDouble("temperature_2m")).toInt(), Math.round(c.getDouble("apparent_temperature")).toInt(),
+                c.optInt("relative_humidity_2m"), Math.round(c.optDouble("wind_speed_10m")).toInt(), dir(c.optInt("wind_direction_10m")),
+                desc(c.optInt("weather_code", -1)), hours, days,
+                d.getJSONArray("sunrise").getString(0).takeLast(5), d.getJSONArray("sunset").getString(0).takeLast(5),
+                Math.round(d.getJSONArray("uv_index_max").optDouble(0, 0.0)).toInt(), pm10(lat, lon), if (wave.isNaN()) -1.0 else wave
+            )
+        } catch (e: Exception) { null }
+    }
+
+    // ============================ المباريات (بيانات ESPN العامة) ============================
+    class Match(val code: String, val league: String, val home: String, val away: String, val hs: String, val aws: String,
                 val state: String, val clock: String, val time: Long)
 
     class MatchCard(val main: Match?, val next: Match?, val all: List<Match>) {
@@ -69,29 +127,29 @@ object Net {
     }
 
     private const val BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/"
-    // الترتيب يحدد الأولوية: الدوري السعودي أولاً ثم الأوروبية
-    private val LEAGUES = linkedMapOf(
-        "ksa.1" to "الدوري السعودي", "uefa.champions" to "دوري أبطال أوروبا", "eng.1" to "الدوري الإنجليزي",
-        "esp.1" to "الدوري الإسباني", "ita.1" to "الدوري الإيطالي", "ger.1" to "الدوري الألماني", "fra.1" to "الدوري الفرنسي"
-    )
 
     private val AR = linkedMapOf(
         "hilal" to "الهلال", "nassr" to "النصر", "ittihad" to "الاتحاد", "ahli" to "الأهلي", "shabab" to "الشباب",
         "ettifaq" to "الاتفاق", "taawoun" to "التعاون", "fateh" to "الفتح", "fayha" to "الفيحاء", "khaleej" to "الخليج",
         "riyadh" to "الرياض", "okhdood" to "الأخدود", "akhdoud" to "الأخدود", "damac" to "ضمك", "qadsiah" to "القادسية",
         "qadisiya" to "القادسية", "kholood" to "الخلود", "orobah" to "العروبة", "wehda" to "الوحدة", "raed" to "الرائد",
-        "hazem" to "الحزم", "hazm" to "الحزم", "najma" to "النجمة", "neom" to "نيوم",
+        "hazem" to "الحزم", "hazm" to "الحزم", "najma" to "النجمة", "neom" to "نيوم", "jeddah" to "جدة", "abha" to "أبها",
         "real madrid" to "ريال مدريد", "atletico" to "أتلتيكو مدريد", "barcelona" to "برشلونة", "sevilla" to "إشبيلية",
+        "villarreal" to "فياريال", "real sociedad" to "ريال سوسيداد", "athletic" to "أتلتيك بلباو", "girona" to "جيرونا",
         "manchester city" to "مانشستر سيتي", "manchester united" to "مانشستر يونايتد", "liverpool" to "ليفربول",
         "arsenal" to "آرسنال", "chelsea" to "تشيلسي", "tottenham" to "توتنهام", "newcastle" to "نيوكاسل",
-        "bayern" to "بايرن ميونخ", "dortmund" to "دورتموند", "leverkusen" to "ليفركوزن",
-        "paris saint" to "باريس سان جيرمان", "marseille" to "مارسيليا", "juventus" to "يوفنتوس", "inter" to "إنتر",
-        "ac milan" to "ميلان", "napoli" to "نابولي", "roma" to "روما"
+        "aston villa" to "أستون فيلا", "west ham" to "وست هام", "everton" to "إيفرتون",
+        "bayern" to "بايرن ميونخ", "dortmund" to "دورتموند", "leverkusen" to "ليفركوزن", "leipzig" to "لايبزيغ",
+        "paris saint" to "باريس سان جيرمان", "marseille" to "مارسيليا", "monaco" to "موناكو", "lyon" to "ليون", "lille" to "ليل",
+        "juventus" to "يوفنتوس", "inter" to "إنتر", "ac milan" to "ميلان", "napoli" to "نابولي", "roma" to "روما",
+        "lazio" to "لاتسيو", "atalanta" to "أتالانتا", "benfica" to "بنفيكا", "porto" to "بورتو", "sporting" to "سبورتنغ",
+        "ajax" to "أياكس", "psv" to "آيندهوفن", "celtic" to "سيلتك", "galatasaray" to "غلطة سراي"
     )
+
     /** أسماء الفرق التي يمكن اختيارها مفضّلة */
     val TEAM_CHOICES: List<String> get() = AR.values.distinct()
 
-    private fun ar(en: String): String {
+    fun ar(en: String): String {
         val l = en.lowercase(Locale.US)
         for ((k, v) in AR) if (l.contains(k)) return v
         return en
@@ -108,9 +166,13 @@ object Net {
         return 0L
     }
 
-    fun matches(): MatchCard {
+    fun leagueName(code: String): String = Prefs.LEAGUE_NAMES.getOrElse(Prefs.LEAGUE_IDS.indexOf(code)) { code }
+
+    /** مباريات البطولات المختارة (الترتيب يحدد الأولوية: السعودي أولاً) */
+    fun fetchAll(leagues: Collection<String>): List<Match> {
         val all = ArrayList<Match>()
-        for ((code, name) in LEAGUES) {
+        for (code in Prefs.LEAGUE_IDS) {
+            if (code !in leagues) continue
             try {
                 val evs = get(BASE + code + "/scoreboard").optJSONArray("events") ?: continue
                 for (i in 0 until evs.length()) {
@@ -125,17 +187,57 @@ object Net {
                         val n = ar(t.optJSONObject("team")?.optString("displayName") ?: "")
                         if (t.optString("homeAway") == "home") { h = n; hs = t.optString("score") } else { a = n; aws = t.optString("score") }
                     }
-                    all.add(Match(name, h, a, hs, aws, state, st?.optString("displayClock") ?: "", parseDate(e.optString("date"))))
+                    all.add(Match(code, leagueName(code), h, a, hs, aws, state, st?.optString("displayClock") ?: "", parseDate(e.optString("date"))))
                 }
             } catch (e: Exception) {}
         }
+        return all
+    }
+
+    /** البطاقة: مباراة فريقك المباشرة، ثم أي مباراة مباشرة، ثم مباراة فريقك القادمة */
+    fun matches(): MatchCard {
+        val fav = Prefs.favTeams()
+        val favOnly = Prefs.matchMode == "fav"
+        val all = fetchAll(Prefs.leagues())
+        fun isFav(m: Match) = m.home in fav || m.away in fav
+        val pool = if (favOnly) all.filter { isFav(it) } else all
         val now = System.currentTimeMillis()
-        val live = all.firstOrNull { it.state == "in" }
-        val upcoming = all.filter { it.state == "pre" && it.time > now - 600000 }.sortedBy { it.time }
-        val recent = all.filter { it.state == "post" && now - it.time < 4 * 3600000L }.sortedByDescending { it.time }
-        val main = live ?: recent.firstOrNull() ?: upcoming.firstOrNull()
+        val upcoming = pool.filter { it.state == "pre" && it.time > now - 600000 }.sortedBy { it.time }
+        val recent = pool.filter { it.state == "post" && now - it.time < 4 * 3600000L }.sortedByDescending { it.time }
+        val main = pool.firstOrNull { it.state == "in" && isFav(it) }
+            ?: pool.firstOrNull { it.state == "in" }
+            ?: upcoming.firstOrNull { isFav(it) }
+            ?: recent.firstOrNull { isFav(it) }
+            ?: recent.firstOrNull() ?: upcoming.firstOrNull()
         val next = upcoming.firstOrNull { it !== main }
         return MatchCard(main, next, all)
+    }
+
+    class Row(val rank: Int, val team: String, val played: Int, val points: Int)
+
+    /** ترتيب الدوري: طلب واحد عند الطلب فقط */
+    fun standings(code: String): List<Row> {
+        return try {
+            val j = get("https://site.api.espn.com/apis/v2/sports/soccer/$code/standings")
+            val ch = j.optJSONArray("children")?.optJSONObject(0) ?: j
+            val en = ch.optJSONObject("standings")?.optJSONArray("entries") ?: return emptyList()
+            val out = ArrayList<Row>()
+            for (i in 0 until en.length()) {
+                val e = en.optJSONObject(i) ?: continue
+                var pts = 0; var gp = 0; var rank = i + 1
+                val st = e.optJSONArray("stats")
+                if (st != null) for (k in 0 until st.length()) {
+                    val s = st.optJSONObject(k) ?: continue
+                    when (s.optString("name")) {
+                        "points" -> pts = s.optInt("value")
+                        "gamesPlayed" -> gp = s.optInt("value")
+                        "rank" -> rank = s.optInt("value", rank)
+                    }
+                }
+                out.add(Row(rank, ar(e.optJSONObject("team")?.optString("displayName") ?: ""), gp, pts))
+            }
+            out.sortedBy { it.rank }
+        } catch (e: Exception) { emptyList() }
     }
 
     fun hhmm(t: Long): String = SimpleDateFormat("HH:mm", Locale.US).format(Date(t))

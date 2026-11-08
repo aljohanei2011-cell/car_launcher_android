@@ -285,11 +285,11 @@ class MainActivity : Activity() {
                 card = shell(c, R.drawable.ic_clock, false)
             }
             "weather" -> {
-                c.addView(head("حالة الطقس · اضغط للتوقعات"))
+                c.addView(head("حالة الطقس · اضغط للتفاصيل"))
                 wxV = Ui.tv(this, 38f, pal.text, true); c.addView(wxV, Ui.lin(Ui.MATCH, 44))
                 wxS = Ui.tv(this, 15f, pal.muted); c.addView(wxS, Ui.lin(Ui.MATCH, 22))
                 card = shell(c, R.drawable.ic_weather, true)
-                card.setOnClickListener { forecast() }
+                card.setOnClickListener { Panels.weather(this, pal) }
             }
             "trip" -> {
                 c.addView(head("كمبيوتر الرحلة"))
@@ -313,6 +313,7 @@ class MainActivity : Activity() {
                 mV = Ui.tv(this, 23f, pal.text, true); c.addView(mV, Ui.lin(Ui.MATCH, 36))
                 mS = Ui.tv(this, 15f, pal.muted); c.addView(mS, Ui.lin(Ui.MATCH, 22))
                 card = shell(c, R.drawable.ic_ball, false)
+                card.setOnClickListener { Panels.matchesDay(this, pal) }
             }
             "music" -> {
                 muHead = head("الموسيقى"); c.addView(muHead)
@@ -345,6 +346,7 @@ class MainActivity : Activity() {
                 qr.addView(Ui.tv(this, 15f, pal.muted).apply { text = "القبلة" }, Ui.lin(Ui.WRAP, 24))
                 c.addView(qr, Ui.lin(Ui.MATCH, 26))
                 card = shell(c, R.drawable.ic_prayer, false)
+                card.setOnClickListener { Panels.prayer(this, pal) { if (!locked()) SettingsScreen(this, 5).show() } }
             }
             "azkar" -> {
                 azHead = head("الأذكار"); c.addView(azHead)
@@ -534,22 +536,6 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun forecast() {
-        val lat = Loc.lat(); val lon = Loc.lon(); val city = Loc.name()
-        toast("جارٍ تحميل التوقعات…")
-        Thread {
-            val days = Net.forecast(lat, lon)
-            h.post {
-                if (days.isEmpty()) { toast("تعذّر تحميل التوقعات. تحقق من الإنترنت"); return@post }
-                val names = arrayOf("اليوم", "غداً", "بعد غد")
-                val sb = StringBuilder()
-                for (i in days.indices) sb.append("${names.getOrElse(i) { "" }}: ${days[i].max}° / ${days[i].min}°  ${days[i].desc}\n")
-                AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle("توقعات $city").setMessage(sb.toString().trim()).setPositiveButton("إغلاق", null).show()
-            }
-        }.start()
-    }
-
     /** إغلاق التطبيقات التي تعمل في الخلفية لتحرير الذاكرة */
     private fun closeAll() {
         val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -571,6 +557,39 @@ class MainActivity : Activity() {
     }
 
     fun forceWeather() { weatherAt = 0L }
+    fun forceMatches() { matchesAt = 0L; matches = null }
+
+    // ============================== التحديث ==============================
+    private var updBusy = false
+
+    /** فحص التحديث: يدوي من الإعدادات، أو يومي تلقائي */
+    fun checkUpdate(manual: Boolean) {
+        if (updBusy) return
+        if (!manual && (moving() || (Prefs.wifiOnly && !Updater.onWifi(this)))) return
+        updBusy = true
+        if (manual) toast("جارٍ التحقق…")
+        Thread {
+            val info = Updater.check(applicationContext)
+            h.post {
+                updBusy = false
+                if (info == null) { if (manual) toast("لديك آخر إصدار"); return@post }
+                val mb = String.format(Locale.US, "%.1f", info.size / 1048576.0)
+                alert(Alert(pal.accent, R.drawable.g_bell, true, "تحديث متاح: الإصدار ${info.build} ($mb ميجا)",
+                    "اضغط للتحديث الآن · " + info.notes, false) { installUpdate(info) })
+            }
+        }.start()
+    }
+
+    private fun installUpdate(info: Updater.Info) {
+        if (moving()) { toast("التحديث غير متاح أثناء القيادة"); return }
+        if (Prefs.wifiOnly && !Updater.onWifi(this)) { toast("التحميل عبر الواي فاي فقط مفعّل في الإعدادات"); return }
+        if (!Updater.canInstall(this)) { toast("اسمح للتطبيق بتثبيت التحديثات ثم اضغط التحديث مرة أخرى"); Updater.askPermission(this); return }
+        toast("جارٍ تحميل التحديث…")
+        Thread {
+            val err = Updater.install(applicationContext, info)
+            h.post { if (err != null) toast(err) }
+        }.start()
+    }
 
     // ============================== شريط التنبيهات ==============================
 
@@ -821,6 +840,12 @@ class MainActivity : Activity() {
 
     private fun refreshMatches() {
         val m = matches?.main
+        if (m == null && matches == null && Prefs.str("mcV").isNotEmpty()) {
+            // آخر نتيجة محفوظة تظهر فوراً قبل الاتصال
+            Ui.setT(mHead, Prefs.str("mcH")); Ui.setT(mV, Prefs.str("mcV")); Ui.setT(mS, Prefs.str("mcS"))
+            mBadge.visibility = View.VISIBLE; Ui.setT(mBadge, "آخر تحديث"); mBadge.setTextColor(pal.muted)
+            return
+        }
         if (m == null) {
             Ui.setT(mHead, "المباريات"); mBadge.visibility = View.GONE
             Ui.setT(mV, if (matchesAt == 0L) "جارٍ التحميل…" else "لا توجد مباريات قريبة")
@@ -836,23 +861,31 @@ class MainActivity : Activity() {
         Ui.setT(mV, if (m.state == "pre") "${m.home} × ${m.away}" else "${m.home} ${m.hs} — ${m.aws} ${m.away}")
         val n = matches?.next
         Ui.setT(mS, if (n != null) "قادم: ${n.home} × ${n.away} ${Net.hhmm(n.time)}" else "")
+        Prefs.putStr("mcH", mHead.text.toString()); Prefs.putStr("mcV", mV.text.toString()); Prefs.putStr("mcS", mS.text.toString())
     }
 
-    /** تنبيهات فرقك المفضلة: البداية والأهداف */
+    /** تنبيهات فرقك المفضلة: قبل ربع ساعة، البداية، الأهداف، النهاية */
+    private val preMatchShown = HashSet<String>()
     private fun matchAlerts(card: Net.MatchCard) {
         val fav = Prefs.favTeams()
         if (fav.isEmpty() || !Prefs.alertOn("match")) return
+        val t = System.currentTimeMillis()
         for (m in card.all) {
             if (m.home !in fav && m.away !in fav) continue
             val key = m.home + "|" + m.away
-            val now = m.state + ":" + m.hs + "-" + m.aws
+            val cur = m.state + ":" + m.hs + "-" + m.aws
+            if (m.state == "pre" && m.time - t in 1..(15 * 60000L) && Prefs.bool("m_pre", true) && preMatchShown.add(key)) {
+                alert(Alert(pal.ok, R.drawable.ic_ball, false, "بعد ربع ساعة: ${m.home} × ${m.away}", m.league + " · " + Net.hhmm(m.time), true))
+            }
             val before = lastScores[key]
-            lastScores[key] = now
-            if (before == null) continue
+            lastScores[key] = cur
+            if (before == null || before == cur) continue
             if (before.startsWith("pre") && m.state == "in") {
-                alert(Alert(pal.ok, R.drawable.ic_ball, false, "بدأت المباراة", "${m.home} × ${m.away} · ${m.league}", true))
-            } else if (m.state == "in" && before != now) {
-                alert(Alert(pal.ok, R.drawable.ic_ball, false, "هدف! ${m.home} ${m.hs} — ${m.aws} ${m.away}", "الدقيقة ${m.clock} · ${m.league}", true))
+                if (Prefs.bool("m_start", true)) alert(Alert(pal.ok, R.drawable.ic_ball, false, "بدأت المباراة", "${m.home} × ${m.away} · ${m.league}", true))
+            } else if (m.state == "post" && !before.startsWith("post")) {
+                if (Prefs.bool("m_final", true)) alert(Alert(pal.ok, R.drawable.ic_ball, false, "النتيجة النهائية: ${m.home} ${m.hs} — ${m.aws} ${m.away}", m.league, true))
+            } else if (m.state == "in") {
+                if (Prefs.bool("m_goal", true)) alert(Alert(pal.ok, R.drawable.ic_ball, false, "هدف! ${m.home} ${m.hs} — ${m.aws} ${m.away}", "الدقيقة ${m.clock} · ${m.league}", true))
             }
         }
     }
@@ -863,6 +896,10 @@ class MainActivity : Activity() {
     }
 
     private fun maybeFetch(now: Long) {
+        if (Prefs.autoUpdate && now - Prefs.long("updChecked") > 24 * 3600000L && now - Prefs.long("updTried") > 3600000L) {
+            Prefs.putLong("updTried", now)
+            checkUpdate(false)
+        }
         if (!weatherBusy && now - weatherAt > 30 * 60000L) {
             weatherBusy = true
             val lat = Loc.lat(); val lon = Loc.lon(); val city = Loc.name()
@@ -877,6 +914,14 @@ class MainActivity : Activity() {
                         if (w.severe && Prefs.alertOn("weather") && Prefs.str("wxDay") != today) {
                             Prefs.putStr("wxDay", today)
                             alert(Alert(pal.amber, R.drawable.ic_weather, false, "تنبيه طقس: ${w.desc}", "${w.city} · قُد بحذر", true))
+                        }
+                        if (w.pm10 >= 300 && Prefs.alertOn("dust") && Prefs.str("dustDay") != today) {
+                            Prefs.putStr("dustDay", today)
+                            alert(Alert(pal.amber, R.drawable.ic_weather, false, "غبار شديد", "${w.city} · الرؤية قد تنخفض، قُد بحذر", true))
+                        }
+                        if (w.temp >= 45 && Prefs.alertOn("heat") && Prefs.str("heatDay") != today) {
+                            Prefs.putStr("heatDay", today)
+                            alert(Alert(pal.danger, R.drawable.ic_weather, false, "حرارة عالية ${w.temp}°", "${w.city} · اشرب الماء وتجنّب ترك أحد في السيارة", true))
                         }
                     }
                     refreshWeather()

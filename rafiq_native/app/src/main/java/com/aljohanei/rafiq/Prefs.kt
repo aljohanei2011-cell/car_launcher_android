@@ -89,9 +89,32 @@ object Prefs {
         set(v) = putInt("preMin", v)
 
     // مفاتيح أنواع التنبيهات
-    val ALERTS = listOf("prayer", "pre", "speed", "rest", "match", "weather", "dua", "friday", "sound")
+    val ALERTS = listOf("prayer", "pre", "speed", "rest", "match", "weather", "dust", "heat", "dua", "friday", "sound")
     val ALERT_NAMES = listOf("الأذان", "قبل الصلاة", "تجاوز السرعة", "الاستراحة", "المباريات (فرقك المفضلة)",
-        "الطقس الشديد", "الأدعية (الركوب والسفر)", "تذكير الجمعة", "صوت التنبيهات")
+        "الطقس الشديد", "الغبار الشديد", "الحرارة فوق 45°", "الأدعية (الركوب والسفر)", "تذكير الجمعة", "صوت التنبيهات")
+
+    // المباريات
+    val LEAGUE_IDS = listOf("ksa.1", "ksa.kings.cup", "afc.champions", "uefa.champions", "eng.1", "esp.1", "ita.1", "ger.1", "fra.1")
+    val LEAGUE_NAMES = listOf("الدوري السعودي", "كأس الملك", "أبطال آسيا", "أبطال أوروبا", "الدوري الإنجليزي",
+        "الدوري الإسباني", "الدوري الإيطالي", "الدوري الألماني", "الدوري الفرنسي")
+    fun leagues(): Set<String> = p().getStringSet("leagues", null) ?: LEAGUE_IDS.toSet()
+    fun setLeagues(s: Set<String>) { p().edit().putStringSet("leagues", HashSet(s)).apply() }
+    /** all = كل المباريات، fav = فرقي المفضلة فقط */
+    var matchMode: String
+        get() = str("matchMode", "all")
+        set(v) = putStr("matchMode", v)
+    val MATCH_ALERTS = listOf("m_pre", "m_start", "m_goal", "m_final")
+    val MATCH_ALERT_NAMES = listOf("قبل المباراة بربع ساعة", "البداية", "الأهداف", "النتيجة النهائية")
+
+    // التحديث
+    var autoUpdate: Boolean
+        get() = bool("autoUpdate", true)
+        set(v) = putBool("autoUpdate", v)
+    var wifiOnly: Boolean
+        get() = bool("wifiOnly", false)
+        set(v) = putBool("wifiOnly", v)
+    fun long(k: String): Long = p().getLong(k, 0L)
+    fun putLong(k: String, v: Long) { p().edit().putLong(k, v).apply() }
     fun alertOn(k: String): Boolean = bool("a_$k", true)
     fun setAlert(k: String, v: Boolean) = putBool("a_$k", v)
     var prayerAlerts: Boolean

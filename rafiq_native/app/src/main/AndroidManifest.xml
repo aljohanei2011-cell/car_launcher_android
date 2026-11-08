@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <!-- زر «إغلاق الكل»: إغلاق التطبيقات التي تعمل في الخلفية -->
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <!-- التحديث من داخل اللانشر (أندرويد يطلب تأكيدك في كل مرة) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <queries>
         <intent>
@@ -72,6 +74,9 @@
         <!-- تنبيه الصلاة: منبّه واحد للصلاة القادمة فقط -->
         <receiver
             android:name=".PrayerAlarm"
+            android:exported="false" />
+        <receiver
+            android:name=".InstallReceiver"
             android:exported="false" />
     </application>
 </manifest>
