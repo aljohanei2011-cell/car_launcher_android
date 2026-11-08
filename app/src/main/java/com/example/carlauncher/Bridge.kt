@@ -589,6 +589,8 @@ class Bridge(private val act: MainActivity) {
     @JavascriptInterface fun matchesState(): String = Matches.state(ctx)
     @JavascriptInterface fun matchesTeams(league: String): String = Matches.teams(ctx, league)
     @JavascriptInterface fun matchesTeamsFetch(league: String) = Matches.fetchTeams(ctx, league)
+    /** البطاقة والصفحة تطلبان التحميل بنفسيهما، فلا يعتمد على خدمة الخلفية (لا تعمل بدون إذن الموقع) */
+    @JavascriptInterface fun matchesTick() { try { Matches.tick(ctx) } catch (e: Exception) {} }
     @JavascriptInterface fun matchesRefresh() { Matches.setConfig(ctx, Matches.config(ctx).toString()); Matches.tick(ctx) }
     @JavascriptInterface fun clearCrashLog() = CrashLog.clear(ctx)
     @JavascriptInterface fun canOverlay(): Boolean = Watchdog.canOverlay(ctx)
