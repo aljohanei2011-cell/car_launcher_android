@@ -605,7 +605,7 @@ card('matches', 'المباريات', function (o) {
   var head = '<a href="matches.html" class="k-row" style="color:inherit;text-decoration:none"><span class="k-lbl">المباريات</span>';
   if (!HAS_NATIVE || !m.cfg.on || !ids.length) return head + '</a><div class="k-sub" style="white-space:normal;flex:1">اختر فريقك لتظهر مبارياته ونتائجه هنا</div><a class="k-btn" style="align-self:flex-start" href="matches.html">اختيار الفريق</a>';
   var e = m.live || m.next || m.last;
-  if (!e) return head + '</a><div class="k-sub" style="white-space:normal;flex:1">' + (m.st.error ? 'يحتاج إنترنت لتحميل المواعيد' : m.st.at ? 'لا توجد مباراة خلال 3 أسابيع' : 'جارٍ تحميل المواعيد…') + '</div>';
+  if (!e) return head + '</a><div class="k-sub" style="white-space:normal;flex:1">' + (m.st.error ? 'تعذّر تحميل المواعيد، تُعاد المحاولة تلقائياً' : m.st.at ? 'لا توجد مباراة خلال 3 أسابيع' : 'جارٍ تحميل المواعيد…') + '</div>';
   var mid, pill;
   function sc(sz){ return '<div class="k-big" style="font-size:' + sz + ';display:flex;gap:.25em;white-space:nowrap;direction:rtl"><span>' + esc(e.home.score || '0') + '</span><span style="opacity:.6">-</span><span>' + esc(e.away.score || '0') + '</span></div>'; }
   if (e.state === 'in') { mid = sc('2.6em'); pill = '<span style="background:rgba(255,80,80,.25);color:#FF9A9A;border-radius:10px;padding:.15em .6em;font-size:.85em">● مباشر ' + esc(e.clock || '') + '</span>'; }

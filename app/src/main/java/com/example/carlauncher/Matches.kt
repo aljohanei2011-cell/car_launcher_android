@@ -59,7 +59,12 @@ object Matches {
         } finally { conn.disconnect() }
     }
 
-    private fun online(c: Context) = try { StatusInfo.read(c).optBoolean("internet") } catch (e: Exception) { false }
+    /** يكفي وجود شبكة فيها إنترنت: علامة «متحقَّق منه» (VALIDATED) تفشل في كثير من شاشات السيارات
+     *  ونقاط اتصال الجوال رغم أن الإنترنت يعمل، فكانت المواعيد لا تُحمَّل أبداً */
+    private fun online(c: Context) = try {
+        val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    } catch (e: Exception) { true }
 
     /** قائمة فرق بطولة لاختيار فريقك */
     fun fetchTeams(c: Context, league: String) {
@@ -145,8 +150,10 @@ object Matches {
             for (k in 0 until prev.length()) { val p = prev.getJSONObject(k); if (p.optString("id") == e.optString("id") && p.optString("state") == "in" && e.optString("state") == "pre") arr.put(i, p) }
         }
         val st = JSONObject().put("at", now).put("events", arr)
-        if (out.isEmpty() && err.isNotEmpty()) st.put("error", err)
-        sp(c).edit().putString("state", st.toString()).putLong("schedAt", now).apply()
+        val failed = out.isEmpty() && err.isNotEmpty()
+        if (failed) { st.put("error", err); Events.add(c, "مباريات: تعذّر تحميل المواعيد ($err)، إعادة المحاولة بعد 10 دقائق") }
+        // عند الفشل نعيد المحاولة بعد 10 دقائق بدل 6 ساعات
+        sp(c).edit().putString("state", st.toString()).putLong("schedAt", if (failed) now - 6 * 3600_000L + 10 * 60_000L else now).apply()
     }
 
     private fun teamIds(cfg: JSONObject): Set<String> {
@@ -202,6 +209,7 @@ object Matches {
                     if (n != null) { compare(c, cfg, live, n); replace(c, n) }
                 }
             } catch (e: Exception) {
+                Events.add(c, "مباريات: " + (e.message ?: e.toString()))
             } finally { busy = false }
         }
     }
