@@ -28,7 +28,7 @@ object Azkar {
 
     /** الصباح من الفجر حتى العصر، والمساء بعده */
     fun isMorning(now: Long): Boolean {
-        val t = Astro.prayerMillis(java.util.Calendar.getInstance().apply { timeInMillis = now }, Prefs.lat, Prefs.lon)
+        val t = Astro.prayerMillis(java.util.Calendar.getInstance().apply { timeInMillis = now }, Loc.lat(), Loc.lon())
         return now >= t[0] && now < t[3]
     }
 

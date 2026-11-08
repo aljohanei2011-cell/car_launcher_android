@@ -65,4 +65,22 @@ object Ui {
     fun gap(c: Context, w: Int, h: Int): View = View(c).apply { layoutParams = LinearLayout.LayoutParams(w, h) }
 
     fun setT(t: TextView, s: CharSequence) { if (t.text.toString() != s.toString()) t.text = s }
+
+    /** إطار بمقاس التصميم 1280×720 يُكبَّر أو يُصغَّر ليملأ الشاشة. يعيد [الجذر، إطار التصميم] */
+    fun scaled(c: Context, bg: Int): Pair<FrameLayout, FrameLayout> {
+        val root = FrameLayout(c).apply { setBackgroundColor(bg) }
+        val design = FrameLayout(c).apply { layoutParams = FrameLayout.LayoutParams(1280, 720); layoutDirection = View.LAYOUT_DIRECTION_LTR }
+        root.addView(design)
+        root.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
+            val w = r - l; val hh = b - t
+            if (w > 0 && hh > 0) {
+                val s = minOf(w / 1280f, hh / 720f)
+                design.pivotX = 0f; design.pivotY = 0f
+                design.scaleX = s; design.scaleY = s
+                design.translationX = (w - 1280 * s) / 2f
+                design.translationY = (hh - 720 * s) / 2f
+            }
+        }
+        return Pair(root, design)
+    }
 }

@@ -1,7 +1,5 @@
 package com.aljohanei.rafiq
 
-import android.content.Context
-import android.location.Geocoder
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -23,9 +21,10 @@ object Net {
     }
 
     // ---------------- الطقس (Open-Meteo بدون مفتاح) ----------------
-    class Weather(val temp: Int, val desc: String, val city: String)
+    class Weather(val temp: Int, val desc: String, val city: String, val severe: Boolean)
+    class Day(val max: Int, val min: Int, val desc: String)
 
-    private fun desc(code: Int): String = when (code) {
+    fun desc(code: Int): String = when (code) {
         0 -> "صافٍ"
         1, 2 -> "غائم جزئياً"
         3 -> "غائم"
@@ -37,37 +36,35 @@ object Net {
         in 95..99 -> "عاصفة رعدية"
         else -> ""
     }
+    private fun severe(code: Int) = code == 65 || code == 67 || code == 82 || code >= 95
 
-    fun weather(c: Context, lat: Double, lon: Double): Weather? {
+    fun weather(lat: Double, lon: Double, city: String): Weather? {
         return try {
             val j = get(String.format(Locale.US,
                 "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f&current=temperature_2m,weather_code", lat, lon))
             val cur = j.getJSONObject("current")
             val t = Math.round(cur.getDouble("temperature_2m")).toInt()
             val code = cur.optInt("weather_code", -1)
-            Weather(t, desc(code), city(c, lat, lon))
+            Weather(t, desc(code), city, severe(code))
         } catch (e: Exception) { null }
     }
 
-    private fun city(c: Context, lat: Double, lon: Double): String {
-        val key = String.format(Locale.US, "%.2f,%.2f", lat, lon)
-        if (Prefs.str("cityKey") == key) return Prefs.str("city")
-        var name = ""
-        try {
-            @Suppress("DEPRECATION")
-            val a = Geocoder(c, Locale("ar")).getFromLocation(lat, lon, 1)
-            if (a != null && a.isNotEmpty()) name = a[0].locality ?: a[0].subAdminArea ?: a[0].adminArea ?: ""
-        } catch (e: Exception) {}
-        if (name.isEmpty()) name = if (Math.abs(lat - 24.71) < 0.4 && Math.abs(lon - 46.67) < 0.4) "الرياض" else "موقعك"
-        Prefs.putStr("cityKey", key); Prefs.putStr("city", name)
-        return name
+    /** توقعات 3 أيام: طلب واحد عند الضغط على بطاقة الطقس فقط */
+    fun forecast(lat: Double, lon: Double): List<Day> {
+        return try {
+            val j = get(String.format(Locale.US,
+                "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f&daily=temperature_2m_max,temperature_2m_min,weather_code&forecast_days=3&timezone=auto", lat, lon))
+            val d = j.getJSONObject("daily")
+            val mx = d.getJSONArray("temperature_2m_max"); val mn = d.getJSONArray("temperature_2m_min"); val wc = d.getJSONArray("weather_code")
+            List(mx.length()) { Day(Math.round(mx.getDouble(it)).toInt(), Math.round(mn.getDouble(it)).toInt(), desc(wc.optInt(it, -1))) }
+        } catch (e: Exception) { emptyList() }
     }
 
     // ---------------- المباريات (بيانات ESPN العامة) ----------------
     class Match(val league: String, val home: String, val away: String, val hs: String, val aws: String,
                 val state: String, val clock: String, val time: Long)
 
-    class MatchCard(val main: Match?, val next: Match?) {
+    class MatchCard(val main: Match?, val next: Match?, val all: List<Match>) {
         fun anyLive() = main?.state == "in"
     }
 
@@ -91,6 +88,9 @@ object Net {
         "paris saint" to "باريس سان جيرمان", "marseille" to "مارسيليا", "juventus" to "يوفنتوس", "inter" to "إنتر",
         "ac milan" to "ميلان", "napoli" to "نابولي", "roma" to "روما"
     )
+    /** أسماء الفرق التي يمكن اختيارها مفضّلة */
+    val TEAM_CHOICES: List<String> get() = AR.values.distinct()
+
     private fun ar(en: String): String {
         val l = en.lowercase(Locale.US)
         for ((k, v) in AR) if (l.contains(k)) return v
@@ -135,7 +135,7 @@ object Net {
         val recent = all.filter { it.state == "post" && now - it.time < 4 * 3600000L }.sortedByDescending { it.time }
         val main = live ?: recent.firstOrNull() ?: upcoming.firstOrNull()
         val next = upcoming.firstOrNull { it !== main }
-        return MatchCard(main, next)
+        return MatchCard(main, next, all)
     }
 
     fun hhmm(t: Long): String = SimpleDateFormat("HH:mm", Locale.US).format(Date(t))

@@ -93,7 +93,8 @@ object Astro {
         val base = (day.clone() as Calendar).apply {
             set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
         }.timeInMillis
-        return LongArray(6) { base + (h[it] * 3600000.0).toLong() }
+        // ضبط الدقائق يدوياً ليطابق مسجد الحي
+        return LongArray(6) { base + (h[it] * 3600000.0).toLong() + Prefs.adj(it) * 60000L }
     }
 
     /** الصلاة القادمة (بدون الشروق): [index, millis] */

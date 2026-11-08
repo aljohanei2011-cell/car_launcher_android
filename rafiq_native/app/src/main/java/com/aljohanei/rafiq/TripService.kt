@@ -30,6 +30,14 @@ object Trip {
     @Volatile var maxKmh = 0f
     @Volatile var startedAt = System.currentTimeMillis()
     var last: Location? = null
+    // القيادة المتواصلة (للاستراحة) وبداية الركوب (للدعاء) والابتعاد (لدعاء السفر)
+    @Volatile var driveStart = 0L
+    @Volatile var lastMovingAt = 0L
+    @Volatile var rideEvent = 0
+    @Volatile var travelEvent = 0
+    var rideLat = 0.0
+    var rideLon = 0.0
+    var travelShown = false
 
     fun reset() {
         distanceM = 0.0; movingMs = 0L; maxKmh = 0f; startedAt = System.currentTimeMillis(); last = null
@@ -86,6 +94,19 @@ class TripService : Service(), LocationListener {
         }
         Trip.last = loc
         if (Trip.speedKmh > Trip.maxKmh) Trip.maxKmh = Trip.speedKmh
+        if (kmh >= 8f) {
+            val idle = now - Trip.lastMovingAt
+            // بعد توقف ساعة أو أكثر: ركوب جديد
+            if (Trip.lastMovingAt == 0L || idle > 3600000L) {
+                Trip.rideEvent++; Trip.rideLat = loc.latitude; Trip.rideLon = loc.longitude; Trip.travelShown = false
+            }
+            // توقف ربع ساعة يبدأ عدّ القيادة المتواصلة من جديد
+            if (Trip.lastMovingAt == 0L || idle > 15 * 60000L) Trip.driveStart = now
+            Trip.lastMovingAt = now
+            if (!Trip.travelShown && Cities.km(Trip.rideLat, Trip.rideLon, loc.latitude, loc.longitude) > 50.0) {
+                Trip.travelShown = true; Trip.travelEvent++
+            }
+        }
         // حفظ الموقع لحساب الصلاة والطقس (مرة كل دقيقة تقريباً تكفي)
         if (now / 60000 != Prefs.int("locMin").toLong()) {
             Prefs.lat = loc.latitude; Prefs.lon = loc.longitude; Prefs.putInt("locMin", (now / 60000).toInt())
@@ -95,10 +116,10 @@ class TripService : Service(), LocationListener {
 
     private fun checkAlert() {
         val limit = Prefs.alertSpeed
-        if (limit <= 0) return
+        if (limit <= 0 || !Prefs.alertOn("speed")) return
         if (!alerted && Trip.speedKmh > limit) {
             alerted = true
-            try {
+            if (Prefs.alertOn("sound")) try {
                 if (tone == null) tone = ToneGenerator(AudioManager.STREAM_MUSIC, 90)
                 tone?.startTone(ToneGenerator.TONE_PROP_BEEP2, 500)
             } catch (e: Exception) {}
