@@ -1005,7 +1005,7 @@ function preview(type){
 /* ===== تبويب الاستراحة ===== */
 function renderRest(){
   var s = section('نمط شاشة الاستراحة');
-  opts(s, [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['lux', 'فاخرة (شريط الصلوات)'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']], prefs.restStyle === 'night' ? 'clock' : prefs.restStyle, function (k) { prefs.restStyle = k; upd(); });
+  opts(s, [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['lux', 'فاخرة (شريط الصلوات)'], ['nap', 'قيلولة']], prefs.restStyle === 'night' ? 'clock' : prefs.restStyle, function (k) { prefs.restStyle = k; upd(); });
   if ((prefs.restStyle || 'classic') === 'clock') { s.appendChild(el('span', 'note', 'الإضاءة في «ساعة فقط»:')); opts(s, [['night', 'خافتة ليلاً تلقائياً'], ['always', 'خافتة دائماً'], ['off', 'عادية']], prefs.restDim || 'night', function (k) { prefs.restDim = k; upd(); }, true); }
   if (!LITE) {
     s = section('الخلفية المتحركة', 'فيديو ترفعه من جوالك («الإرسال من الجوال» ▸ استراحة متحركة): MP4 بمقاس 1280×720 ومن 10 إلى 30 ثانية. في الاستراحة: اضغط مطولاً على الخلفية لتغيير الفيديو والمكان والتعتيم بسرعة.');
@@ -1054,9 +1054,6 @@ function renderRest(){
 
   s = section('مدة بقائها');
   opts(s, [[0, 'حتى أخرج منها'], [5, '5 دقائق'], [15, '15 دقيقة'], [30, '30 دقيقة']], prefs.restReturn, function (k) { prefs.restReturn = k; upd(); }, true);
-  s.appendChild(el('span', 'note', 'نوع الاستراحة:'));
-  opts(s, [['native', 'خفيفة (موصى بها: أقل استهلاك للذاكرة بكثير)'], ['web', 'كاملة (كل الأنماط، أثقل)']], prefs.restEngine || 'native', function (k) { prefs.restEngine = k; upd(); }, true);
-  s.appendChild(el('span', 'note', 'الخفيفة تدعم: كلاسيكي، ساعة فقط، فاخرة، مع الصورة أو الفيديو. الزخرفة والمعرض والقيلولة تعمل بالكاملة تلقائياً.'));
   toggle(s, 'ابقَ في الاستراحة', 'stayRest', 'إذا أخرجها النظام بدون لمس منك (أو أُغلقت الواجهة) ترجع لها تلقائياً. مع إذن «إغلاق التطبيقات» تعود حتى لو ظهرت قائمة التطبيقات الأخيرة.');
 
   s = section('الأدعية', 'اضغط على الدعاء لإخفائه أو إظهاره، وأضف أدعيتك.');

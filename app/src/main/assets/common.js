@@ -164,7 +164,8 @@ function nativeRestConfig(){
 }
 function nativeRestOk(){
   var p = loadPrefsCached(), st = p.restStyle || 'classic';
-  return HAS_NATIVE && p.restEngine !== 'web' && ['classic', 'clock', 'night', 'lux'].indexOf(st) >= 0 && typeof Native.openNativeRest === 'function';
+  // الاستراحة كلها أصلية (أخف بكثير)؛ القيلولة وحدها صفحة لأنها تحتاج المنبّه
+  return HAS_NATIVE && st !== 'nap' && typeof Native.openNativeRest === 'function';
 }
 
 /* ===== حماية الإعدادات: نسخة ثانية داخل التطبيق =====
@@ -242,6 +243,8 @@ function loadPrefs(){
     // استبدال بطاقة الموسيقى الفارغة يصير افتراضياً (مرة واحدة)
     if (!p._v31) { p._v31 = 1; p.hideEmpty = true; if (!p.emptyAlt) p.emptyAlt = 'times'; }
     if (p.restStyle === 'night') { p.restStyle = 'clock'; p.restDim = 'always'; }
+    // الزخرفة والمعرض حُذفا (كانا يعملان بمحرك الصفحات الثقيل فقط): نرجع للكلاسيكي
+    if (p.restStyle === 'pattern' || p.restStyle === 'gallery') p.restStyle = 'classic';
     if (LITE) liteFix(p);
     return p;
   } catch (e) { return Object.assign({}, DEFAULT_PREFS); }
