@@ -335,6 +335,12 @@ class Bridge(private val act: MainActivity) {
 
     // ===== OBD (قطعة ELM327 بلوتوث) =====
     @JavascriptInterface fun obd(): String = Obd.json(ctx)
+    @JavascriptInterface fun roadLimit(): String = RoadLimit.json()
+    /** الاسم الدقيق لكود العطل بالإنجليزية من بيانات OBDex المفتوحة (CC0)، يُقرأ سطراً سطراً بلا تحميل الملف كله */
+    @JavascriptInterface fun obdCodeEn(code: String): String = try {
+        val k = code.trim().uppercase() + "\t"
+        ctx.assets.open("obd_codes_en.tsv").bufferedReader().useLines { s -> s.firstOrNull { it.startsWith(k) }?.substringAfter('\t') ?: "" }
+    } catch (e: Exception) { "" }
     @JavascriptInterface fun obdDevices(): String = Obd.devices()
     @JavascriptInterface fun obdStart(addr: String) = Obd.start(ctx, addr)
     @JavascriptInterface fun obdStop() = Obd.stop()

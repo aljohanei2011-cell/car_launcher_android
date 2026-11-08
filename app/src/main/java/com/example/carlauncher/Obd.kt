@@ -49,7 +49,41 @@ object Obd {
             .put("saved", sp(c).getString("addr", "") ?: "").put("dtcs", dtcs).put("dtcAt", dtcAt).toString()
     }
 
+    @Volatile private var appCtx: Context? = null
+    private var hotN = 0
+    private var lowN = 0
+    private val lastWarn = HashMap<String, Long>()
+
+    /** تنبيهات صحة السيارة: حرارة المحرك 110° فأكثر، وضعف الشحن والمحرك يعمل، وضعف البطارية والمحرك مطفأ */
+    private fun health(rpm: Double?, cool: Double?, volt: Double?) {
+        val c = appCtx ?: return
+        if (!Prefs.config(c).optBoolean("obdAlerts", true)) return
+        if (cool != null) {
+            hotN = if (cool >= 110) hotN + 1 else 0
+            if (hotN >= 2) warn(c, "hot", "حرارة المحرك مرتفعة", "الحرارة " + Math.round(cool) + "° — توقف في مكان آمن وافحص ماء الرديتر")
+        }
+        if (volt != null && volt > 5) {
+            val running = (rpm ?: 0.0) > 400
+            lowN = if (if (running) volt < 12.6 else volt < 11.8) lowN + 1 else 0
+            if (lowN >= 3) {
+                val v = String.format(java.util.Locale.US, "%.1f", volt)
+                if (running) warn(c, "charge", "ضعف شحن البطارية", "الجهد $v فولت والمحرك يعمل — افحص الدينمو والسير")
+                else warn(c, "batt", "البطارية ضعيفة", "الجهد $v فولت — قد لا يشتغل المحرك")
+            }
+        }
+    }
+
+    private fun warn(c: Context, key: String, title: String, sub: String) {
+        val now = System.currentTimeMillis()
+        if (now - (lastWarn[key] ?: 0L) < 15 * 60_000L) return
+        lastWarn[key] = now
+        Events.add(c, "OBD: $title — $sub")
+        val svc = TripService.instance
+        if (svc != null) svc.main.post { svc.alertFrom("drive", title, sub, "obd.html", true) } else Alerts.show(c, "drive", title, sub, "obd.html")
+    }
+
     fun start(c: Context, addr: String) {
+        appCtx = c.applicationContext
         if (running) stop()
         sp(c).edit().putString("addr", addr).apply()
         running = true; state = "connecting"; err = ""
@@ -100,6 +134,7 @@ object Obd {
                     fuel?.let { vals.put("fuel", Math.round(it)) }; volt?.let { vals.put("volt", it) }
                     vals.put("at", System.currentTimeMillis())
                 }
+                try { health(rpm, cool, volt) } catch (e: Exception) {}
                 tick++
                 Thread.sleep(700)
             }

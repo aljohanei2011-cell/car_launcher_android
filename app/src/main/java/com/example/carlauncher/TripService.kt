@@ -63,7 +63,7 @@ class TripService : Service() {
     private var listening = false
 
     private val listener = object : LocationListener {
-        override fun onLocationChanged(loc: Location) { TripStore.onFix(this@TripService, loc); checkSpeed(loc); checkTripAlerts() }
+        override fun onLocationChanged(loc: Location) { TripStore.onFix(this@TripService, loc); RoadLimit.onFix(this@TripService, loc); checkSpeed(loc); checkTripAlerts() }
         @Deprecated("") override fun onStatusChanged(p: String?, s: Int, b: Bundle?) {}
         override fun onProviderEnabled(p: String) {}
         override fun onProviderDisabled(p: String) {}
@@ -186,8 +186,22 @@ class TripService : Service() {
     }
 
     /** تنبيه السرعة: بعد 3 قراءات متتالية فوق الحد، ومرة كل دقيقة كحد أقصى */
+    private var roadOver = 0
+    private var lastRoadAlert = 0L
+
     private fun checkSpeed(loc: Location) {
         val cfg = Prefs.config(this)
+        // حد سرعة الطريق من OpenStreetMap (مع هامش يختاره المستخدم)
+        if (cfg.optBoolean("roadLimitOn", false) && loc.hasSpeed() && RoadLimit.fresh()) {
+            val kmh = loc.speed * 3.6
+            val lim = RoadLimit.limit
+            if (kmh > lim + cfg.optInt("roadTol", 10)) roadOver++ else roadOver = 0
+            val now = System.currentTimeMillis()
+            if (roadOver >= 3 && now - lastRoadAlert > 60_000) {
+                lastRoadAlert = now
+                alert("تجاوزت حد سرعة الطريق", "سرعتك " + Math.round(kmh) + " كم/س وحد الطريق " + lim + " كم/س", null)
+            }
+        } else roadOver = 0
         if (!cfg.optBoolean("speedOn", false) || !loc.hasSpeed()) return
         val limit = cfg.optInt("speedLimit", 120)
         val kmh = loc.speed * 3.6

@@ -544,6 +544,10 @@ card('media', 'الموسيقى', function (o) {
 card('speed', 'عداد السرعة', function (o) {
   var t = natJSON('trip') || {}, v = t.gps ? Math.round(t.speed) : 0, max = 200;
   var lim = +prefs.speedLimit || 120, over = prefs.speedOn && v > lim;
+  // حد سرعة الطريق من OpenStreetMap: لوحة دائرية بجانب كلمة «السرعة»
+  var rl = prefs.roadLimitOn && HAS_NATIVE ? natJSON('roadLimit') || {} : {}, rlim = +rl.limit || 0;
+  if (rlim && v > rlim + (+prefs.roadTol || 10)) over = true;
+  var rsign = rlim ? '<span title="حد سرعة الطريق" style="display:inline-flex;align-items:center;justify-content:center;min-width:2em;height:2em;border-radius:50%;background:#fff;border:.2em solid #E53935;color:#111;font-weight:800;font-size:.85em;box-sizing:border-box">' + rlim + '</span>' : '';
   var a = -120 + 240 * Math.min(v, max) / max;
   function pt(deg, r){ var rad = (deg - 90) * Math.PI / 180; return (100 + r * Math.cos(rad)).toFixed(1) + ' ' + (105 + r * Math.sin(rad)).toFixed(1); }
   var arc = function (from, to, col, w){ var large = (to - from) > 180 ? 1 : 0; return '<path d="M' + pt(from, 80) + ' A80 80 0 ' + large + ' 1 ' + pt(to, 80) + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round"/>'; };
@@ -552,7 +556,7 @@ card('speed', 'عداد السرعة', function (o) {
   var limDeg = -120 + 240 * Math.min(lim, max) / max;
   if (prefs.skin === 'red') {
     var pc = Math.min(v, max) / max, C = 2 * Math.PI * 70;
-    return '<div class="k-row"><span class="k-lbl">السرعة</span><span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span></div>' +
+    return '<div class="k-row"><span class="k-lbl">السرعة</span>' + (rsign || '<span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span>') + '</div>' +
       '<div style="position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center"><div style="position:relative;height:100%;aspect-ratio:1;max-width:100%">' +
       '<img src="skins/red/ring.png" alt="" style="position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:contain">' +
       '<svg viewBox="0 0 200 200" style="position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%"><circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="6"/>' +
@@ -561,7 +565,7 @@ card('speed', 'عداد السرعة', function (o) {
   }
   var main = prefs.skin === 'gold' && !prefs.accent ? (over ? '#FF6B5A' : 'url(#gg)') : (over ? '#FF6B5A' : accentCol('#5AB0FF'));
   var trackC = isLight() ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.15)', fg = fgCol();
-  return '<div class="k-row"><span class="k-lbl">السرعة</span><span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span></div>' +
+  return '<div class="k-row"><span class="k-lbl">السرعة</span>' + (rsign || '<span class="k-sub" style="font-size:.95em">' + (t.gps ? 'GPS' : 'بانتظار GPS') + '</span>') + '</div>' +
     '<svg class="gauge" viewBox="0 0 200 150" aria-hidden="true"><defs><linearGradient id="gg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a6420"/><stop offset=".6" stop-color="#E6B85C"/><stop offset="1" stop-color="#F5D58A"/></linearGradient></defs>' + arc(-120, 120, trackC, 10) + arc(-120, a, main, 10) +
     (prefs.speedOn ? '<path d="M' + pt(limDeg, 70) + ' L' + pt(limDeg, 90) + '" stroke="#E8C061" stroke-width="3"/>' : '') + ticks +
     '<g transform="rotate(' + a + ' 100 105)"><path d="M100 30 L104 105 L96 105Z" fill="' + (over ? '#FF6B5A' : prefs.skin === 'gold' ? '#F5D58A' : fg) + '"/></g><circle cx="100" cy="105" r="7" fill="' + fg + '"/>' +
