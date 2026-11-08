@@ -140,6 +140,25 @@ object Matches {
                 }
             } catch (e: Exception) { err = e.message ?: "تعذّر التحميل" }
         }
+        // بديل: جدول الفريق نفسه (القادمة والنتائج) إن لم يُرجع جدول الدوري أي مباراة لفريقك
+        if (out.isEmpty()) {
+            val from = now - 86_400_000L; val to = now + 21 * 86_400_000L
+            val seen = HashSet<String>()
+            for (lg in leagues) for (id in ids) for (q in listOf("?fixture=true", "")) {
+                try {
+                    val j = get(BASE + lg + "/teams/" + id + "/schedule" + q)
+                    val evs = j.optJSONArray("events") ?: JSONArray()
+                    for (i in 0 until evs.length()) {
+                        val ev = evs.optJSONObject(i) ?: continue
+                        val comp = ev.optJSONArray("competitions")?.optJSONObject(0) ?: continue
+                        val e = parseEvent(ev, comp, lg) ?: continue
+                        val d = e.optLong("date")
+                        if (d in from..to && seen.add(e.optString("id"))) out.add(e)
+                    }
+                    if (out.isNotEmpty()) err = ""
+                } catch (e: Exception) { if (err.isEmpty()) err = e.message ?: "تعذّر التحميل" }
+            }
+        }
         out.sortBy { it.optLong("date") }
         val old = try { JSONObject(state(c)) } catch (e: Exception) { JSONObject() }
         val arr = JSONArray(); out.forEach { arr.put(it) }

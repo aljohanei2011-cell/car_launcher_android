@@ -603,6 +603,8 @@ function teamBadge(t, big){
 card('matches', 'المباريات', function (o) {
   var m = matchesData(), ids = (m.cfg.teams || []).map(function (t) { return t.id; });
   var head = '<a href="matches.html" class="k-row" style="color:inherit;text-decoration:none"><span class="k-lbl">المباريات</span>';
+  // نطلب التحميل من البطاقة نفسها (مرة في الدقيقة على الأكثر)، والخدمة تقرر هل حان وقته
+  if (HAS_NATIVE && m.cfg.on && ids.length && Date.now() - (window._mtT || 0) > 60000) { window._mtT = Date.now(); nat('matchesTick'); }
   if (!HAS_NATIVE || !m.cfg.on || !ids.length) return head + '</a><div class="k-sub" style="white-space:normal;flex:1">اختر فريقك لتظهر مبارياته ونتائجه هنا</div><a class="k-btn" style="align-self:flex-start" href="matches.html">اختيار الفريق</a>';
   var e = m.live || m.next || m.last;
   if (!e) return head + '</a><div class="k-sub" style="white-space:normal;flex:1">' + (m.st.error ? 'تعذّر تحميل المواعيد، تُعاد المحاولة تلقائياً' : m.st.at ? 'لا توجد مباراة خلال 3 أسابيع' : 'جارٍ تحميل المواعيد…') + '</div>';

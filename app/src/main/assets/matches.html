@@ -116,7 +116,7 @@ function renderList(){
   L.innerHTML = '';
   var now = Date.now(), evs = m.events.filter(function (e) { return e.state !== 'post' || now - e.date < 3 * 86400000; });
   if (!m.cfg.on || !ids.length) L.innerHTML = '<div class="pempty">اختر فريقك من اليسار<br>لتظهر مبارياته ونتائجه</div>';
-  else if (!evs.length) L.innerHTML = '<div class="pempty">' + (m.st.at ? 'لا توجد مباريات خلال 3 أسابيع' : 'جارٍ تحميل المواعيد…<br>يحتاج إنترنت') + '</div>';
+  else if (!evs.length) L.innerHTML = '<div class="pempty">' + (m.st.error ? 'تعذّر تحميل المواعيد: ' + String(m.st.error).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '<br>تُعاد المحاولة تلقائياً، أو اضغط «تحديث»' : m.st.at ? 'لا توجد مباريات خلال 3 أسابيع' : 'جارٍ تحميل المواعيد…<br>يحتاج إنترنت') + '</div>';
   evs.forEach(function (e) {
     var d = el('div', 'mt' + (e.state === 'in' ? ' live' : ''));
     function side(t){ var s = el('span', 'tm'); var dt = el('span', 'dot'); dt.style.background = t.color ? '#' + t.color : '#3a5a8a'; s.appendChild(dt); s.appendChild(document.createTextNode(t.ar || t.name)); return s; }
@@ -137,6 +137,7 @@ function renderList(){
   $('src').textContent = (m.st.at ? 'آخر تحديث للمواعيد ' + agoText(m.st.at) + '. ' : '') + 'المصدر: ESPN (مجاني بدون تسجيل). أثناء المباراة تتحدث النتيجة كل دقيقة.';
 }
 $('onoff').onclick = function () { cfg.on = !cfg.on; save(); renderList(); };
+if (HAS_NATIVE) { nat('matchesTick'); setTimeout(renderList, 5000); }
 $('refresh').onclick = function () { nat('matchesRefresh'); toast('جارٍ التحديث…'); setTimeout(renderList, 4000); };
 renderCfg(); renderList();
 setInterval(function () { renderList(); }, 15000);
