@@ -1,0 +1,81 @@
+name: Build Rafiq Native (new launcher)
+
+# لانشر مستقل: يُبنى من مجلد rafiq_native فقط وعلى فرعه الخاص.
+# لا يلمس تطبيق «رفيق الطريق» القديم ولا يصدر له تحديثاً.
+on:
+  push:
+    branches: [rafiq-native]
+    paths:
+      - "rafiq_native/**"
+      - ".github/workflows/build-rafiq-native.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: rafiq-native-build
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      # نفس مفتاح التوقيع الثابت (إن توفّر) حتى تُثبَّت التحديثات فوق بعضها
+      - name: Restore signing key
+        env:
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          mkdir -p rafiq_native/signing
+          for CAND in "$KEYSTORE_PASS" "$KEYSTORE_B64"; do
+            P=$(printf "%s" "$CAND" | tr -d ' \r\n\t')
+            [ -z "$P" ] && continue
+            if openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in keystore/release.jks.enc -out rafiq_native/signing/release.jks -pass "pass:$P" 2>/dev/null \
+               && keytool -list -keystore rafiq_native/signing/release.jks -storepass "$P" >/dev/null 2>&1; then
+              printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=carlauncher\n" "$P" "$P" > rafiq_native/signing/signing.properties
+              echo "signing: fixed key"; break
+            fi
+            rm -f rafiq_native/signing/release.jks
+          done
+
+      - name: Build APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: gradle -p rafiq_native :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          APK=$(ls rafiq_native/app/build/outputs/apk/release/*.apk | head -1)
+          cp "$APK" out/rafiq-native.apk
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rafiq-native-apk
+          path: out/*.apk
+
+      # إصدار تجريبي واحد ثابت الاسم (ليس «الأحدث» ولا رقمياً، فلا يراه محدّث التطبيق القديم)
+      - name: Publish to fixed pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view rafiq-native >/dev/null 2>&1; then
+            gh release create rafiq-native --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "رفيق الطريق الجديد (لانشر مستقل)" \
+              --notes "لانشر مستقل بواجهات أندرويد الأصلية. يُثبَّت بجانب التطبيق القديم."
+          fi
+          gh release upload rafiq-native out/rafiq-native.apk --clobber
+          gh release edit rafiq-native --notes "آخر بناء: ${{ github.run_number }} — $(git log -1 --pretty=%s)"
