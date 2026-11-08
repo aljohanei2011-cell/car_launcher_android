@@ -146,8 +146,11 @@ body.perf .strip{-webkit-backdrop-filter:none;backdrop-filter:none;background:rg
 <script src="common.js"></script>
 <script>
 var prefs = loadPrefs();
+// الاستراحة أصلية الآن (أخف بكثير على الذاكرة): إن فُتحت هذه الصفحة مباشرة (صفحة البداية مثلاً) نحوّلها للأصلية.
+// تبقى هذه الصفحة للقيلولة (تحتاج المنبّه) وللمعاينة بـ ?style=
+if (!IN_FRAME && nativeRestOk() && !/style=/.test(location.search)) { nat('openNativeRest', nativeRestConfig()); location.replace('index.html'); }
 applyPrefs('rest', prefs);
-var STYLES = [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['lux', 'فاخرة'], ['pattern', 'زخرفة'], ['gallery', 'معرض صوري'], ['nap', 'قيلولة']];
+var STYLES = [['classic', 'كلاسيكي'], ['clock', 'ساعة فقط'], ['lux', 'فاخرة'], ['nap', 'قيلولة']];
 var style = (location.search.match(/style=(\w+)/) || [])[1] || prefs.restStyle || 'classic';
 if (style === 'night') style = 'clock';
 if (!STYLES.some(function (x) { return x[0] === style; })) style = 'classic';
