@@ -97,7 +97,6 @@ function poll(){
   }
   else if (s.phase === 'error') { m.className = 'msg err'; m.textContent = s.error; btn.textContent = 'إعادة المحاولة'; }
   else m.textContent = '';
-  // القناة الثابتة: إصدار أحدث منشور لكنه لم يصل لهذه الشاشة بعد
   if (s.pendingHrs > 0 && s.phase === 'none') { $('pend').textContent = 'يوجد إصدار أحدث (' + s.newest + ') يصل خلال ' + s.pendingHrs + ' ساعة تقريباً.'; $('pend').style.display = ''; }
   else $('pend').style.display = 'none';
   if (switchTo && s.phase === 'available' && s.switching) { switchTo = null; nat('updateDownload'); }

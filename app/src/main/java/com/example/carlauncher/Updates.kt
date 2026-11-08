@@ -173,11 +173,6 @@ object Updater {
     /** قناة التحديث لهذه الشاشة: beta (كل إصدار فوراً) أو stable (الإصدار بعد مرور يومين على نشره دون سحبه، وإصدار «إصلاح عاجل» فوراً) */
     fun channel(c: Context): String = sp(c).getString("channel", "stable") ?: "stable"
     fun setChannel(c: Context, ch: String) { sp(c).edit().putString("channel", if (ch == "beta") "beta" else "stable").apply() }
-    private const val STABLE_DELAY_MS = 48L * 3600_000L
-
-    private fun parseTime(s: String): Long = try {
-        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.parse(s)?.time ?: 0L
-    } catch (e: Exception) { 0L }
 
     /** ملف التحديث المناسب لهذه النسخة (أو للنسخة المطلوب التحويل إليها) */
     private fun pickApk(assets: JSONArray, lite: Boolean): JSONObject? {
@@ -205,26 +200,19 @@ object Updater {
                 // ملف واحد لكل الشاشات: نأخذ rafiq.apk دائماً (لم يعد هناك تحويل بين نسختين)
                 val wantLite = false
                 switching = false
-                // القناة الثابتة (الافتراضية): الإصدار يصل بعد 48 ساعة من نشره، فإن ظهر فيه خلل يُسحب قبل أن يصل لكل الشاشات.
-                // «إصلاح عاجل» في عنوان الإصدار أو وصفه يصل فوراً، وقناة beta تأخذ كل إصدار فوراً.
-                val beta = forceBeta || channel(c) == "beta"
-                val now = System.currentTimeMillis()
                 var best: JSONObject? = null; var bestN = 0
-                var newest: JSONObject? = null; var newestN = 0
+                var newestN = 0
                 for (i in 0 until arr.length()) {
                     val r = arr.getJSONObject(i)
                     if (r.optBoolean("draft")) continue
                     val n = r.optString("tag_name").removePrefix("v").toIntOrNull() ?: continue
                     if (pickApk(r.optJSONArray("assets") ?: JSONArray(), wantLite) == null) continue
-                    if (n > newestN) { newestN = n; newest = r }
-                    val hot = r.optString("body").contains("إصلاح عاجل") || r.optString("name").contains("إصلاح عاجل")
-                    val ok = beta || (!r.optBoolean("prerelease") && (hot || now - parseTime(r.optString("published_at")) >= STABLE_DELAY_MS))
+                    if (n > newestN) newestN = n
+                    // قناة واحدة: كل إصدار رسمي يصل فوراً (بدون انتظار 48 ساعة)
+                    val ok = !r.optBoolean("prerelease")
                     if (ok && n > bestN) { bestN = n; best = r }
                 }
-                // إصدار أحدث لم يصل للقناة الثابتة بعد
-                val pendingHrs = if (!beta && newest != null && newestN > maxOf(bestN, BuildConfig.VERSION_CODE))
-                    Math.max(1L, (STABLE_DELAY_MS - (now - parseTime(newest.optString("published_at")))) / 3600_000L) else 0L
-                set("channel" to (if (beta) "beta" else "stable"), "newest" to newestN, "pendingHrs" to pendingHrs)
+                set("channel" to "stable", "newest" to newestN, "pendingHrs" to 0L)
                 val j = best
                 if (j == null) { set("latest" to 0, "current" to BuildConfig.VERSION_CODE, "phase" to "none"); return@thread }
                 val asset = pickApk(j.optJSONArray("assets") ?: JSONArray(), wantLite)
