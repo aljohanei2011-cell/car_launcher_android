@@ -48,6 +48,10 @@ object CrashLog {
     }
     private class Handler(val c: Context, val prev: Thread.UncaughtExceptionHandler?) : Thread.UncaughtExceptionHandler {
         override fun uncaughtException(t: Thread, e: Throwable) {
+            // خطأ في خيط عمل خلفي (تحميل، طقس، OBD…) لا يجوز أن يُغلق الواجهة كلها: نسجّله ونترك الخيط ينتهي.
+            // الخيط الرئيسي وخيط الجسر (JavaBridge) ونفاد الذاكرة تبقى كما هي، لأن التطبيق بعدها لا يعمل بشكل سليم.
+            val worker = t !== android.os.Looper.getMainLooper().thread && !t.name.contains("JavaBridge", true)
+            if (worker && e !is OutOfMemoryError) { add(c, "worker:" + t.name, android.util.Log.getStackTraceString(e)); return }
             add(c, "crash:" + t.name, android.util.Log.getStackTraceString(e))
             prev?.uncaughtException(t, e)
         }

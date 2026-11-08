@@ -301,38 +301,62 @@ object Backup {
         return o
     }
 
-    private fun filesB64(dir: File): JSONArray {
-        val a = JSONArray()
-        dir.listFiles()?.filter { it.isFile }?.forEach {
-            a.put(JSONObject().put("name", it.name).put("b64", Base64.encodeToString(it.readBytes(), Base64.NO_WRAP)))
-        }
-        return a
-    }
-
-    private fun build(c: Context, webJson: String): String {
-        val o = JSONObject()
-        o.put("app", "rafiq").put("v", 1).put("created", System.currentTimeMillis()).put("version", BuildConfig.VERSION_CODE)
-        o.put("web", JSONObject(webJson))
+    /**
+     * النسخة تُكتب مباشرة إلى الملف بالتدفق (الصور والأصوات base64 قطعة قطعة)، بدل بنائها كاملة في الذاكرة.
+     * كانت تُبنى نصاً واحداً فيه كل الصور، فتنفد الذاكرة على الشاشات الضعيفة ويُغلق التطبيق
+     * (OutOfMemoryError لا تلتقطها catch (e: Exception)). تُكتب في ملف مؤقت ثم تُنقل، فلا تتلف نسخة سابقة.
+     */
+    private fun writeBackup(c: Context, webJson: String, out: File) {
+        val head = JSONObject()
+        head.put("app", "rafiq").put("v", 1).put("created", System.currentTimeMillis()).put("version", BuildConfig.VERSION_CODE)
+        head.put("web", JSONObject(webJson))
         val sp = JSONObject(); PREF_FILES.forEach { sp.put(it, dumpPrefs(c, it)) }
-        o.put("prefs", sp)
-        o.put("images", filesB64(Images.dir(c)))
-        o.put("sounds", filesB64(Sounds.dir(c)))
-        return o.toString()
+        head.put("prefs", sp)
+        val h = head.toString()
+        val tmp = File(out.parentFile, out.name + ".tmp")
+        try {
+            tmp.outputStream().buffered(64 * 1024).use { o ->
+                o.write(h.substring(0, h.length - 1).toByteArray())   // بدون «}» الأخيرة
+                streamFiles(o, "images", Images.dir(c))
+                streamFiles(o, "sounds", Sounds.dir(c))
+                o.write("}".toByteArray())
+            }
+            if (out.exists()) out.delete()
+            if (!tmp.renameTo(out)) throw java.io.IOException("rename")
+        } finally { if (tmp.exists()) tmp.delete() }
     }
 
-    fun prepare(c: Context, webJson: String): Boolean = try { file(c).writeText(build(c, webJson)); true } catch (e: Exception) { false }
+    private fun streamFiles(o: java.io.OutputStream, key: String, dir: File) {
+        o.write(",\"$key\":[".toByteArray())
+        var first = true
+        dir.listFiles()?.filter { it.isFile && !it.name.endsWith(".tmp") }?.forEach { f ->
+            if (!first) o.write(",".toByteArray()); first = false
+            o.write(("{\"name\":" + JSONObject.quote(f.name) + ",\"b64\":\"").toByteArray())
+            // لا نغلق o عند إغلاق مُرمِّز base64
+            val keep = object : java.io.FilterOutputStream(o) {
+                override fun write(b: ByteArray, off: Int, len: Int) { out.write(b, off, len) }
+                override fun close() { flush() }
+            }
+            android.util.Base64OutputStream(keep, Base64.NO_WRAP).use { enc -> f.inputStream().use { it.copyTo(enc, 32 * 1024) } }
+            o.write("\"}".toByteArray())
+        }
+        o.write("]".toByteArray())
+    }
+
+    fun prepare(c: Context, webJson: String): Boolean = try { writeBackup(c, webJson, file(c)); true }
+        catch (e: Throwable) { CrashLog.add(c, "backup", "تعذّرت النسخة الاحتياطية: $e"); false }
 
     // ===== نسخ احتياطية تلقائية داخل الشاشة (أسبوعياً، آخر 3 نسخ) =====
     fun autoDir(c: Context) = File(c.filesDir, "autobak").apply { mkdirs() }
     fun autoSave(c: Context, webJson: String): Boolean = try {
         val name = "auto-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date()) + ".json"
-        File(autoDir(c), name).writeText(build(c, webJson))
-        autoDir(c).listFiles()?.filter { it.name.startsWith("auto-") }?.sortedByDescending { it.name }?.drop(3)?.forEach { it.delete() }
+        writeBackup(c, webJson, File(autoDir(c), name))
+        autoDir(c).listFiles()?.filter { it.name.startsWith("auto-") && it.name.endsWith(".json") }?.sortedByDescending { it.name }?.drop(3)?.forEach { it.delete() }
         true
-    } catch (e: Exception) { false }
+    } catch (e: Throwable) { CrashLog.add(c, "backup", "تعذّرت النسخة التلقائية: $e"); false }
     fun autoList(c: Context): String {
         val a = JSONArray()
-        autoDir(c).listFiles()?.filter { it.name.startsWith("auto-") }?.sortedByDescending { it.name }?.forEach {
+        autoDir(c).listFiles()?.filter { it.name.startsWith("auto-") && it.name.endsWith(".json") }?.sortedByDescending { it.name }?.forEach {
             a.put(JSONObject().put("name", it.name).put("at", it.lastModified()).put("size", it.length()))
         }
         return a.toString()
@@ -378,7 +402,11 @@ object Backup {
         if (uiOnly) web.put("__scope", "ui")
         pending(c).writeText(web.toString())
         true
-    } catch (e: Exception) { false }
+    } catch (e: Throwable) {
+        // نسخة كبيرة جداً على شاشة ضعيفة: تفشل الاستعادة بدل أن يُغلق التطبيق
+        if (e is OutOfMemoryError) CrashLog.add(c, "backup", "النسخة أكبر من ذاكرة الشاشة")
+        false
+    }
 
     /** إعدادات الواجهة المستعادة تنتظر أن تكتبها الصفحة في تخزينها */
     fun takePendingWeb(c: Context): String {
