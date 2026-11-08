@@ -247,8 +247,9 @@ object Updater {
         if (assetId == 0L) { check(c); return }
         set("phase" to "downloading", "progress" to 0, "error" to null)
         thread {
-            val f = File(File(c.filesDir, "update").apply { mkdirs() }, "update.apk")
+            val f = File(c.filesDir, "update/update.apk")
             try {
+                f.parentFile?.mkdirs()
                 var conn = open("https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases/assets/$assetId", token(c), "application/octet-stream")
                 var code = conn.responseCode
                 var hops = 0

@@ -154,6 +154,8 @@ class MainActivity : AppCompatActivity() {
             if (Voice.enabled(this)) { Voice.keySeen(this); webView.evaluateJavascript("window.onVoiceKey && window.onVoiceKey()", null) }
             return
         }
+        // محرك الصفحات مُغلق أثناء الاستراحة الخفيفة: نحفظ الطلب ليُفتح عند إعادة البناء (بدل ضياعه أو فتح صفحة قديمة)
+        if (needRebuild) { if (intent != null) setIntent(intent); return }
         val p = intent?.getStringExtra("page")
         if (p != null) webView.loadUrl(base + pageFrom(intent, "index.html"))
         else if (intent?.hasCategory(Intent.CATEGORY_HOME) == true) webView.loadUrl(base + "index.html")

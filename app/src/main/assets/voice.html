@@ -86,7 +86,7 @@ $('mic').onclick = function () {
       clearInterval(poll);
       if (st.state === 'error' || !st.results || !st.results.length) {
         $('heard').textContent = '';
-        $('st').textContent = st.err === 100 || (st.rmsMax != null && st.rmsMax < 1) ? 'الميكروفون لا يصله صوت: افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google».' : (VERR[st.err] || 'لم أسمع شيئاً') + ' — الميكروفون يعمل (وصله صوت)، تكلّم أوضح أو أقرب.';
+        $('st').textContent = (st.err === 2 || st.err === 12 || st.err === 13) ? (VERR[st.err] || 'خطأ في خدمة الكلام') + ' (رمز ' + st.err + '): الأوامر الصوتية تحتاج إنترنت في هذه الشاشة، أو اختر «نافذة Google».' : st.err === 100 || (st.rmsMax != null && st.rmsMax < 1) ? 'الميكروفون لا يصله صوت: افصل بلوتوث الجوال، أو تحقق من إذن الميكروفون لتطبيق Google، أو أطفئ «Ok Google».' : (VERR[st.err] || 'لم أسمع شيئاً') + ' — الميكروفون يعمل (وصله صوت)، تكلّم أوضح أو أقرب.';
         return;
       }
       var cmd = null, heard = st.results[0];
