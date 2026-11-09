@@ -48,6 +48,35 @@ class MainActivity : AppCompatActivity() {
         fileCallback = null
     }
 
+    private fun isWebViewLock(e: Throwable): Boolean {
+        var t: Throwable? = e
+        while (t != null) { if (t.message?.contains("more than one process") == true) return true; t = t.cause }
+        return false
+    }
+
+    /** عملية جديدة نظيفة بعد ثانيتين (تكون القديمة انتهت وحررت مجلد محرك الصفحات) */
+    private fun restartFresh(e: Throwable) {
+        val sp = getSharedPreferences("watchdog", MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        var n = sp.getInt("wvLockN", 0)
+        if (now - sp.getLong("wvLockAt", 0L) > 5 * 60_000L) n = 0
+        sp.edit().putInt("wvLockN", n + 1).putLong("wvLockAt", now).commit()
+        // إن تكرر نزيد المهلة حتى تنتهي العملية القديمة فعلاً
+        val delay = if (n < 3) 2000L else 10_000L
+        CrashLog.add(this, "webview-lock", "محرك الصفحات مشغول بعملية سابقة، إعادة تشغيل الواجهة بعد ${delay / 1000} ث (مرة ${n + 1})")
+        Events.add(this, "إعادة تشغيل الواجهة: محرك الصفحات مشغول بتشغيل سابق")
+        try {
+            val i = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            val pi = android.app.PendingIntent.getActivity(this, 7301, i,
+                android.app.PendingIntent.FLAG_CANCEL_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+            (getSystemService(ALARM_SERVICE) as android.app.AlarmManager)
+                .set(android.app.AlarmManager.ELAPSED_REALTIME, android.os.SystemClock.elapsedRealtime() + delay, pi)
+        } catch (x: Exception) {}
+        alive = false
+        finish()
+        android.os.Process.killProcess(android.os.Process.myPid())
+    }
+
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +87,13 @@ class MainActivity : AppCompatActivity() {
         Events.add(this, "تشغيل الواجهة" + (if (savedInstanceState != null) " (بعد إغلاقها من النظام)" else ""))
         hideSystemBars()
 
-        webView = WebView(this).apply {
+        // على بعض الشاشات تبدأ عملية جديدة للتطبيق قبل أن تنتهي القديمة (بعد قتل النظام له أو بعد التحديث)،
+        // فيرفض محرك الصفحات العمل لأن القديمة ما زالت تمسك مجلده، ويُغلق التطبيق. بدل الإغلاق نعيد التشغيل بعد ثانيتين.
+        val wv = try { WebView(this) } catch (e: RuntimeException) {
+            if (!isWebViewLock(e)) throw e
+            restartFresh(e); return
+        }
+        webView = wv.apply {
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -118,7 +153,7 @@ class MainActivity : AppCompatActivity() {
         // أولوية عالية لمحرك الصفحات حتى لا يُغلقه النظام عند ضغط الذاكرة
         // مهم وهو ظاهر، ويخفّ عن النظام عندما يكون تطبيق آخر في المقدمة
         try { webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true) } catch (e: Exception) {}
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        // بدون طبقة رسم إضافية: محرك الصفحات يرسم بالمعالج الرسومي أصلاً، والطبقة كانت تحجز نسخة إضافية بحجم الشاشة في الذاكرة
         // نوقف الضغط المطوّل الافتراضي (تحديد النص) حتى تصل الضغطة المطوّلة للواجهة (تحرير البطاقات)
         webView.setOnLongClickListener { true }
         webView.isLongClickable = false
@@ -248,7 +283,11 @@ class MainActivity : AppCompatActivity() {
     // عند فتح تطبيق آخر (الخرائط مثلاً) نوقف الواجهة مؤقتاً لتوفير المعالج؛ التنبيهات تعمل من الخدمة
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) Events.add(this, "النظام يطلب تخفيف الذاكرة (المستوى $level)")
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            Events.add(this, "النظام يطلب تخفيف الذاكرة (المستوى $level)")
+            // نحرر ذاكرة التخزين المؤقت لمحرك الصفحات (الصور والملفات المحمّلة) حتى لا يقتله النظام
+            try { if (::webView.isInitialized) webView.clearCache(false) } catch (e: Exception) {}
+        }
     }
 
     override fun onDestroy() {
