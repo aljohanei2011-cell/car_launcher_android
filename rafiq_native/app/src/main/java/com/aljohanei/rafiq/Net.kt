@@ -172,17 +172,20 @@ object Net {
      * مباريات اليوم وغداً للبطولات المطلوبة (الترتيب يحدد الأولوية: السعودي أولاً).
      * تعيد null إن فشلت كل الطلبات (لا يوجد اتصال) حتى لا تُمسح النتائج المعروضة.
      */
-    fun fetchAll(leagues: Collection<String>): List<Match>? {
+    fun fetchAll(leagues: Collection<String>, withTomorrow: Boolean = true): List<Match>? {
         val all = ArrayList<Match>()
         val f = SimpleDateFormat("yyyyMMdd", Locale.US)
         val t = System.currentTimeMillis()
-        val range = f.format(Date(t)) + "-" + f.format(Date(t + 86400000L))
+        // المصدر يرفض نطاق التواريخ، فنطلب كل يوم وحده (اليوم، وغداً إن طُلب)
+        val days = if (withTomorrow) listOf(f.format(Date(t)), f.format(Date(t + 86400000L))) else listOf(f.format(Date(t)))
         var ok = 0; var tried = 0
+        val seen = HashSet<String>()
         for (code in Prefs.LEAGUE_IDS) {
             if (code !in leagues) continue
+            for (day in days) {
             tried++
             try {
-                val j = get(BASE + code + "/scoreboard?limit=100&dates=" + range)
+                val j = get(BASE + code + "/scoreboard?limit=100&dates=" + day)
                 ok++
                 val evs = j.optJSONArray("events") ?: continue
                 for (i in 0 until evs.length()) {
@@ -197,9 +200,11 @@ object Net {
                         val n = ar(t.optJSONObject("team")?.optString("displayName") ?: "")
                         if (t.optString("homeAway") == "home") { h = n; hs = t.optString("score") } else { a = n; aws = t.optString("score") }
                     }
+                    if (!seen.add(e.optString("id", h + a + e.optString("date")))) continue
                     all.add(Match(code, leagueName(code), h, a, hs, aws, state, st?.optString("displayClock") ?: "", parseDate(e.optString("date"))))
                 }
             } catch (e: Exception) {}
+            }
         }
         return if (tried > 0 && ok == 0) null else all
     }
@@ -213,7 +218,7 @@ object Net {
         val fav = Prefs.favTeams()
         val favOnly = Prefs.matchMode == "fav"
         val all: List<Match> = if (only != null && prev != null) {
-            val part = fetchAll(only) ?: return null
+            val part = fetchAll(only, false) ?: return null
             (prev.filter { it.code !in only } + part).sortedBy { Prefs.LEAGUE_IDS.indexOf(it.code) }
         } else fetchAll(Prefs.leagues()) ?: return null
         fun isFav(m: Match) = m.home in fav || m.away in fav
