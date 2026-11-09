@@ -56,6 +56,10 @@ jobs:
         run: |
           set +e
           D1=$(date -u +%Y%m%d); D2=$(date -u -d '+1 day' +%Y%m%d)
+          for Q in "" "?dates=$D1" "?dates=$D1-$D2" "?limit=100" "?limit=100&dates=$D1-$D2"; do
+            curl -s -m 20 -o /tmp/q.json -w "eng.1 [$Q] HTTP %{http_code} " "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard$Q"
+            head -c 160 /tmp/q.json; echo
+          done
           for L in ksa.1 ksa.kings.cup afc.champions uefa.champions eng.1 esp.1 ita.1 ger.1 fra.1; do
             curl -s -m 20 -o /tmp/s.json -w "$L HTTP %{http_code} %{size_download}B " "https://site.api.espn.com/apis/site/v2/sports/soccer/$L/scoreboard?limit=100&dates=$D1-$D2"
             jq -r '"league=\(.leagues[0].name) events=\(.events|length) first=\(.events[0].date) \(.events[0].status.type.state)"' /tmp/s.json || echo "(not json)"
