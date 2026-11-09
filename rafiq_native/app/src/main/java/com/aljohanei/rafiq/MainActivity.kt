@@ -42,7 +42,6 @@ import kotlin.math.roundToInt
  */
 class MainActivity : Activity() {
     private val h = Handler(Looper.getMainLooper())
-    private val hmF = SimpleDateFormat("HH:mm", Locale.US)
     private val labelCache = HashMap<String, String>()
     private var standbyClock: TextView? = null
     private var qiblaDeg = 0f
@@ -85,6 +84,11 @@ class MainActivity : Activity() {
     private lateinit var azHead: TextView
     private lateinit var azV: TextView
     private lateinit var azS: TextView
+    private var cmpV: TextView? = null
+    private var cmpS: TextView? = null
+    private var occV: TextView? = null
+    private var occS: TextView? = null
+    private var barH = 104
 
     // بيانات الشبكة (تبقى عند إعادة بناء الواجهة)
     private var weather: Net.Weather? = null
@@ -196,12 +200,7 @@ class MainActivity : Activity() {
             or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
     }
 
-    fun palNow(): Palette = when (Prefs.theme) {
-        "dark" -> Palette.DARK
-        "light" -> Palette.LIGHT
-        "amber" -> Palette.AMBER
-        else -> if (night) Palette.DARK else Palette.LIGHT
-    }
+    fun palNow(): Palette = Palette.current(night)
 
     /** تطبيق أي تغيير من الإعدادات فوراً */
     fun applySettings() {
@@ -224,6 +223,9 @@ class MainActivity : Activity() {
         pal = palNow()
         Ui.fontScale = if (Prefs.bigFont) 1.1f else 1f
         standbyView = null; standbyClock = null
+        barH = when (Prefs.barSize) { 0 -> 80; 2 -> 92; else -> 104 }
+        if (Prefs.keepOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val (root, d) = Ui.scaled(this, pal.bg)
         design = d
         buildHeader(d)
@@ -293,22 +295,43 @@ class MainActivity : Activity() {
         val hidden = Prefs.hidden()
         val rightStack = Ui.col(this)
         val leftStack = Ui.col(this)
-        d.addView(rightStack, Ui.abs(340, 556, 916, 78))
-        d.addView(leftStack, Ui.abs(340, 556, 24, 78))
-        // تُنشأ كل البطاقات (لتبقى المراجع صالحة) وتُضاف حسب الترتيب المحفوظ
-        val made = HashMap<String, View>()
-        for (id in Prefs.CARD_IDS) made[id] = makeCard(id, hidden)
+        // المساحة بين الشريط العلوي والقائمة السفلية (تقل قليلاً مع القائمة الكبيرة)
+        val avail = 720 - 72 - barH
+        d.addView(rightStack, Ui.abs(340, avail - 12, 916, 78))
+        d.addView(leftStack, Ui.abs(340, avail - 12, 24, 78))
+        var hidden = Prefs.hidden()
         val r = Prefs.column(true); val l = Prefs.column(false)
-        for (id in Prefs.CARD_IDS) if (id !in r && id !in l) r.add(id)
-        for (id in r) rightStack.addView(made[id], Ui.lin(Ui.MATCH, 0, 1f).apply { topMargin = 6; bottomMargin = 6 })
-        for (id in l) leftStack.addView(made[id], Ui.lin(Ui.MATCH, 0, 1f).apply { topMargin = 6; bottomMargin = 6 })
+        // البطاقات الجديدة تبدأ مخفية مرة واحدة، وتوضع في العمود الأقصر
+        val known = Prefs.knownCards()
+        val newOnes = Prefs.NEW_CARDS.filter { it !in known }
+        if (newOnes.isNotEmpty()) {
+            hidden = hidden + newOnes
+            Prefs.setHidden(hidden); Prefs.setKnownCards(known + newOnes)
+        }
+        for (id in Prefs.CARD_IDS) if (id !in r && id !in l) {
+            val rv = r.count { it !in hidden }; val lv = l.count { it !in hidden }
+            if (rv <= lv) r.add(id) else l.add(id)
+        }
+        Prefs.setColumns(r, l)
+        // تُنشأ البطاقات الظاهرة فقط (المخفية لا تأخذ ذاكرة)
+        val made = HashMap<String, View>()
+        for (id in Prefs.CARD_IDS) if (id !in hidden || id in BASE_CARDS) made[id] = makeCard(id, hidden)
+        for (id in r) made[id]?.let { rightStack.addView(it, Ui.lin(Ui.MATCH, 0, 1f).apply { topMargin = 6; bottomMargin = 6 }) }
+        for (id in l) made[id]?.let { leftStack.addView(it, Ui.lin(Ui.MATCH, 0, 1f).apply { topMargin = 6; bottomMargin = 6 }) }
 
+        val gh = avail - 24
         val g = FrameLayout(this)
-        d.addView(g, Ui.abs(528, 544, 376, 84))
-        gauge = GaugeView(this).apply { pal = this@MainActivity.pal; mode = Prefs.gauge; max = Prefs.maxSpeed; alert = Prefs.alertSpeed }
+        d.addView(g, Ui.abs(528, gh, 376, 84))
+        gauge = GaugeView(this).apply {
+            pal = this@MainActivity.pal; mode = Prefs.gauge; max = Prefs.maxSpeed; alert = Prefs.alertSpeed; showMax = Prefs.maxMark
+        }
         g.addView(gauge, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.NO_GRAVITY))
-        g.addView(ImageView(this).apply { setImageResource(R.drawable.car_rear); scaleType = ImageView.ScaleType.FIT_CENTER },
-            Ui.at(260, 213, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+        // صورة السيارة (اختيارية، وتختفي في العداد الرقمي لأنه يحتاج المساحة)
+        if (Prefs.showCar && Prefs.gauge != 6) {
+            val sc = gh / 544f
+            g.addView(ImageView(this).apply { setImageResource(R.drawable.car_rear); scaleType = ImageView.ScaleType.FIT_CENTER },
+                Ui.at((260 * sc).toInt(), (213 * sc).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+        }
     }
 
     private fun makeCard(id: String, hidden: Set<String>): View {
@@ -385,7 +408,7 @@ class MainActivity : Activity() {
                 qr.addView(Ui.tv(this, 15f, pal.muted).apply { text = "القبلة" }, Ui.lin(Ui.WRAP, 24))
                 c.addView(qr, Ui.lin(Ui.MATCH, 26))
                 card = shell(c, R.drawable.ic_prayer, false)
-                card.setOnClickListener { Panels.prayer(this, pal) { if (!locked()) SettingsScreen(this, 5).show() } }
+                card.setOnClickListener { Panels.prayer(this, pal) { openSettingsScreen(3) } }
             }
             "azkar" -> {
                 azHead = head("الأذكار"); c.addView(azHead)
@@ -394,6 +417,76 @@ class MainActivity : Activity() {
                 card = shell(c, R.drawable.ic_azkar, false)
                 card.setOnClickListener { Azkar.tap(System.currentTimeMillis()); it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); refreshAzkar() }
                 card.setOnLongClickListener { Azkar.skip(System.currentTimeMillis()); it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); refreshAzkar(); true }
+            }
+            "dest" -> {
+                c.addView(head("وجهاتي · اضغط مطولاً لحفظ موقعك"))
+                val row = Ui.row(this, Gravity.CENTER)
+                for (k in listOf("mosque", "work", "home")) {
+                    row.addView(Ui.tv(this, 19f, pal.text, true, Gravity.CENTER).apply {
+                        text = destName(k)
+                        background = Ui.pressable(Ui.rounded(pal.card, 12f, 2, if (Prefs.str("dest_$k").isEmpty()) pal.line else pal.accent),
+                            Ui.rounded(pal.line, 12f))
+                        setOnClickListener { goDest(k) }
+                        setOnLongClickListener { saveDest(k); true }
+                    }, Ui.lin(0, 64, 1f).apply { leftMargin = 4; rightMargin = 4 })
+                }
+                c.addView(row, Ui.lin(Ui.MATCH, 70).apply { topMargin = 4 })
+                card = shell(c, R.drawable.ic_pin, false)
+            }
+            "compass" -> {
+                c.addView(head("البوصلة"))
+                cmpV = Ui.tv(this, 30f, pal.text, true).also { c.addView(it, Ui.lin(Ui.MATCH, 40)) }
+                cmpS = Ui.tv(this, 15f, pal.muted).also { c.addView(it, Ui.lin(Ui.MATCH, 22)) }
+                card = shell(c, R.drawable.g_compass, false, pal.accent)
+            }
+            "occasions" -> {
+                c.addView(head("المناسبات"))
+                occV = Ui.tv(this, 24f, pal.text, true).also { c.addView(it, Ui.lin(Ui.MATCH, 34)) }
+                occS = Ui.tv(this, 15f, pal.amber).also { c.addView(it, Ui.lin(Ui.MATCH, 22)) }
+                card = shell(c, R.drawable.g_star, false, pal.amber)
+                card.setOnClickListener { Panels.prayer(this, pal) { if (!locked()) openSettingsScreen(3) } }
+            }
+            "ayah" -> {
+                val a = Ayat.today()
+                c.addView(head("آية اليوم"))
+                c.addView(Ui.tv(this, 21f, pal.text, true).apply { text = "﴿ ${a.text} ﴾"; maxLines = 2; setLineSpacing(4f, 1f) },
+                    Ui.lin(Ui.MATCH, Ui.WRAP))
+                c.addView(Ui.tv(this, 15f, pal.amber).apply { text = a.ref }, Ui.lin(Ui.MATCH, 22).apply { topMargin = 4 })
+                card = shell(c, R.drawable.g_book, false, pal.accent)
+            }
+            "dial" -> {
+                c.addView(head("اتصال سريع · اضغط مطولاً للتعديل"))
+                val row = Ui.row(this, Gravity.CENTER)
+                for (i in 2 downTo 0) {
+                    val name = Prefs.str("dialN$i")
+                    row.addView(Ui.tv(this, 18f, if (name.isEmpty()) pal.muted else pal.text, true, Gravity.CENTER).apply {
+                        text = if (name.isEmpty()) "+ إضافة" else name
+                        background = Ui.pressable(Ui.rounded(pal.card, 12f, 2, if (name.isEmpty()) pal.line else pal.accent), Ui.rounded(pal.line, 12f))
+                        setOnClickListener { dial(i) }
+                        setOnLongClickListener { editDial(i); true }
+                    }, Ui.lin(0, 64, 1f).apply { leftMargin = 4; rightMargin = 4 })
+                }
+                c.addView(row, Ui.lin(Ui.MATCH, 70).apply { topMargin = 4 })
+                card = shell(c, R.drawable.g_phone, false, pal.accent)
+            }
+            "shortcuts" -> {
+                c.addView(head("اختصارات · اضغط مطولاً للتغيير"))
+                val row = Ui.row(this, Gravity.CENTER)
+                for (i in 3 downTo 0) {
+                    val pkg = Prefs.str("sc$i")
+                    val info = if (pkg.isEmpty()) null else appInfo(pkg)
+                    val cell = FrameLayout(this).apply {
+                        background = Ui.pressable(Ui.rounded(pal.tile, 14f, 2, pal.tileLine), Ui.rounded(pal.line, 14f))
+                        if (info != null) addView(ImageView(context).apply { setImageDrawable(info.second); scaleType = ImageView.ScaleType.FIT_CENTER },
+                            Ui.at(46, 46, Gravity.CENTER))
+                        else addView(Ui.icon(context, R.drawable.g_plus, pal.muted), Ui.at(28, 28, Gravity.CENTER))
+                        setOnClickListener { if (pkg.isEmpty() || !launch(pkg)) pickShortcut(i) }
+                        setOnLongClickListener { pickShortcut(i); true }
+                    }
+                    row.addView(cell, Ui.lin(64, 64).apply { leftMargin = 6; rightMargin = 6 })
+                }
+                c.addView(row, Ui.lin(Ui.MATCH, 70).apply { topMargin = 4 })
+                card = shell(c, R.drawable.g_apps, false, pal.accent)
             }
             else -> {
                 c.addView(Ui.tv(this, 22f, pal.onAccent, true, Gravity.CENTER).apply {
@@ -416,8 +509,10 @@ class MainActivity : Activity() {
         setOnClickListener { onClick() }
     }
 
-    /** إطار البطاقة: نص وبلاطة أيقونة في أقصى اليمين */
-    private fun shell(content: LinearLayout, icon: Int, warm: Boolean): View {
+    private val BASE_CARDS = setOf("time", "weather", "trip", "matches", "music", "prayer", "azkar", "nav")
+
+    /** إطار البطاقة: نص وبلاطة أيقونة في أقصى اليمين (tint للأيقونات البسيطة) */
+    private fun shell(content: LinearLayout, icon: Int, warm: Boolean, tint: Int? = null): View {
         val card = Ui.row(this, Gravity.CENTER_VERTICAL).apply {
             background = Ui.cardBg(pal)
             setPadding(14, 10, 14, 8)
@@ -425,7 +520,7 @@ class MainActivity : Activity() {
         card.addView(content, Ui.lin(0, Ui.MATCH, 1f))
         val tile = FrameLayout(this).apply {
             background = if (warm) Ui.rounded(pal.warmTile, 18f, 2, pal.warmLine) else Ui.rounded(pal.tile, 18f, 2, pal.tileLine)
-            addView(Ui.icon(context, icon), Ui.at(58, 58, Gravity.CENTER))
+            addView(Ui.icon(context, icon, tint), Ui.at(if (tint != null) 44 else 58, if (tint != null) 44 else 58, Gravity.CENTER))
         }
         card.addView(tile, Ui.lin(76, 76).apply { leftMargin = 14 })
         return card
@@ -453,37 +548,49 @@ class MainActivity : Activity() {
     private fun rebuildFooter() {
         footer?.let { design.removeView(it) }
         val f = FrameLayout(this)
-        design.addView(f, 0, Ui.abs(1280, 80, 0, 640))
+        design.addView(f, 0, Ui.abs(1280, barH, 0, 720 - barH))
         footer = f
         f.addView(View(this).apply { setBackgroundColor(if (editMode) pal.accent else pal.line) }, Ui.abs(1280, 2, 0, 0))
         val bar = Ui.row(this, Gravity.CENTER)
-        f.addView(bar, Ui.abs(1280, 78, 0, 2))
-        for (i in 5 downTo 0) bar.addView(slotView(i), Ui.lin(0, Ui.MATCH, 1f).apply { leftMargin = 4; rightMargin = 4 })
+        f.addView(bar, Ui.abs(1256, barH - 10, 12, 6))
+        for (i in 5 downTo 0) bar.addView(slotView(i), Ui.lin(0, Ui.MATCH, 1f).apply { leftMargin = 5; rightMargin = 5 })
     }
 
+    /** خانة القائمة: أيقونة داخل بلاطة موحّدة، وإطار للخانة النشطة، وتضيء لحظة الضغط */
     private fun slotView(i: Int): View {
+        val size = Prefs.barSize
+        val tileSz = when (size) { 0 -> 40; 2 -> 64; else -> 58 }
+        val iconSz = when (size) { 0 -> 28; 2 -> 46; else -> 40 }
+        val showLabel = size != 2 && (Prefs.slotLabels || editMode)
         val v = Ui.col(this, Gravity.CENTER)
         val type = Prefs.slotType(i); val value = Prefs.slotValue(i)
         val active = type == "fn" && value == "home"
-        val color = if (active) pal.accent else pal.muted
-        if (editMode) v.background = Ui.rounded(pal.card, 12f, 2, pal.accent)
-        val top = Ui.row(this, Gravity.CENTER)
-        top.addView(View(this).apply { setBackgroundColor(if (active && !editMode) pal.accent else 0) }, Ui.lin(120, 3))
-        v.addView(top, Ui.lin(Ui.MATCH, 3).apply { bottomMargin = 7 })
-        val icRow = Ui.row(this, Gravity.CENTER)
-        val iv: ImageView = if (type == "app") {
-            ImageView(this).apply { setImageDrawable(appInfo(value)?.second); scaleType = ImageView.ScaleType.FIT_CENTER }
-        } else {
-            Ui.icon(this, fnIcons[fnIds.indexOf(value).coerceAtLeast(0)], color)
+        val color = if (active) pal.accent else pal.text
+        val normal = when {
+            editMode -> Ui.rounded(pal.card, 14f, 2, pal.accent)
+            active -> Ui.rounded(pal.card, 14f, 2, pal.accent)
+            else -> null
         }
-        icRow.addView(iv, Ui.lin(30, 30))
-        // نقطة صغيرة عندما يعمل تطبيق الموسيقى
+        v.background = Ui.pressable(normal, Ui.rounded(pal.line, 14f))
+        val tile = FrameLayout(this).apply { background = Ui.rounded(pal.tile, 14f, 2, if (active) pal.accent else pal.tileLine) }
+        if (type == "app") {
+            tile.addView(ImageView(this).apply { setImageDrawable(appInfo(value)?.second); scaleType = ImageView.ScaleType.FIT_CENTER },
+                Ui.at(iconSz, iconSz, Gravity.CENTER))
+        } else {
+            tile.addView(Ui.icon(this, fnIcons[fnIds.indexOf(value).coerceAtLeast(0)], if (active) pal.accent else 0xFFE6EAEE.toInt()),
+                Ui.at(iconSz * 3 / 4, iconSz * 3 / 4, Gravity.CENTER))
+        }
+        val icRow = Ui.row(this, Gravity.CENTER)
+        icRow.addView(tile, Ui.lin(tileSz, tileSz))
+        // نقطة خضراء عندما يعمل تطبيق الموسيقى
         val playing = Media.playing && ((type == "app" && value == Media.app) || (type == "fn" && value == "music"))
-        if (playing) icRow.addView(View(this).apply { background = Ui.rounded(pal.ok, 4f) }, Ui.lin(8, 8).apply { leftMargin = 6 })
-        v.addView(icRow, Ui.lin(Ui.MATCH, 30))
-        val label = if (editMode) "✎ تعديل" else slotTitle(i)
-        if (Prefs.slotLabels || editMode) {
-            v.addView(Ui.tv(this, 16f, if (editMode) pal.accent else color, active, Gravity.CENTER).apply { text = label }, Ui.lin(Ui.MATCH, 26).apply { topMargin = 4 })
+        if (playing) icRow.addView(View(this).apply { background = Ui.rounded(pal.ok, 5f) }, Ui.lin(10, 10).apply { leftMargin = 6 })
+        v.addView(icRow, Ui.lin(Ui.MATCH, tileSz))
+        if (showLabel) {
+            val ls = if (size == 0) 15f else 18f
+            v.addView(Ui.tv(this, ls, if (editMode) pal.accent else color, active, Gravity.CENTER).apply {
+                text = if (editMode) "✎ تعديل" else slotTitle(i)
+            }, Ui.lin(Ui.MATCH, if (size == 0) 22 else 26).apply { topMargin = 3 })
         }
         v.setOnClickListener { if (editMode) editSlot(i) { rebuildFooter() } else openSlot(i) }
         v.setOnLongClickListener {
@@ -528,10 +635,80 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun openSettingsScreen() {
+    fun openSettingsScreen(section: Int = -1) {
         if (locked()) return
-        SettingsScreen(this).show()
+        val pin = Prefs.pin
+        if (pin.isEmpty()) { SettingsScreen(this, section).show(); return }
+        val e = android.widget.EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            hint = "الرقم السري"
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("الإعدادات مقفلة").setView(e)
+            .setPositiveButton("فتح") { _, _ -> if (e.text.toString() == pin) SettingsScreen(this, section).show() else toast("الرقم غير صحيح") }
+            .setNegativeButton("إلغاء", null).show()
     }
+
+    // ============================== وجهاتي، الاتصال، الاختصارات ==============================
+    private fun destName(k: String) = when (k) { "home" -> "المنزل"; "work" -> "العمل"; else -> "المسجد" }
+
+    private fun goDest(k: String) {
+        val v = Prefs.str("dest_$k")
+        val uri = when {
+            v.isNotEmpty() -> "geo:$v?q=$v(" + Uri.encode(destName(k)) + ")"
+            k == "mosque" -> "geo:0,0?q=" + Uri.encode("مسجد")
+            else -> { toast("اضغط مطولاً على «${destName(k)}» وأنت فيه لحفظ موقعه"); return }
+        }
+        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        catch (e: Exception) { toast("لا يوجد تطبيق خرائط") }
+    }
+
+    fun saveDest(k: String) {
+        if (!Trip.gpsLive()) { toast("انتظر إشارة GPS ثم أعد المحاولة"); return }
+        Prefs.putStr("dest_$k", String.format(Locale.US, "%.6f,%.6f", Prefs.lat, Prefs.lon))
+        toast("تم حفظ موقعك الحالي كـ«${destName(k)}»"); build()
+    }
+
+    private fun dial(i: Int) {
+        val num = Prefs.str("dialP$i")
+        if (num.isEmpty()) { editDial(i); return }
+        try { startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(num))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        catch (e: Exception) { toast("لا يوجد تطبيق هاتف على الشاشة") }
+    }
+
+    fun editDial(i: Int) {
+        val box = Ui.col(this, Gravity.TOP).apply { setPadding(32, 8, 32, 8) }
+        val n = android.widget.EditText(this).apply { hint = "الاسم"; setText(Prefs.str("dialN$i")); setSingleLine() }
+        val p = android.widget.EditText(this).apply { hint = "رقم الجوال"; setText(Prefs.str("dialP$i")); inputType = android.text.InputType.TYPE_CLASS_PHONE }
+        box.addView(n); box.addView(p)
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("اتصال سريع ${i + 1}").setView(box)
+            .setPositiveButton("حفظ") { _, _ -> Prefs.putStr("dialN$i", n.text.toString().trim()); Prefs.putStr("dialP$i", p.text.toString().trim()); build() }
+            .setNeutralButton("حذف") { _, _ -> Prefs.putStr("dialN$i", ""); Prefs.putStr("dialP$i", ""); build() }
+            .setNegativeButton("إلغاء", null).show()
+    }
+
+    fun pickShortcut(i: Int) {
+        if (locked()) return
+        Drawer.show(this, pal, "اختر تطبيقاً للاختصار") { pkg -> Prefs.putStr("sc$i", pkg); build() }
+    }
+
+    /** تجربة الأصوات من الإعدادات */
+    fun testSound(adhan: Boolean) {
+        try {
+            if (adhan) {
+                val u = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+                android.media.RingtoneManager.getRingtone(this, u)?.play()
+            } else {
+                if (tone == null) tone = ToneGenerator(AudioManager.STREAM_MUSIC, 90)
+                tone?.startTone(ToneGenerator.TONE_PROP_BEEP2, 500)
+            }
+        } catch (e: Exception) { toast("تعذّر تشغيل الصوت") }
+    }
+
+    /** ذاكرة اللانشر الآن بالميجا */
+    fun memoryMb(): Int = try {
+        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        am.getProcessMemoryInfo(intArrayOf(android.os.Process.myPid()))[0].totalPss / 1024
+    } catch (e: Exception) { -1 }
 
     fun launch(pkg: String): Boolean {
         val it = packageManager.getLaunchIntentForPackage(pkg) ?: return false
@@ -598,7 +775,7 @@ class MainActivity : Activity() {
 
     fun forceWeather() { weatherAt = 0L }
     fun forceMatches() { matchesAt = 0L; matchesTry = 0L; matchesFullAt = 0L }
-    fun matchesUpdatedText(): String = if (matchesAt == 0L) "—" else hmF.format(Date(matchesAt))
+    fun matchesUpdatedText(): String = if (matchesAt == 0L) "—" else Ui.hm(matchesAt)
 
     // ============================== اللوحة السريعة ==============================
     /** ضغطة مطولة على الساعة: السطوع، الصوت، الثيم، العرض على الزجاج */
@@ -620,11 +797,11 @@ class MainActivity : Activity() {
         val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         row("الصوت", Pair("−") { am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI) },
             Pair("+") { am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI) })
-        val themes = listOf("auto", "dark", "light", "amber")
-        row("الثيم", Pair("تلقائي") { Prefs.theme = themes[0]; dlg.dismiss(); applySettings() },
-            Pair("داكن") { Prefs.theme = themes[1]; dlg.dismiss(); applySettings() },
-            Pair("فاتح") { Prefs.theme = themes[2]; dlg.dismiss(); applySettings() },
-            Pair("كهرماني") { Prefs.theme = themes[3]; dlg.dismiss(); applySettings() })
+        fun fixed(b: String) { Prefs.theme = "fixed"; Prefs.setBase("fixed", b); dlg.dismiss(); applySettings() }
+        row("الثيم", Pair("تلقائي") { Prefs.theme = "auto"; dlg.dismiss(); applySettings() },
+            Pair("داكن") { fixed("dark") }, Pair("أسود") { fixed("black") }, Pair("فاتح") { fixed("light") })
+        row("الساعة", Pair("12") { Prefs.clock24 = false; dlg.dismiss(); applySettings() },
+            Pair("24") { Prefs.clock24 = true; dlg.dismiss(); applySettings() })
         row("شاشات", Pair("سرعة كبيرة") { dlg.dismiss(); Panels.bigSpeed(this) }, Pair("الانتظار") { dlg.dismiss(); showStandby() })
         dlg = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("لوحة سريعة").setView(box).setPositiveButton("إغلاق", null).create()
@@ -637,12 +814,12 @@ class MainActivity : Activity() {
         if (standbyView != null) return
         val v = Ui.col(this, Gravity.CENTER).apply { setBackgroundColor(0xFF000000.toInt()) }
         val now = System.currentTimeMillis()
-        val clock = Ui.tv(this, 200f, 0xFF2EE6F0.toInt(), true, Gravity.CENTER).apply { text = hmF.format(Date(now)) }
+        val clock = Ui.tv(this, 200f, 0xFF2EE6F0.toInt(), true, Gravity.CENTER).apply { text = Ui.hmBig(now) }
         standbyClock = clock
         v.addView(clock, Ui.lin(Ui.MATCH, 230))
         v.addView(Ui.tv(this, 28f, 0xFF9AA7B4.toInt(), false, Gravity.CENTER).apply { text = toLatinDigits(SimpleDateFormat("EEEE d MMMM", Locale("ar")).format(Date(now))) + " · " + Astro.hijriText(now) }, Ui.lin(Ui.MATCH, 44))
         val (idx, at) = Astro.nextPrayer(now, Loc.lat(), Loc.lon())
-        v.addView(Ui.tv(this, 30f, 0xFFF5B841.toInt(), true, Gravity.CENTER).apply { text = "${Astro.PRAYER_NAMES[idx]} " + hmF.format(Date(at)) }, Ui.lin(Ui.MATCH, 50).apply { topMargin = 20 })
+        v.addView(Ui.tv(this, 30f, 0xFFF5B841.toInt(), true, Gravity.CENTER).apply { text = "${Astro.PRAYER_NAMES[idx]} " + Ui.hm(at) }, Ui.lin(Ui.MATCH, 50).apply { topMargin = 20 })
         design.addView(v, Ui.abs(1280, 720, 0, 0))
         standbyView = v
         refreshSlow()
@@ -854,7 +1031,7 @@ class MainActivity : Activity() {
                 if (m.state == "pre" && (m.home in favT || m.away in favT) && m.time - now in 1..(15 * 60000L)
                     && preMatchShown.add(m.home + "|" + m.away + "|" + m.time)) {
                     alert(Alert(pal.ok, R.drawable.ic_ball, false,
-                        "بعد ${Duas.mins(((m.time - now + 59999L) / 60000L).toInt())}: ${m.home} × ${m.away}", m.league + " · " + Net.hhmm(m.time), true))
+                        "بعد ${Duas.mins(((m.time - now + 59999L) / 60000L).toInt())}: ${m.home} × ${m.away}", m.league + " · " + Ui.hm(m.time), true))
                 }
             }
         }
@@ -883,8 +1060,8 @@ class MainActivity : Activity() {
         override fun run() {
             if (!started) return
             val now = System.currentTimeMillis()
-            Ui.setT(clockTv, hmF.format(Date(now)))
-            gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive())
+            Ui.setT(clockTv, Ui.hmBig(now))
+            gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive(), Trip.bearing, Trip.maxKmh.roundToInt())
             refreshTrip()
             refreshMusic()
             checkAlerts(now)
@@ -893,8 +1070,9 @@ class MainActivity : Activity() {
             if (standbyView != null && Trip.kmh() > 5f) hideStandby()
             else if (standbyView == null && Prefs.standby && Trip.gpsLive() && Trip.kmh() < 1f &&
                 now - maxOf(Trip.lastMovingAt, lastTouch) > 10 * 60000L) showStandby()
-            standbyClock?.let { Ui.setT(it, hmF.format(Date(now))) }
+            standbyClock?.let { Ui.setT(it, Ui.hmBig(now)) }
             updateQibla()
+            refreshCompass()
             Ui.setT(headingTv, if (Trip.bearing >= 0f && Trip.kmh() > 8f) dirName(Trip.bearing) else "")
             if (now - lastStatus > 5000) { lastStatus = now; refreshStatus() }
             if (now - lastSlow > 30000) {
@@ -913,15 +1091,15 @@ class MainActivity : Activity() {
     }
 
     private fun refreshAll() {
-        Ui.setT(clockTv, hmF.format(Date()))
-        gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive())
+        Ui.setT(clockTv, Ui.hmBig(System.currentTimeMillis()))
+        gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive(), Trip.bearing, Trip.maxKmh.roundToInt())
         refreshTrip(); refreshMusic(); refreshStatus(); refreshSlow(); refreshWeather(); refreshMatches()
     }
 
     private fun refreshSlow() {
         val now = System.currentTimeMillis()
         val df = SimpleDateFormat("EEEE d MMMM yyyy", Locale("ar"))
-        Ui.setT(timeV, hmF.format(Date(now)))
+        Ui.setT(timeV, Ui.hmBig(now))
         Ui.setT(timeS1, toLatinDigits(df.format(Date(now))))
         Ui.setT(timeS2, Astro.hijriText(now))
         dayIcon.setImageResource(if (night) R.drawable.g_moon else R.drawable.g_sun)
@@ -935,6 +1113,7 @@ class MainActivity : Activity() {
         if (lp.screenBrightness != want) { lp.screenBrightness = want; window.attributes = lp }
         refreshPrayer(now)
         refreshAzkar()
+        refreshOccasions(now)
     }
 
     private fun toLatinDigits(s: String): String {
@@ -950,7 +1129,7 @@ class MainActivity : Activity() {
         val mins = ((at - now) / 60000L).toInt()
         val left = if (mins >= 60) "بعد ${mins / 60} س ${mins % 60} د" else "بعد $mins د"
         Ui.setT(prV, "${Astro.PRAYER_NAMES[idx]} · $left")
-        Ui.setT(prS, "الأذان " + hmF.format(Date(at)) + " · " + Loc.name())
+        Ui.setT(prS, "الأذان " + Ui.hm(at) + " · " + Loc.name())
         qiblaDeg = Astro.qibla(Loc.lat(), Loc.lon()).toFloat()
         updateQibla()
     }
@@ -962,6 +1141,21 @@ class MainActivity : Activity() {
         val rot = if (rel) qiblaDeg - heading else qiblaDeg
         if (Math.abs(qArrow.rotation - rot) > 2f) qArrow.rotation = rot
         Ui.setT(qTxt, if (rel) "بالنسبة لاتجاه السيارة" else "${qiblaDeg.roundToInt()}° من الشمال")
+    }
+
+    private fun refreshCompass() {
+        val v = cmpV ?: return
+        val b = Trip.bearing
+        Ui.setT(v, if (b >= 0f && Trip.gpsLive()) "${dirName(b)} · ${b.roundToInt()}°" else "متوقف")
+        val alt = Trip.altitude
+        cmpS?.let { Ui.setT(it, if (alt.isNaN()) "الارتفاع: بانتظار GPS" else "الارتفاع ${alt.roundToInt()} م عن سطح البحر") }
+    }
+
+    private fun refreshOccasions(now: Long) {
+        val v = occV ?: return
+        val o = Astro.occasions(now)
+        Ui.setT(v, o.getOrElse(0) { "لا مناسبات خلال 4 أشهر" })
+        occS?.let { Ui.setT(it, o.getOrElse(1) { Astro.hijriText(now) }) }
     }
 
     private fun refreshAzkar() {
@@ -1025,7 +1219,7 @@ class MainActivity : Activity() {
         val w = weather
         if (w == null) { Ui.setT(wxV, "--°"); Ui.setT(wxS, Loc.name() + " · بانتظار الاتصال"); return }
         Ui.setT(wxV, "${w.temp}°")
-        Ui.setT(wxHead, "حالة الطقس · " + hmF.format(Date(weatherAt)))
+        Ui.setT(wxHead, "حالة الطقس · " + Ui.hm(weatherAt))
         Ui.setT(wxS, if (w.desc.isEmpty()) w.city else "${w.city} · ${w.desc}")
     }
 
@@ -1047,11 +1241,11 @@ class MainActivity : Activity() {
         when (m.state) {
             "in" -> { Ui.setT(mBadge, "مباشر ${m.clock}"); mBadge.setTextColor(pal.ok) }
             "post" -> { Ui.setT(mBadge, "انتهت"); mBadge.setTextColor(pal.muted) }
-            else -> { Ui.setT(mBadge, "قادم ${Net.hhmm(m.time)}"); mBadge.setTextColor(pal.muted) }
+            else -> { Ui.setT(mBadge, "قادم ${Ui.hm(m.time)}"); mBadge.setTextColor(pal.muted) }
         }
         Ui.setT(mV, if (m.state == "pre") "${m.home} × ${m.away}" else "${m.home} ${m.hs} — ${m.aws} ${m.away}")
         val n = matches?.next
-        Ui.setT(mS, if (n != null) "قادم: ${n.home} × ${n.away} ${Net.hhmm(n.time)}" else "")
+        Ui.setT(mS, if (n != null) "قادم: ${n.home} × ${n.away} ${Ui.hm(n.time)}" else "")
         if (n == null) Ui.setT(mS, "آخر تحديث " + matchesUpdatedText())
         Prefs.putStr("mcH", mHead.text.toString()); Prefs.putStr("mcV", mV.text.toString()); Prefs.putStr("mcS", mS.text.toString())
     }

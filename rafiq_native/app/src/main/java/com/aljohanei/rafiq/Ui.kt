@@ -86,4 +86,46 @@ object Ui {
         }
         return Pair(root, design)
     }
+
+    // ---------------- الوقت بنظام 12 أو 24 ----------------
+    /** الوقت نصاً: «11:21 م» أو «23:21» */
+    fun hm(ms: Long): String {
+        val c = java.util.Calendar.getInstance().apply { timeInMillis = ms }
+        return hm(c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
+    }
+    fun hm(h: Int, m: Int): String {
+        if (Prefs.clock24) return String.format(java.util.Locale.US, "%02d:%02d", h, m)
+        val h12 = if (h % 12 == 0) 12 else h % 12
+        return String.format(java.util.Locale.US, "%d:%02d %s", h12, m, if (h < 12) "ص" else "م")
+    }
+    /** من نص «06:38» القادم من الإنترنت */
+    fun hmStr(s: String): String = try {
+        val p = s.trim().split(":"); hm(p[0].toInt(), p[1].toInt())
+    } catch (e: Exception) { s }
+    /** للساعات الكبيرة: «ص/م» بخط أصغر */
+    fun hmBig(ms: Long): CharSequence {
+        val t = hm(ms)
+        if (Prefs.clock24) return t
+        val sp = android.text.SpannableString(t)
+        sp.setSpan(android.text.style.RelativeSizeSpan(0.45f), t.length - 1, t.length, 0)
+        return sp
+    }
+
+    // ---------------- عناصر الإعدادات ----------------
+    /** مفتاح تشغيل مرسوم (بدون صور) */
+    fun switchView(c: Context, on: Boolean, p: Palette): View {
+        val track = FrameLayout(c).apply { background = rounded(if (on) p.accent else p.line, 16f) }
+        val knob = View(c).apply { background = rounded(if (on) p.onAccent else p.muted, 12f) }
+        track.addView(knob, FrameLayout.LayoutParams(24, 24, (if (on) Gravity.LEFT else Gravity.RIGHT) or Gravity.CENTER_VERTICAL).apply {
+            leftMargin = 4; rightMargin = 4
+        })
+        return track
+    }
+
+    /** خلفية تضيء لحظة الضغط */
+    fun pressable(normal: Drawable?, pressed: Drawable): Drawable =
+        android.graphics.drawable.StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), pressed)
+            addState(intArrayOf(), normal ?: android.graphics.drawable.ColorDrawable(0))
+        }
 }

@@ -29,6 +29,7 @@ object Trip {
     @Volatile var movingMs = 0L
     @Volatile var maxKmh = 0f
     @Volatile var startedAt = System.currentTimeMillis()
+    @Volatile var altitude = Double.NaN
     var last: Location? = null
     // القيادة المتواصلة (للاستراحة) وبداية الركوب (للدعاء) والابتعاد (لدعاء السفر)
     @Volatile var driveStart = 0L
@@ -123,6 +124,7 @@ class TripService : Service(), LocationListener {
         }
         Trip.speedKmh = if (kmh < 2f) 0f else kmh
         Trip.hasFix = true
+        if (loc.hasAltitude()) Trip.altitude = loc.altitude
         Trip.lastFixAt = now
         if (loc.hasBearing() && kmh > 8f) Trip.bearing = loc.bearing
         if (prev != null && kmh >= 3f && loc.accuracy < 40f) {

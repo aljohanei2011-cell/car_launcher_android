@@ -24,7 +24,6 @@ import kotlin.math.sin
 
 /** شاشات تُفتح بالضغط على البطاقات. تُنشأ عند الفتح وتُحذف عند الإغلاق */
 object Panels {
-    private val hm = SimpleDateFormat("HH:mm", Locale.US)
 
     /** إطار شاشة كاملة بمقاس التصميم: عنوان وزر إغلاق، ومحتوى */
     private fun frame(a: MainActivity, pal: Palette, title: String, extra: Pair<String, () -> Unit>? = null,
@@ -84,13 +83,13 @@ object Panels {
     private fun buildWeather(a: MainActivity, pal: Palette, body: FrameLayout, f: Net.Full) {
         // يمين: الآن
         val now = box(a, pal)
-        now.addView(t(a, 18f, pal.muted, "الآن · آخر تحديث " + hm.format(Date())), Ui.lin(Ui.MATCH, 26))
+        now.addView(t(a, 18f, pal.muted, "الآن · آخر تحديث " + Ui.hm(System.currentTimeMillis())), Ui.lin(Ui.MATCH, 26))
         now.addView(t(a, 84f, pal.text, "${f.temp}°", true), Ui.lin(Ui.MATCH, 96))
         now.addView(t(a, 24f, pal.text, f.desc, true), Ui.lin(Ui.MATCH, 34))
         now.addView(t(a, 18f, pal.muted, "الإحساس الفعلي ${f.feels}°"), Ui.lin(Ui.MATCH, 30).apply { topMargin = 10 })
         now.addView(t(a, 18f, pal.muted, "الرطوبة ${f.humidity}%"), Ui.lin(Ui.MATCH, 30))
         now.addView(t(a, 18f, pal.muted, "الرياح ${f.wind} كم/س ${f.windDir}"), Ui.lin(Ui.MATCH, 30))
-        now.addView(t(a, 18f, pal.muted, "الشروق ${f.sunrise} · الغروب ${f.sunset}"), Ui.lin(Ui.MATCH, 30))
+        now.addView(t(a, 18f, pal.muted, "الشروق ${Ui.hmStr(f.sunrise)} · الغروب ${Ui.hmStr(f.sunset)}"), Ui.lin(Ui.MATCH, 30))
         now.addView(t(a, 18f, pal.muted, "الأشعة فوق البنفسجية ${f.uv}"), Ui.lin(Ui.MATCH, 30))
         if (f.pm10 >= 0) now.addView(t(a, 18f, if (f.pm10 >= 150) pal.amber else pal.muted, "الغبار: ${Net.dustLevel(f.pm10)} (${f.pm10})"), Ui.lin(Ui.MATCH, 30))
         if (f.wave >= 0) now.addView(t(a, 18f, pal.accent, String.format(Locale.US, "البحر: ارتفاع الموج %.1f م", f.wave)), Ui.lin(Ui.MATCH, 30))
@@ -103,7 +102,7 @@ object Panels {
             val r = Ui.row(a, Gravity.CENTER_VERTICAL)
             r.addView(t(a, 17f, pal.accent, if (x.rain > 0) "مطر ${x.rain}%" else "", false, Gravity.LEFT), Ui.lin(0, 40, 1f))
             r.addView(t(a, 22f, pal.text, "${x.temp}°", true, Gravity.CENTER), Ui.lin(80, 40))
-            r.addView(t(a, 18f, pal.muted, x.time, false, Gravity.RIGHT), Ui.lin(80, 40))
+            r.addView(t(a, 18f, pal.muted, Ui.hmStr(x.time), false, Gravity.RIGHT), Ui.lin(100, 40))
             hrs.addView(r, Ui.lin(Ui.MATCH, 44))
         }
         body.addView(hrs, Ui.abs(380, 600, 482, 24))
@@ -144,14 +143,14 @@ object Panels {
                 background = if (isNext) Ui.rounded(pal.accent, 12f) else null
                 setPadding(14, 0, 14, 0)
             }
-            r.addView(t(a, 24f, if (isNext) pal.onAccent else pal.text, hm.format(Date(pt[i])), true, Gravity.LEFT), Ui.lin(0, 56, 1f))
+            r.addView(t(a, 24f, if (isNext) pal.onAccent else pal.text, Ui.hm(pt[i]), true, Gravity.LEFT), Ui.lin(0, 56, 1f))
             r.addView(t(a, 22f, if (isNext) pal.onAccent else pal.text, name, isNext), Ui.lin(Ui.WRAP, 56))
             list.addView(r, Ui.lin(Ui.MATCH, 58).apply { topMargin = 4 })
         }
         list.addView(countdown, Ui.lin(Ui.MATCH, 34).apply { topMargin = 10 })
         val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 1) }
-        list.addView(t(a, 18f, pal.muted, "فجر الغد " + hm.format(Date(Astro.prayerMillis(tomorrow, lat, lon)[0]))), Ui.lin(Ui.MATCH, 30))
-        if (ramadan) list.addView(t(a, 18f, pal.amber, "الإمساك " + hm.format(Date(pt[0] - 10 * 60000L))), Ui.lin(Ui.MATCH, 30))
+        list.addView(t(a, 18f, pal.muted, "فجر الغد " + Ui.hm(Astro.prayerMillis(tomorrow, lat, lon)[0])), Ui.lin(Ui.MATCH, 30))
+        if (ramadan) list.addView(t(a, 18f, pal.amber, "الإمساك " + Ui.hm(pt[0] - 10 * 60000L)), Ui.lin(Ui.MATCH, 30))
         for (o in Astro.occasions(nowMs)) list.addView(t(a, 17f, pal.amber, o), Ui.lin(Ui.MATCH, 28))
         body.addView(list, Ui.abs(400, 600, 856, 24))
 
@@ -188,7 +187,7 @@ object Panels {
             val day = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, k) }
             val m = Astro.prayerMillis(day, lat, lon)
             val r = Ui.row(a, Gravity.CENTER_VERTICAL)
-            for (i in intArrayOf(5, 4, 3, 2, 0)) r.addView(t(a, 16f, if (k == 0) pal.text else pal.muted, hm.format(Date(m[i])), k == 0, Gravity.CENTER), Ui.lin(0, 40, 1f))
+            for (i in intArrayOf(5, 4, 3, 2, 0)) r.addView(t(a, 14f, if (k == 0) pal.text else pal.muted, Ui.hm(m[i]), k == 0, Gravity.CENTER), Ui.lin(0, 40, 1f))
             r.addView(t(a, 16f, if (k == 0) pal.accent else pal.text, dn[day.get(Calendar.DAY_OF_WEEK) - 1], true, Gravity.CENTER), Ui.lin(70, 40))
             week.addView(r, Ui.lin(Ui.MATCH, 44).apply { topMargin = 6 })
         }
@@ -268,7 +267,7 @@ object Panels {
                 val sv = ScrollView(a)
                 val col = Ui.col(a, Gravity.TOP or Gravity.RIGHT).apply { setPadding(24, 16, 24, 24) }
                 sv.addView(col, FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP))
-                col.addView(t(a, 16f, pal.muted, "آخر تحديث " + hm.format(Date())), Ui.lin(Ui.MATCH, 26))
+                col.addView(t(a, 16f, pal.muted, "آخر تحديث " + Ui.hm(System.currentTimeMillis())), Ui.lin(Ui.MATCH, 26))
                 for ((code, list) in all.groupBy { it.code }) {
                     val hr = Ui.row(a, Gravity.CENTER_VERTICAL)
                     hr.addView(t(a, 18f, pal.accent, "الترتيب", true, Gravity.CENTER).apply {
@@ -285,7 +284,7 @@ object Panels {
                         val status = when (m.state) {
                             "in" -> "مباشر ${m.clock}"
                             "post" -> "انتهت"
-                            else -> (if (dayF.format(Date(m.time)) == todayKey) "" else "غداً ") + hm.format(Date(m.time))
+                            else -> (if (dayF.format(Date(m.time)) == todayKey) "" else "غداً ") + Ui.hm(m.time)
                         }
                         r.addView(t(a, 18f, if (m.state == "in") pal.ok else pal.muted, status, m.state == "in", Gravity.LEFT), Ui.lin(160, 52))
                         val line = if (m.state == "pre") "${m.home} × ${m.away}" else "${m.home} ${m.hs} — ${m.aws} ${m.away}"
@@ -364,12 +363,12 @@ object Panels {
     // ============================ سجل الرحلات ============================
     fun tripLog(a: MainActivity) {
         val rows = Prefs.str("tripLog").split(";").filter { it.isNotEmpty() }
-        val f = SimpleDateFormat("EEE d/M HH:mm", Locale("ar"))
+        val f = SimpleDateFormat("EEE d/M", Locale("ar"))
         val items = rows.mapNotNull {
             val p = it.split("|")
             if (p.size < 5) null else try {
                 val km = String.format(Locale.US, "%.1f", p[1].toDouble() / 1000.0)
-                "${f.format(Date(p[0].toLong()))}\n$km كم · ${p[2].toLong() / 60000} د · متوسط ${p[3]} · أعلى ${p[4]}"
+                "${f.format(Date(p[0].toLong()))} ${Ui.hm(p[0].toLong())}\n$km كم · ${p[2].toLong() / 60000} د · متوسط ${p[3]} · أعلى ${p[4]}"
             } catch (e: Exception) { null }
         }
         android.app.AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert)

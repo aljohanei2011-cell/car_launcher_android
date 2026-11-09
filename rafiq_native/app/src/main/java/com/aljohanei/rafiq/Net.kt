@@ -262,5 +262,5 @@ object Net {
         } catch (e: Exception) { emptyList() }
     }
 
-    fun hhmm(t: Long): String = SimpleDateFormat("HH:mm", Locale.US).format(Date(t))
+    fun hhmm(t: Long): String = Ui.hm(t)
 }

@@ -9,16 +9,65 @@ object Prefs {
     fun init(c: Context) { if (sp == null) sp = c.applicationContext.getSharedPreferences("rafiq", Context.MODE_PRIVATE) }
     private fun p(): SharedPreferences = sp!!
 
-    val CARD_IDS = listOf("time", "weather", "trip", "matches", "music", "prayer", "azkar", "nav")
-    val CARD_NAMES = listOf("الوقت والتاريخ", "الطقس", "كمبيوتر الرحلة", "المباريات", "الموسيقى", "الصلاة", "الأذكار", "الملاحة")
+    val CARD_IDS = listOf("time", "weather", "trip", "matches", "music", "prayer", "azkar", "nav",
+        "dest", "compass", "occasions", "ayah", "dial", "shortcuts")
+    val CARD_NAMES = listOf("الوقت والتاريخ", "الطقس", "كمبيوتر الرحلة", "المباريات", "الموسيقى", "الصلاة", "الأذكار", "الملاحة",
+        "وجهاتي", "البوصلة", "المناسبات", "آية اليوم", "اتصال سريع", "اختصارات")
+    /** البطاقات الجديدة تبدأ مخفية حتى لا يزدحم العمود؛ تُظهرها من الإعدادات */
+    val NEW_CARDS = listOf("dest", "compass", "occasions", "ayah", "dial", "shortcuts")
+    fun knownCards(): Set<String> = p().getStringSet("known", emptySet()) ?: emptySet()
+    fun setKnownCards(s: Set<String>) { p().edit().putStringSet("known", HashSet(s)).apply() }
     fun cardName(id: String): String = CARD_NAMES.getOrElse(CARD_IDS.indexOf(id)) { id }
 
-    /** auto / dark / light / amber */
+    /** auto = ثيم للنهار وثيم لليل، fixed = ثيم واحد. (القيم القديمة dark/light/amber تُحوَّل تلقائياً) */
     var theme: String
         get() = str("theme", "auto")
         set(v) = putStr("theme", v)
+    // الخلفية: dark / black / light ، لون التمييز: cyan / red / green / amber / blue / silver
+    fun base(slot: String): String = str("base_$slot", when (slot) { "day" -> "light"; "night" -> "black"; else -> "dark" })
+    fun accent(slot: String): String = str("acc_$slot", when (slot) { "day" -> "blue"; "night" -> "amber"; else -> "cyan" })
+    fun setBase(slot: String, v: String) = putStr("base_$slot", v)
+    fun setAccent(slot: String, v: String) = putStr("acc_$slot", v)
 
-    /** 0 قوس، 1 حلقة، 2 شريط */
+    /** نظام الساعة: 12 افتراضياً */
+    var clock24: Boolean
+        get() = bool("clock24", false)
+        set(v) = putBool("clock24", v)
+
+    /** حجم القائمة السفلية: 0 عادي، 1 كبير، 2 أيقونات فقط */
+    var barSize: Int
+        get() = int("barSize", 1)
+        set(v) = putInt("barSize", v)
+
+    var showCar: Boolean
+        get() = bool("showCar", true)
+        set(v) = putBool("showCar", v)
+    var maxMark: Boolean
+        get() = bool("maxMark", true)
+        set(v) = putBool("maxMark", v)
+    var keepOn: Boolean
+        get() = bool("keepOn", false)
+        set(v) = putBool("keepOn", v)
+    /** رقم سري اختياري لفتح الإعدادات */
+    var pin: String
+        get() = str("pin")
+        set(v) = putStr("pin", v)
+
+    fun remove(keys: Collection<String>) { val e = p().edit(); for (k in keys) e.remove(k); e.apply() }
+    fun removePrefix(prefixes: Collection<String>) {
+        val e = p().edit()
+        for (k in p().all.keys) if (prefixes.any { k.startsWith(it) }) e.remove(k)
+        e.apply()
+    }
+    /** استعادة كل الإعدادات مع إبقاء الموقع وسجل الرحلات وإحصاءات الاستخدام */
+    fun resetAll() {
+        val keep = setOf("lat", "lon", "tripLog", "ride", "locMin", "hint1", "updChecked", "updTried")
+        val e = p().edit()
+        for (k in p().all.keys) if (k !in keep && !k.startsWith("use_")) e.remove(k)
+        e.apply()
+    }
+
+    /** 0 قوس، 1 حلقة، 2 شريط، 3 إبرة، 4 قوس مقطّع، 5 نصف دائرة، 6 رقمي، 7 عداد وبوصلة */
     var gauge: Int
         get() = int("gauge", 0)
         set(v) = putInt("gauge", v)
@@ -57,7 +106,7 @@ object Prefs {
 
     /** ترتيب البطاقات في العمودين */
     fun column(right: Boolean): MutableList<String> {
-        val def = if (right) "time,weather,trip,matches" else "music,prayer,azkar,nav"
+        val def = if (right) "time,weather,trip,matches,compass,occasions,ayah" else "music,prayer,azkar,nav,dest,dial,shortcuts"
         val l = str(if (right) "colR" else "colL", def).split(",").filter { it in CARD_IDS }.toMutableList()
         return l
     }
