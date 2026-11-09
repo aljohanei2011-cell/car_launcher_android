@@ -249,7 +249,7 @@ object Panels {
 
     // ============================ المباريات ============================
     fun matchesDay(a: MainActivity, pal: Palette) {
-        val (d, body) = frame(a, pal, "مباريات اليوم", Pair("تحديث") { a.forceMatches(); matchesDay(a, pal) })
+        val (d, body) = frame(a, pal, "مباريات اليوم وغداً", Pair("تحديث") { a.forceMatches(); matchesDay(a, pal) })
         val wait = t(a, 22f, pal.muted, "جارٍ التحميل…", false, Gravity.CENTER)
         body.addView(wait, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.CENTER))
         d.show()
@@ -259,7 +259,10 @@ object Panels {
             val all = Net.fetchAll(leagues)
             h.post {
                 if (!d.isShowing) return@post
-                if (all.isEmpty()) { wait.text = "لا توجد مباريات اليوم، أو لا يوجد اتصال"; return@post }
+                if (all == null) { wait.text = "لا يوجد اتصال بالإنترنت"; return@post }
+                if (all.isEmpty()) { wait.text = "لا توجد مباريات اليوم أو غداً في البطولات المختارة"; return@post }
+                val dayF = SimpleDateFormat("yyyyMMdd", Locale.US)
+                val todayKey = dayF.format(Date())
                 body.removeAllViews()
                 val fav = Prefs.favTeams()
                 val sv = ScrollView(a)
@@ -279,7 +282,11 @@ object Panels {
                         val r = Ui.row(a, Gravity.CENTER_VERTICAL).apply {
                             background = Ui.rounded(pal.card, 12f, 2, if (isFav) pal.accent else pal.line); setPadding(18, 0, 18, 0)
                         }
-                        val status = when (m.state) { "in" -> "مباشر ${m.clock}"; "post" -> "انتهت"; else -> hm.format(Date(m.time)) }
+                        val status = when (m.state) {
+                            "in" -> "مباشر ${m.clock}"
+                            "post" -> "انتهت"
+                            else -> (if (dayF.format(Date(m.time)) == todayKey) "" else "غداً ") + hm.format(Date(m.time))
+                        }
                         r.addView(t(a, 18f, if (m.state == "in") pal.ok else pal.muted, status, m.state == "in", Gravity.LEFT), Ui.lin(160, 52))
                         val line = if (m.state == "pre") "${m.home} × ${m.away}" else "${m.home} ${m.hs} — ${m.aws} ${m.away}"
                         r.addView(t(a, 20f, pal.text, line, isFav), Ui.lin(0, 52, 1f))
@@ -329,20 +336,21 @@ object Panels {
         }.start()
     }
 
-    // ============================ العرض على الزجاج ============================
-    /** سرعة كبيرة معكوسة لتنعكس على الزجاج ليلاً. لمسة تغلقها */
-    fun hud(a: MainActivity, pal: Palette) {
+    // ============================ شاشة السرعة الكبيرة ============================
+    /** شاشة سوداء فيها السرعة فقط بخط كبير جداً (مريحة ليلاً). لمسة تغلقها */
+    fun bigSpeed(a: MainActivity) {
+        val pal = Palette.DARK
         val d = Dialog(a, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen)
         val (root, design) = Ui.scaled(a, 0xFF000000.toInt())
-        val sp = t(a, 340f, pal.accent, "0", true, Gravity.CENTER).apply { scaleX = -1f }
-        design.addView(sp, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.CENTER))
-        val unit = t(a, 40f, pal.muted, "كم/س", false, Gravity.CENTER).apply { scaleX = -1f }
-        design.addView(unit, Ui.at(Ui.MATCH, 60, Gravity.BOTTOM).apply { bottomMargin = 60 })
+        val sp = Ui.tv(a, 360f / Ui.fontScale, pal.accent, true, Gravity.CENTER).apply { text = "0" }
+        design.addView(sp, Ui.at(Ui.MATCH, 460, Gravity.CENTER))
+        design.addView(t(a, 36f, pal.muted, "كم/س · المس الشاشة للرجوع", false, Gravity.CENTER),
+            Ui.at(Ui.MATCH, 60, Gravity.BOTTOM).apply { bottomMargin = 50 })
         root.setOnClickListener { d.dismiss() }
         val h = Handler(Looper.getMainLooper())
         val r = object : Runnable {
             override fun run() {
-                val v = Math.round(Trip.speedKmh)
+                val v = Math.round(Trip.kmh())
                 Ui.setT(sp, v.toString())
                 sp.setTextColor(if (Prefs.alertSpeed in 1 until v) pal.danger else pal.accent)
                 h.postDelayed(this, 1000)

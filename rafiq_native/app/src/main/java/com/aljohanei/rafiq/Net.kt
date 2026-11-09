@@ -168,13 +168,23 @@ object Net {
 
     fun leagueName(code: String): String = Prefs.LEAGUE_NAMES.getOrElse(Prefs.LEAGUE_IDS.indexOf(code)) { code }
 
-    /** مباريات البطولات المختارة (الترتيب يحدد الأولوية: السعودي أولاً) */
-    fun fetchAll(leagues: Collection<String>): List<Match> {
+    /**
+     * مباريات اليوم وغداً للبطولات المطلوبة (الترتيب يحدد الأولوية: السعودي أولاً).
+     * تعيد null إن فشلت كل الطلبات (لا يوجد اتصال) حتى لا تُمسح النتائج المعروضة.
+     */
+    fun fetchAll(leagues: Collection<String>): List<Match>? {
         val all = ArrayList<Match>()
+        val f = SimpleDateFormat("yyyyMMdd", Locale.US)
+        val t = System.currentTimeMillis()
+        val range = f.format(Date(t)) + "-" + f.format(Date(t + 86400000L))
+        var ok = 0; var tried = 0
         for (code in Prefs.LEAGUE_IDS) {
             if (code !in leagues) continue
+            tried++
             try {
-                val evs = get(BASE + code + "/scoreboard").optJSONArray("events") ?: continue
+                val j = get(BASE + code + "/scoreboard?limit=100&dates=" + range)
+                ok++
+                val evs = j.optJSONArray("events") ?: continue
                 for (i in 0 until evs.length()) {
                     val e = evs.optJSONObject(i) ?: continue
                     val st = e.optJSONObject("status")
@@ -191,14 +201,21 @@ object Net {
                 }
             } catch (e: Exception) {}
         }
-        return all
+        return if (tried > 0 && ok == 0) null else all
     }
 
     /** البطاقة: مباراة فريقك المباشرة، ثم أي مباراة مباشرة، ثم مباراة فريقك القادمة */
-    fun matches(): MatchCard {
+    /**
+     * only: أثناء المباريات المباشرة نحدّث بطولاتها فقط (بيانات أقل)، ونُبقي بقية المباريات من prev.
+     * تعيد null عند انقطاع الاتصال.
+     */
+    fun matches(only: Set<String>? = null, prev: List<Match>? = null): MatchCard? {
         val fav = Prefs.favTeams()
         val favOnly = Prefs.matchMode == "fav"
-        val all = fetchAll(Prefs.leagues())
+        val all: List<Match> = if (only != null && prev != null) {
+            val part = fetchAll(only) ?: return null
+            (prev.filter { it.code !in only } + part).sortedBy { Prefs.LEAGUE_IDS.indexOf(it.code) }
+        } else fetchAll(Prefs.leagues()) ?: return null
         fun isFav(m: Match) = m.home in fav || m.away in fav
         val pool = if (favOnly) all.filter { isFav(it) } else all
         val now = System.currentTimeMillis()

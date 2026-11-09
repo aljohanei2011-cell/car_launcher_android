@@ -23,7 +23,7 @@ class PrayerAlarm : BroadcastReceiver() {
         val early = intent.getBooleanExtra("early", false)
         if (idx in 0..5) {
             val name = Astro.PRAYER_NAMES[idx]
-            if (early && Prefs.alertOn("pre")) notify(c, "بعد ${Prefs.preMin} دقائق: صلاة $name", null, true)
+            if (early && Prefs.alertOn("pre")) notify(c, "بعد ${Duas.mins(Prefs.preMin)}: صلاة $name", null, true)
             if (!early && Prefs.alertOn("prayer")) notify(c, "حان وقت صلاة $name", "بعد الأذان: " + Duas.AFTER_ADHAN, false)
         }
         schedule(c)
@@ -90,5 +90,17 @@ object Duas {
         "اللهم إني أسألك علماً نافعاً، ورزقاً طيباً، وعملاً متقبلاً",
         "حسبنا الله ونعم الوكيل"
     )
+    fun mins(n: Int): String = when {
+        n == 1 -> "دقيقة"
+        n == 2 -> "دقيقتين"
+        n in 3..10 -> "$n دقائق"
+        else -> "$n دقيقة"
+    }
+    fun hours(n: Long): String = when {
+        n == 1L -> "ساعة"
+        n == 2L -> "ساعتان"
+        n in 3L..10L -> "$n ساعات"
+        else -> "$n ساعة"
+    }
     fun today(): String = DAILY[(java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)) % DAILY.size]
 }

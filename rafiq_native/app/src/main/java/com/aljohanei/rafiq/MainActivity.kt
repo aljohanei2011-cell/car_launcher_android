@@ -42,6 +42,13 @@ import kotlin.math.roundToInt
  */
 class MainActivity : Activity() {
     private val h = Handler(Looper.getMainLooper())
+    private val hmF = SimpleDateFormat("HH:mm", Locale.US)
+    private val labelCache = HashMap<String, String>()
+    private var standbyClock: TextView? = null
+    private var qiblaDeg = 0f
+    private var matchesFail = false
+    private var matchesTry = 0L
+    private var matchesFullAt = 0L
     private lateinit var pal: Palette
     private var night = false
     private var started = false
@@ -120,7 +127,16 @@ class MainActivity : Activity() {
         PrayerAlarm.schedule(this)
         if (Prefs.autoPlay && !autoPlayed) {
             autoPlayed = true
-            h.postDelayed({ Media.key(this, KeyEvent.KEYCODE_MEDIA_PLAY) }, 8000)
+            h.postDelayed({
+                // لا نرسل «تشغيل» إن كان الصوت يعمل أصلاً
+                val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                if (!am.isMusicActive) Media.key(this, KeyEvent.KEYCODE_MEDIA_PLAY)
+            }, 8000)
+        }
+        if (!Prefs.bool("hint1", false)) {
+            Prefs.putBool("hint1", true)
+            alert(Alert(pal.accent, R.drawable.g_gear, true, "مرحباً بك في رفيق الطريق",
+                "الإعدادات: آخر خانة في القائمة السفلية · اضغط أي بطاقة لتفاصيلها · اضغط مطولاً على الساعة للوحة السريعة", false))
         }
     }
 
@@ -141,6 +157,8 @@ class MainActivity : Activity() {
         super.onStart()
         started = true
         Media.attach(this)
+        // إن مُنح إذن الموقع لاحقاً من إعدادات النظام نبدأ خدمة GPS هنا
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) TripService.start(this)
         lastSlow = 0L; lastStatus = 0L
         h.removeCallbacks(tick); h.post(tick)
     }
@@ -194,7 +212,7 @@ class MainActivity : Activity() {
 
     fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
 
-    private fun moving() = Trip.speedKmh > 10f
+    private fun moving() = Trip.kmh() > 10f
     private fun locked(): Boolean {
         if (Prefs.lockDriving && moving()) { toast("التعديل مقفل أثناء القيادة"); return true }
         return false
@@ -205,7 +223,7 @@ class MainActivity : Activity() {
     private fun build() {
         pal = palNow()
         Ui.fontScale = if (Prefs.bigFont) 1.1f else 1f
-        standbyView = null
+        standbyView = null; standbyClock = null
         val (root, d) = Ui.scaled(this, pal.bg)
         design = d
         buildHeader(d)
@@ -215,7 +233,6 @@ class MainActivity : Activity() {
         bannerHost = FrameLayout(this).apply { visibility = View.GONE }
         d.addView(bannerHost, Ui.abs(1232, 112, 24, 80))
         setContentView(root)
-        current = null
         refreshAll()
         pumpBanner()
     }
@@ -549,7 +566,7 @@ class MainActivity : Activity() {
     private fun carInfo() {
         val dist = String.format(Locale.US, "%.1f", Trip.distanceM / 1000.0)
         val msg = "المسافة: $dist كم\nمدة الحركة: ${Trip.movingMs / 60000} دقيقة\nمتوسط السرعة: ${Trip.avgKmh().roundToInt()} كم/س\n" +
-            "أعلى سرعة: ${Trip.maxKmh.roundToInt()} كم/س\nالسرعة الآن: ${Trip.speedKmh.roundToInt()} كم/س\n" +
+            "أعلى سرعة: ${Trip.maxKmh.roundToInt()} كم/س\nالسرعة الآن: ${Trip.kmh().roundToInt()} كم/س\n" +
             "GPS: " + (if (Trip.gpsLive()) "متصل" else "غير متصل") + "\nالمدينة: ${Loc.name()}"
         AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("معلومات السيارة والرحلة").setMessage(msg)
@@ -580,8 +597,8 @@ class MainActivity : Activity() {
     }
 
     fun forceWeather() { weatherAt = 0L }
-    fun forceMatches() { matchesAt = 0L }
-    fun matchesUpdatedText(): String = if (matchesAt == 0L) "—" else SimpleDateFormat("HH:mm", Locale.US).format(Date(matchesAt))
+    fun forceMatches() { matchesAt = 0L; matchesTry = 0L; matchesFullAt = 0L }
+    fun matchesUpdatedText(): String = if (matchesAt == 0L) "—" else hmF.format(Date(matchesAt))
 
     // ============================== اللوحة السريعة ==============================
     /** ضغطة مطولة على الساعة: السطوع، الصوت، الثيم، العرض على الزجاج */
@@ -608,7 +625,7 @@ class MainActivity : Activity() {
             Pair("داكن") { Prefs.theme = themes[1]; dlg.dismiss(); applySettings() },
             Pair("فاتح") { Prefs.theme = themes[2]; dlg.dismiss(); applySettings() },
             Pair("كهرماني") { Prefs.theme = themes[3]; dlg.dismiss(); applySettings() })
-        row("شاشات", Pair("على الزجاج") { dlg.dismiss(); Panels.hud(this, pal) }, Pair("الانتظار") { dlg.dismiss(); showStandby() })
+        row("شاشات", Pair("سرعة كبيرة") { dlg.dismiss(); Panels.bigSpeed(this) }, Pair("الانتظار") { dlg.dismiss(); showStandby() })
         dlg = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("لوحة سريعة").setView(box).setPositiveButton("إغلاق", null).create()
         dlg.show()
@@ -620,10 +637,12 @@ class MainActivity : Activity() {
         if (standbyView != null) return
         val v = Ui.col(this, Gravity.CENTER).apply { setBackgroundColor(0xFF000000.toInt()) }
         val now = System.currentTimeMillis()
-        v.addView(Ui.tv(this, 200f, pal.accent, true, Gravity.CENTER).apply { text = SimpleDateFormat("HH:mm", Locale.US).format(Date(now)) }, Ui.lin(Ui.MATCH, 230))
+        val clock = Ui.tv(this, 200f, 0xFF2EE6F0.toInt(), true, Gravity.CENTER).apply { text = hmF.format(Date(now)) }
+        standbyClock = clock
+        v.addView(clock, Ui.lin(Ui.MATCH, 230))
         v.addView(Ui.tv(this, 28f, 0xFF9AA7B4.toInt(), false, Gravity.CENTER).apply { text = toLatinDigits(SimpleDateFormat("EEEE d MMMM", Locale("ar")).format(Date(now))) + " · " + Astro.hijriText(now) }, Ui.lin(Ui.MATCH, 44))
         val (idx, at) = Astro.nextPrayer(now, Loc.lat(), Loc.lon())
-        v.addView(Ui.tv(this, 30f, 0xFFF5B841.toInt(), true, Gravity.CENTER).apply { text = "${Astro.PRAYER_NAMES[idx]} " + SimpleDateFormat("HH:mm", Locale.US).format(Date(at)) }, Ui.lin(Ui.MATCH, 50).apply { topMargin = 20 })
+        v.addView(Ui.tv(this, 30f, 0xFFF5B841.toInt(), true, Gravity.CENTER).apply { text = "${Astro.PRAYER_NAMES[idx]} " + hmF.format(Date(at)) }, Ui.lin(Ui.MATCH, 50).apply { topMargin = 20 })
         design.addView(v, Ui.abs(1280, 720, 0, 0))
         standbyView = v
         refreshSlow()
@@ -631,7 +650,7 @@ class MainActivity : Activity() {
 
     private fun hideStandby() {
         standbyView?.let { design.removeView(it) }
-        standbyView = null
+        standbyView = null; standbyClock = null
         lastTouch = System.currentTimeMillis()
         refreshSlow()
     }
@@ -752,21 +771,22 @@ class MainActivity : Activity() {
         // تجاوز السرعة (الصفارة من الخدمة، هنا الشريط فقط)
         val lim = Prefs.alertSpeed
         if (lim > 0 && Prefs.alertOn("speed")) {
-            if (!speedShown && Trip.speedKmh > lim) {
+            if (!speedShown && Trip.kmh() > lim) {
                 speedShown = true
-                alert(Alert(pal.danger, R.drawable.g_bell, true, "تجاوزت حد التنبيه $lim كم/س", "السرعة الآن ${Trip.speedKmh.roundToInt()} كم/س", false))
-            } else if (speedShown && Trip.speedKmh < lim - 5) speedShown = false
+                alert(Alert(pal.danger, R.drawable.g_bell, true, "تجاوزت حد التنبيه $lim كم/س", "السرعة الآن ${Trip.kmh().roundToInt()} كم/س", false))
+            } else if (speedShown && Trip.kmh() < lim - 5) speedShown = false
         }
         // الصلاة: قبلها ثم عند الأذان
         if (nextAt > 0) {
             val preMs = Prefs.preMin * 60000L
             if (Prefs.alertOn("pre") && preMs > 0 && now >= nextAt - preMs && now < nextAt && preShownFor != nextAt) {
                 preShownFor = nextAt
-                alert(Alert(pal.accent, R.drawable.ic_prayer, false, "بعد ${Prefs.preMin} دقائق: صلاة ${Astro.PRAYER_NAMES[nextIdx]}", Loc.name(), false))
+                alert(Alert(pal.accent, R.drawable.ic_prayer, false, "بعد ${Duas.mins(((nextAt - now + 59999L) / 60000L).toInt())}: صلاة ${Astro.PRAYER_NAMES[nextIdx]}", Loc.name(), false))
             }
             if (now >= nextAt && adhanShownFor != nextAt) {
                 adhanShownFor = nextAt
-                if (Prefs.alertOn("prayer")) alert(Alert(pal.accent, R.drawable.ic_prayer, false,
+                // إن عادت الواجهة بعد غياب طويل لا نعرض أذاناً فات وقته
+                if (now - nextAt < 10 * 60000L && Prefs.alertOn("prayer")) alert(Alert(pal.accent, R.drawable.ic_prayer, false,
                     "حان وقت صلاة ${Astro.PRAYER_NAMES[nextIdx]}", "بعد الأذان: " + Duas.AFTER_ADHAN, false))
                 refreshPrayer(now)
             }
@@ -786,7 +806,7 @@ class MainActivity : Activity() {
             val hrs = (now - Trip.driveStart) / 3600000L
             if (hrs >= 2L * (restCount + 1)) {
                 restCount++
-                alert(Alert(pal.amber, R.drawable.g_car, true, "مضى ${hrs} ساعات على القيادة", "خذ استراحة قصيرة لسلامتك", true))
+                alert(Alert(pal.amber, R.drawable.g_car, true, "مضى على القيادة ${Duas.hours(hrs)}", "خذ استراحة قصيرة لسلامتك", true))
             }
         }
     }
@@ -809,6 +829,7 @@ class MainActivity : Activity() {
                 val why = when {
                     hj[1] == 8 -> ""
                     hj[1] == 9 && hj[0] == 1 -> ""
+                    hj[1] == 11 && hj[0] in 10..13 -> ""   // العيد وأيام التشريق: لا صيام
                     hj[1] == 11 && hj[0] == 9 -> "غداً يوم عرفة"
                     hj[0] in 13..15 && !(hj[1] == 11 && hj[0] == 13) -> "غداً من الأيام البيض"
                     dow == Calendar.MONDAY -> "غداً الاثنين"
@@ -823,6 +844,18 @@ class MainActivity : Activity() {
             if (eid && Prefs.str("eidDay") != dayKey && Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 5..14) {
                 Prefs.putStr("eidDay", dayKey)
                 alert(Alert(pal.amber, R.drawable.ic_prayer, false, "عيدكم مبارك", "تقبّل الله منا ومنكم", false))
+            }
+        }
+        // قبل مباراة فريقك بربع ساعة: من الموعد المعروف مباشرة، بدون انتظار تحديث
+        val favT = Prefs.favTeams()
+        if (favT.isNotEmpty() && Prefs.alertOn("match") && Prefs.bool("m_pre", true)) {
+            val list = matches?.all
+            if (list != null) for (m in list) {
+                if (m.state == "pre" && (m.home in favT || m.away in favT) && m.time - now in 1..(15 * 60000L)
+                    && preMatchShown.add(m.home + "|" + m.away + "|" + m.time)) {
+                    alert(Alert(pal.ok, R.drawable.ic_ball, false,
+                        "بعد ${Duas.mins(((m.time - now + 59999L) / 60000L).toInt())}: ${m.home} × ${m.away}", m.league + " · " + Net.hhmm(m.time), true))
+                }
             }
         }
         val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date(now))
@@ -850,16 +883,19 @@ class MainActivity : Activity() {
         override fun run() {
             if (!started) return
             val now = System.currentTimeMillis()
-            Ui.setT(clockTv, SimpleDateFormat("HH:mm", Locale.US).format(Date(now)))
-            gauge.set(Trip.speedKmh.roundToInt(), Trip.gpsLive())
+            Ui.setT(clockTv, hmF.format(Date(now)))
+            gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive())
             refreshTrip()
             refreshMusic()
             checkAlerts(now)
             // وضع الانتظار: توقف 10 دقائق بلا لمس، ويخرج عند الحركة
-            if (standbyView != null && Trip.speedKmh > 5f) hideStandby()
-            else if (standbyView == null && Prefs.standby && Trip.speedKmh < 1f &&
+            // بدون إشارة GPS لا نعرف هل السيارة واقفة، فلا يظهر تلقائياً
+            if (standbyView != null && Trip.kmh() > 5f) hideStandby()
+            else if (standbyView == null && Prefs.standby && Trip.gpsLive() && Trip.kmh() < 1f &&
                 now - maxOf(Trip.lastMovingAt, lastTouch) > 10 * 60000L) showStandby()
-            Ui.setT(headingTv, if (Trip.bearing >= 0f && Trip.speedKmh > 8f) dirName(Trip.bearing) else "")
+            standbyClock?.let { Ui.setT(it, hmF.format(Date(now))) }
+            updateQibla()
+            Ui.setT(headingTv, if (Trip.bearing >= 0f && Trip.kmh() > 8f) dirName(Trip.bearing) else "")
             if (now - lastStatus > 5000) { lastStatus = now; refreshStatus() }
             if (now - lastSlow > 30000) {
                 lastSlow = now
@@ -877,15 +913,15 @@ class MainActivity : Activity() {
     }
 
     private fun refreshAll() {
-        Ui.setT(clockTv, SimpleDateFormat("HH:mm", Locale.US).format(Date()))
-        gauge.set(Trip.speedKmh.roundToInt(), Trip.gpsLive())
+        Ui.setT(clockTv, hmF.format(Date()))
+        gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive())
         refreshTrip(); refreshMusic(); refreshStatus(); refreshSlow(); refreshWeather(); refreshMatches()
     }
 
     private fun refreshSlow() {
         val now = System.currentTimeMillis()
         val df = SimpleDateFormat("EEEE d MMMM yyyy", Locale("ar"))
-        Ui.setT(timeV, SimpleDateFormat("HH:mm", Locale.US).format(Date(now)))
+        Ui.setT(timeV, hmF.format(Date(now)))
         Ui.setT(timeS1, toLatinDigits(df.format(Date(now))))
         Ui.setT(timeS2, Astro.hijriText(now))
         dayIcon.setImageResource(if (night) R.drawable.g_moon else R.drawable.g_sun)
@@ -914,16 +950,18 @@ class MainActivity : Activity() {
         val mins = ((at - now) / 60000L).toInt()
         val left = if (mins >= 60) "بعد ${mins / 60} س ${mins % 60} د" else "بعد $mins د"
         Ui.setT(prV, "${Astro.PRAYER_NAMES[idx]} · $left")
-        Ui.setT(prS, "الأذان " + SimpleDateFormat("HH:mm", Locale.US).format(Date(at)) + " · " + Loc.name())
-        val q = Astro.qibla(Loc.lat(), Loc.lon()).toFloat()
+        Ui.setT(prS, "الأذان " + hmF.format(Date(at)) + " · " + Loc.name())
+        qiblaDeg = Astro.qibla(Loc.lat(), Loc.lon()).toFloat()
+        updateQibla()
+    }
+
+    /** سهم القبلة يتبع اتجاه السيارة كل ثانية (تغيير خاصية فقط، بدون إعادة رسم إن لم يتغير) */
+    private fun updateQibla() {
         val heading = Trip.bearing
-        if (heading >= 0f && Trip.gpsLive()) {
-            qArrow.rotation = q - heading
-            Ui.setT(qTxt, "بالنسبة لاتجاه السيارة")
-        } else {
-            qArrow.rotation = q
-            Ui.setT(qTxt, "${q.roundToInt()}° من الشمال")
-        }
+        val rel = heading >= 0f && Trip.gpsLive()
+        val rot = if (rel) qiblaDeg - heading else qiblaDeg
+        if (Math.abs(qArrow.rotation - rot) > 2f) qArrow.rotation = rot
+        Ui.setT(qTxt, if (rel) "بالنسبة لاتجاه السيارة" else "${qiblaDeg.roundToInt()}° من الشمال")
     }
 
     private fun refreshAzkar() {
@@ -947,10 +985,18 @@ class MainActivity : Activity() {
         Ui.setT(tripS, "متوسط ${Trip.avgKmh().roundToInt()} · أعلى ${Trip.maxKmh.roundToInt()} كم/س")
     }
 
+    /** اسم التطبيق من الذاكرة المؤقتة (بدون تحميل أيقونته كل ثانية) */
+    private fun appLabel(pkg: String): String {
+        if (pkg.isEmpty()) return ""
+        return labelCache.getOrPut(pkg) {
+            try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (e: Exception) { "" }
+        }
+    }
+
     private var lastPlaying = false
     private fun refreshMusic() {
         if (Media.title.isNotEmpty()) {
-            val app = appInfo(Media.app)?.first ?: ""
+            val app = appLabel(Media.app)
             Ui.setT(muHead, if (app.isEmpty()) "يتم التشغيل الآن" else "يتم التشغيل الآن · $app")
             Ui.setT(muV, if (Media.artist.isEmpty()) Media.title else "${Media.title} · ${Media.artist}")
         } else if (!Media.granted(this)) {
@@ -979,22 +1025,22 @@ class MainActivity : Activity() {
         val w = weather
         if (w == null) { Ui.setT(wxV, "--°"); Ui.setT(wxS, Loc.name() + " · بانتظار الاتصال"); return }
         Ui.setT(wxV, "${w.temp}°")
-        Ui.setT(wxHead, "حالة الطقس · " + SimpleDateFormat("HH:mm", Locale.US).format(Date(weatherAt)))
+        Ui.setT(wxHead, "حالة الطقس · " + hmF.format(Date(weatherAt)))
         Ui.setT(wxS, if (w.desc.isEmpty()) w.city else "${w.city} · ${w.desc}")
     }
 
     private fun refreshMatches() {
         val m = matches?.main
-        if (m == null && matches == null && Prefs.str("mcV").isNotEmpty()) {
-            // آخر نتيجة محفوظة تظهر فوراً قبل الاتصال
+        if (matches == null && Prefs.str("mcV").isNotEmpty()) {
+            // آخر نتيجة محفوظة تظهر فوراً قبل الاتصال، وتبقى إن لم يوجد إنترنت
             Ui.setT(mHead, Prefs.str("mcH")); Ui.setT(mV, Prefs.str("mcV")); Ui.setT(mS, Prefs.str("mcS"))
-            mBadge.visibility = View.VISIBLE; Ui.setT(mBadge, "آخر تحديث"); mBadge.setTextColor(pal.muted)
+            mBadge.visibility = View.VISIBLE; Ui.setT(mBadge, if (matchesFail) "بدون اتصال" else "محفوظ"); mBadge.setTextColor(pal.muted)
             return
         }
         if (m == null) {
             Ui.setT(mHead, "المباريات"); mBadge.visibility = View.GONE
-            Ui.setT(mV, if (matchesAt == 0L) "جارٍ التحميل…" else "لا توجد مباريات قريبة")
-            Ui.setT(mS, "السعودي والأوروبي"); return
+            Ui.setT(mV, if (matches == null) (if (matchesFail) "لا يوجد اتصال بالإنترنت" else "جارٍ التحميل…") else "لا توجد مباريات قريبة")
+            Ui.setT(mS, "اضغط للقائمة · اضغط مطولاً للتحديث"); return
         }
         Ui.setT(mHead, m.league)
         mBadge.visibility = View.VISIBLE
@@ -1015,14 +1061,10 @@ class MainActivity : Activity() {
     private fun matchAlerts(card: Net.MatchCard) {
         val fav = Prefs.favTeams()
         if (fav.isEmpty() || !Prefs.alertOn("match")) return
-        val t = System.currentTimeMillis()
         for (m in card.all) {
             if (m.home !in fav && m.away !in fav) continue
             val key = m.home + "|" + m.away
             val cur = m.state + ":" + m.hs + "-" + m.aws
-            if (m.state == "pre" && m.time - t in 1..(15 * 60000L) && Prefs.bool("m_pre", true) && preMatchShown.add(key)) {
-                alert(Alert(pal.ok, R.drawable.ic_ball, false, "بعد ربع ساعة: ${m.home} × ${m.away}", m.league + " · " + Net.hhmm(m.time), true))
-            }
             val before = lastScores[key]
             lastScores[key] = cur
             if (before == null || before == cur) continue
@@ -1034,11 +1076,6 @@ class MainActivity : Activity() {
                 if (Prefs.bool("m_goal", true)) alert(Alert(pal.ok, R.drawable.ic_ball, false, "هدف! ${m.home} ${m.hs} — ${m.aws} ${m.away}", "الدقيقة ${m.clock} · ${m.league}", true))
             }
         }
-    }
-
-    private fun favLive(): Boolean {
-        val fav = Prefs.favTeams()
-        return matches?.all?.any { it.state == "in" && (it.home in fav || it.away in fav) } == true
     }
 
     private fun maybeFetch(now: Long) {
@@ -1074,18 +1111,33 @@ class MainActivity : Activity() {
                 }
             }.start()
         }
-        val live = matches?.anyLive() == true || favLive()
-        val interval = if (live) 60000L else 20 * 60000L
-        val wanted = "matches" !in Prefs.hidden() || (Prefs.favTeams().isNotEmpty() && Prefs.alertOn("match"))
-        if (wanted && !matchesBusy && now - matchesAt > interval) {
+        // أثناء مباراة مباشرة (أو مباراة فريقك التي حان موعدها) نحدّث بطولتها فقط كل دقيقة؛ والتحديث الكامل كل 20 دقيقة
+        val fav = Prefs.favTeams()
+        val hot = HashSet<String>()
+        matches?.all?.forEach { m ->
+            val mine = m.home in fav || m.away in fav
+            val due = m.state == "pre" && m.time - now < 2 * 60000L && now - m.time < 3 * 3600000L
+            if ((m.state == "in" && (mine || m === matches?.main)) || (due && mine)) hot.add(m.code)
+        }
+        val full = now - matchesFullAt > 20 * 60000L
+        val wanted = "matches" !in Prefs.hidden() || (fav.isNotEmpty() && Prefs.alertOn("match"))
+        if (wanted && !matchesBusy && now >= matchesTry && (full || (hot.isNotEmpty() && now - matchesAt > 60000L))) {
             matchesBusy = true
+            val prev = if (full) null else matches?.all
             Thread {
-                val m = Net.matches()
+                val m = if (prev != null) Net.matches(hot, prev) else Net.matches()
                 h.post {
                     matchesBusy = false
-                    matchesAt = System.currentTimeMillis()
-                    if (m.main != null || matches == null) matches = m
-                    matchAlerts(m)
+                    val t = System.currentTimeMillis()
+                    if (m == null) {
+                        // لا اتصال: نُبقي المعروض ونعيد المحاولة بعد دقيقتين
+                        matchesFail = true; matchesTry = t + 2 * 60000L
+                    } else {
+                        matchesFail = false; matchesAt = t
+                        if (prev == null) matchesFullAt = t
+                        matches = m
+                        matchAlerts(m)
+                    }
                     refreshMatches()
                 }
             }.start()

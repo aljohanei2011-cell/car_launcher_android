@@ -50,6 +50,22 @@ jobs:
             rm -f rafiq_native/signing/release.jks
           done
 
+      # فحص إعلامي لمصادر البيانات (المباريات والطقس): لا يوقف البناء إن فشل
+      - name: Check data sources (informational)
+        continue-on-error: true
+        run: |
+          set +e
+          D1=$(date -u +%Y%m%d); D2=$(date -u -d '+1 day' +%Y%m%d)
+          for L in ksa.1 ksa.kings.cup afc.champions uefa.champions eng.1 esp.1 ita.1 ger.1 fra.1; do
+            curl -s -m 20 -o /tmp/s.json -w "$L HTTP %{http_code} %{size_download}B " "https://site.api.espn.com/apis/site/v2/sports/soccer/$L/scoreboard?limit=100&dates=$D1-$D2"
+            jq -r '"league=\(.leagues[0].name) events=\(.events|length) first=\(.events[0].date) \(.events[0].status.type.state)"' /tmp/s.json || echo "(not json)"
+          done
+          curl -s -m 20 "https://site.api.espn.com/apis/v2/sports/soccer/ksa.1/standings" | jq -r '.children[0].standings.entries[0] | "standings: \(.team.displayName) " + ([.stats[]|select(.name=="points" or .name=="gamesPlayed" or .name=="rank")|"\(.name)=\(.value)"]|join(" "))' || echo "standings: unexpected shape"
+          curl -s -m 20 "https://api.open-meteo.com/v1/forecast?latitude=24.09&longitude=38.06&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&hourly=temperature_2m,precipitation_probability&forecast_hours=12&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,sunrise,sunset&forecast_days=5&timezone=auto" | jq -c '{cur:.current, hours:(.hourly.time|length), h0:.hourly.time[0], days:(.daily.time|length), sunrise:.daily.sunrise[0], err:.reason}'
+          curl -s -m 20 "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=24.09&longitude=38.06&current=pm10" | jq -c '{pm10:.current.pm10, err:.reason}'
+          curl -s -m 20 "https://marine-api.open-meteo.com/v1/marine?latitude=24.09&longitude=38.06&current=wave_height" | jq -c '{wave:.current.wave_height, err:.reason}'
+          exit 0
+
       - name: Build APK
         env:
           VERSION_CODE: ${{ github.run_number }}

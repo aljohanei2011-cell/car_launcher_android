@@ -55,7 +55,7 @@ object Trip {
         rideStartAt = 0L; rideDistM = 0.0; rideMovingMs = 0L; rideMaxKmh = 0f
         Prefs.putStr("ride", "")
     }
-    fun saveRide() { Prefs.putStr("ride", "$rideStartAt|$rideDistM|$rideMovingMs|$rideMaxKmh|$lastMovingAt") }
+    fun saveRide() { Prefs.putStr("ride", "$rideStartAt|$rideDistM|$rideMovingMs|$rideMaxKmh|$lastMovingAt|$rideLat|$rideLon|$travelShown") }
     /** عند تشغيل الخدمة: استرجاع رحلة لم تُغلق، وإغلاقها إن مضى عليها أكثر من ساعة */
     fun restoreRide() {
         val p = Prefs.str("ride").split("|")
@@ -63,6 +63,8 @@ object Trip {
         try {
             rideStartAt = p[0].toLong(); rideDistM = p[1].toDouble(); rideMovingMs = p[2].toLong(); rideMaxKmh = p[3].toFloat()
             val last = p[4].toLong()
+            // بدون نقطة بداية محفوظة لا نحسب «الابتعاد» حتى لا يظهر دعاء السفر خطأً
+            if (p.size >= 8) { rideLat = p[5].toDouble(); rideLon = p[6].toDouble(); travelShown = p[7] == "true" } else travelShown = true
             if (System.currentTimeMillis() - last > 3600000L) closeRide() else lastMovingAt = last
         } catch (e: Exception) { Prefs.putStr("ride", "") }
     }
@@ -72,6 +74,8 @@ object Trip {
     }
     fun avgKmh(): Float = if (movingMs < 5000) 0f else (distanceM / 1000.0 / (movingMs / 3600000.0)).toFloat()
     fun gpsLive(): Boolean = hasFix && System.currentTimeMillis() - lastFixAt < 10000
+    /** السرعة الحالية، وصفر إن انقطعت إشارة GPS (حتى لا تبقى آخر سرعة عالقة) */
+    fun kmh(): Float = if (gpsLive()) speedKmh else 0f
 }
 
 /**
@@ -110,12 +114,17 @@ class TripService : Service(), LocationListener {
 
     override fun onLocationChanged(loc: Location) {
         val now = System.currentTimeMillis()
-        val kmh = if (loc.hasSpeed()) loc.speed * 3.6f else 0f
+        var kmh = if (loc.hasSpeed()) loc.speed * 3.6f else 0f
+        val prev = Trip.last
+        // بعض الشاشات لا ترسل السرعة مع الموقع: نحسبها من المسافة والزمن
+        if (!loc.hasSpeed() && prev != null && loc.accuracy < 25f) {
+            val dtMs = loc.time - prev.time
+            if (dtMs in 500..5000) kmh = prev.distanceTo(loc) / (dtMs / 1000f) * 3.6f
+        }
         Trip.speedKmh = if (kmh < 2f) 0f else kmh
         Trip.hasFix = true
         Trip.lastFixAt = now
         if (loc.hasBearing() && kmh > 8f) Trip.bearing = loc.bearing
-        val prev = Trip.last
         if (prev != null && kmh >= 3f && loc.accuracy < 40f) {
             val d = prev.distanceTo(loc)
             val dt = loc.time - prev.time

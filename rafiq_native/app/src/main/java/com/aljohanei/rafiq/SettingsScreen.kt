@@ -36,7 +36,11 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
 
     fun show() { render(); d.show() }
 
-    private fun changed() { a.applySettings(); pal = a.palNow(); render() }
+    private var scroll: ScrollView? = null
+    private var keep = false
+
+    /** تطبيق فوري مع البقاء في نفس موضع التمرير */
+    private fun changed() { a.applySettings(); pal = a.palNow(); keep = true; render() }
 
     private fun render() {
         val (root, design) = Ui.scaled(a, pal.bg)
@@ -45,7 +49,15 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
 
         // يسار: محتوى القسم
         val leftCol = Ui.col(a, Gravity.TOP or Gravity.RIGHT)
+        val oldY = if (keep) scroll?.scrollY ?: 0 else 0
+        keep = false
         val sv = ScrollView(a).apply { isVerticalScrollBarEnabled = true }
+        scroll = sv
+        if (oldY > 0) sv.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+            override fun onLayoutChange(v: View?, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
+                sv.removeOnLayoutChangeListener(this); sv.scrollTo(0, oldY)
+            }
+        })
         content = Ui.col(a, Gravity.TOP or Gravity.RIGHT).apply { setPadding(24, 8, 24, 24) }
         sv.addView(content, android.widget.FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP))
         leftCol.addView(sv, Ui.lin(Ui.MATCH, Ui.MATCH))
@@ -138,7 +150,7 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
 
     private fun cards() {
         title("البطاقات")
-        note("أظهر أو أخفِ أي بطاقة، ورتّبها داخل العمود، أو انقلها للعمود الآخر.")
+        note("أظهر أو أخفِ أي بطاقة، ورتّبها داخل العمود. «نقل» يبدّلها مع البطاقة المقابلة في العمود الآخر.")
         val r = Prefs.column(true); val l = Prefs.column(false)
         val hidden = Prefs.hidden()
         for (right in listOf(true, false)) {
@@ -149,7 +161,11 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
                 val vis = id !in hidden
                 line(Prefs.cardName(id),
                     btn("نقل ⇄", false) {
-                        col.removeAt(idx); (if (right) l else r).add(id); Prefs.setColumns(r, l); changed()
+                        // تبديل مع البطاقة المقابلة في العمود الآخر، فيبقى في كل عمود 4 بطاقات ولا تنضغط
+                        val other = if (right) l else r
+                        if (idx < other.size) { val o = other[idx]; other[idx] = id; col[idx] = o }
+                        else { col.removeAt(idx); other.add(id) }
+                        Prefs.setColumns(r, l); changed()
                     },
                     btn("▼", false) {
                         if (idx < col.size - 1) { col[idx] = col[idx + 1]; col[idx + 1] = id; Prefs.setColumns(r, l); changed() }
@@ -293,7 +309,7 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
         action("اجعله الواجهة الرئيسية للشاشة", "فتح") { open(Settings.ACTION_HOME_SETTINGS) }
         action("كمبيوتر الرحلة", "تصفير") { Trip.reset(); changed() }
         toggle("تشغيل الموسيقى تلقائياً عند تشغيل الشاشة", Prefs.autoPlay) { Prefs.autoPlay = it }
-        action("عرض السرعة على الزجاج (ليلاً)", "تشغيل") { d.dismiss(); Panels.hud(a, pal) }
+        action("شاشة السرعة الكبيرة (مريحة ليلاً)", "تشغيل") { d.dismiss(); Panels.bigSpeed(a) }
         action("سجل الرحلات", "عرض") { Panels.tripLog(a) }
         title("النسخ الاحتياطي")
         action("حفظ كل الإعدادات في ملف", "نسخ احتياطي") { a.backup(true) }

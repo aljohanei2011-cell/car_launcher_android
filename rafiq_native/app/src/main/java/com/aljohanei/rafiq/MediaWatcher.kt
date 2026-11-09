@@ -75,6 +75,7 @@ object Media {
             when (code) {
                 KeyEvent.KEYCODE_MEDIA_PREVIOUS -> t.skipToPrevious()
                 KeyEvent.KEYCODE_MEDIA_NEXT -> t.skipToNext()
+                KeyEvent.KEYCODE_MEDIA_PLAY -> if (!playing) t.play()
                 else -> if (playing) t.pause() else t.play()
             }
             return
