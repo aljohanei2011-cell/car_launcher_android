@@ -153,7 +153,7 @@ class MainActivity : AppCompatActivity() {
         // أولوية عالية لمحرك الصفحات حتى لا يُغلقه النظام عند ضغط الذاكرة
         // مهم وهو ظاهر، ويخفّ عن النظام عندما يكون تطبيق آخر في المقدمة
         try { webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true) } catch (e: Exception) {}
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        // بدون طبقة رسم إضافية: محرك الصفحات يرسم بالمعالج الرسومي أصلاً، والطبقة كانت تحجز نسخة إضافية بحجم الشاشة في الذاكرة
         // نوقف الضغط المطوّل الافتراضي (تحديد النص) حتى تصل الضغطة المطوّلة للواجهة (تحرير البطاقات)
         webView.setOnLongClickListener { true }
         webView.isLongClickable = false
@@ -283,7 +283,11 @@ class MainActivity : AppCompatActivity() {
     // عند فتح تطبيق آخر (الخرائط مثلاً) نوقف الواجهة مؤقتاً لتوفير المعالج؛ التنبيهات تعمل من الخدمة
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) Events.add(this, "النظام يطلب تخفيف الذاكرة (المستوى $level)")
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            Events.add(this, "النظام يطلب تخفيف الذاكرة (المستوى $level)")
+            // نحرر ذاكرة التخزين المؤقت لمحرك الصفحات (الصور والملفات المحمّلة) حتى لا يقتله النظام
+            try { if (::webView.isInitialized) webView.clearCache(false) } catch (e: Exception) {}
+        }
     }
 
     override fun onDestroy() {

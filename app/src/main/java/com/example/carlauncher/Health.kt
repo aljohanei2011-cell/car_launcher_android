@@ -22,11 +22,19 @@ object CrashLog {
         try {
             val f = file(c)
             val line = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()) +
-                " [" + source + "] v" + BuildConfig.VERSION_CODE + " / Android " + Build.VERSION.RELEASE + "\n" + msg.take(4000) + "\n\n"
+                " [" + source + "] v" + BuildConfig.VERSION_CODE + " / Android " + Build.VERSION.RELEASE + "\n" + mem(c) + msg.take(4000) + "\n\n"
             f.appendText(line)
             if (f.length() > MAX) { val t = f.readText(); f.writeText(t.takeLast(MAX / 2)) }
         } catch (e: Exception) {}
     }
+    /** حالة الذاكرة لحظة العطل: هل الشاشة ضعيفة فعلاً أم أن تطبيقاً آخر يستهلكها */
+    private fun mem(c: Context): String = try {
+        val am = c.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mi = android.app.ActivityManager.MemoryInfo(); am.getMemoryInfo(mi)
+        val rt = Runtime.getRuntime()
+        "(ذاكرة الشاشة: متاحة ${mi.availMem / 1048576} من ${mi.totalMem / 1048576} م.ب" + (if (mi.lowMemory) "، منخفضة" else "") +
+            " · التطبيق ${(rt.totalMemory() - rt.freeMemory()) / 1048576} من ${rt.maxMemory() / 1048576} م.ب)\n"
+    } catch (e: Exception) { "" }
     fun read(c: Context): String = try { file(c).takeIf { it.exists() }?.readText() ?: "" } catch (e: Exception) { "" }
     fun clear(c: Context) { file(c).delete() }
     /** عدد مرات إغلاق محرك الصفحات لنقص الذاكرة خلال آخر 3 أيام */
