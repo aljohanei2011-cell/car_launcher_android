@@ -24,8 +24,9 @@ object Prefs {
         get() = str("theme", "auto")
         set(v) = putStr("theme", v)
     // الخلفية: dark / black / light ، لون التمييز: cyan / red / green / amber / blue / silver
-    fun base(slot: String): String = str("base_$slot", when (slot) { "day" -> "light"; "night" -> "black"; else -> "dark" })
-    fun accent(slot: String): String = str("acc_$slot", when (slot) { "day" -> "blue"; "night" -> "amber"; else -> "cyan" })
+    // الافتراضي يطابق الشكل الحالي (داكن سماوي ليلاً، فاتح نهاراً) حتى لا يتغير شيء بعد التحديث
+    fun base(slot: String): String = str("base_$slot", when (slot) { "day" -> "light"; else -> "dark" })
+    fun accent(slot: String): String = str("acc_$slot", "cyan")
     fun setBase(slot: String, v: String) = putStr("base_$slot", v)
     fun setAccent(slot: String, v: String) = putStr("acc_$slot", v)
 
