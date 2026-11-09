@@ -122,6 +122,9 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
         val brands = listOf("COROLLA 2015", "TOYOTA", "Corolla", "كورولا 2015", "")
         seg("الشعار", listOf("COROLLA 2015", "TOYOTA", "Corolla", "كورولا 2015", "بدون"), brands.indexOf(Prefs.brand)) { Prefs.brand = brands[it] }
         seg("موضع الشعار", listOf("يسار", "يمين"), if (Prefs.brandLeft) 0 else 1) { Prefs.brandLeft = it == 0 }
+        seg("حجم الخط", listOf("عادي", "كبير"), if (Prefs.bigFont) 1 else 0) { Prefs.bigFont = it == 1 }
+        toggle("وضع الانتظار بعد التوقف 10 دقائق", Prefs.standby) { Prefs.standby = it }
+        note("وضع الانتظار: شاشة داكنة فيها الساعة والصلاة القادمة، وتعود الواجهة عند اللمس أو الحركة.")
     }
 
     private fun gaugeSec() {
@@ -247,6 +250,7 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
 
     private fun matches() {
         title("المباريات")
+        action("آخر تحديث: " + a.matchesUpdatedText(), "تحديث الآن") { a.forceMatches(); a.toast("جارٍ تحديث المباريات…") }
         val fav = Prefs.favTeams()
         action("الفرق المفضلة: " + (if (fav.isEmpty()) "لم تُختر" else fav.joinToString("، ")), "اختيار") { pickTeams() }
         seg("العرض في البطاقة", listOf("كل المباريات", "فرقي فقط"), if (Prefs.matchMode == "fav") 1 else 0) {
@@ -288,6 +292,12 @@ class SettingsScreen(private val a: MainActivity, start: Int = 0) {
         action("عرض اسم المقطع في بطاقة الموسيقى", "إذن الإشعارات") { open("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS") }
         action("اجعله الواجهة الرئيسية للشاشة", "فتح") { open(Settings.ACTION_HOME_SETTINGS) }
         action("كمبيوتر الرحلة", "تصفير") { Trip.reset(); changed() }
+        toggle("تشغيل الموسيقى تلقائياً عند تشغيل الشاشة", Prefs.autoPlay) { Prefs.autoPlay = it }
+        action("عرض السرعة على الزجاج (ليلاً)", "تشغيل") { d.dismiss(); Panels.hud(a, pal) }
+        action("سجل الرحلات", "عرض") { Panels.tripLog(a) }
+        title("النسخ الاحتياطي")
+        action("حفظ كل الإعدادات في ملف", "نسخ احتياطي") { a.backup(true) }
+        action("استرجاع الإعدادات من ملف", "استرجاع") { d.dismiss(); a.backup(false) }
         title("التحديث")
         val ver = try { a.packageManager.getPackageInfo(a.packageName, 0).versionName } catch (e: Exception) { "" }
         line("الإصدار المثبّت: $ver")

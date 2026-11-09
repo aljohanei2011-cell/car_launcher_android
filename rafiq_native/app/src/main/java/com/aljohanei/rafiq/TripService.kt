@@ -38,6 +38,34 @@ object Trip {
     var rideLat = 0.0
     var rideLon = 0.0
     var travelShown = false
+    // عدّادات الرحلة الحالية لسجل الرحلات (تُحفظ كل دقيقة)
+    @Volatile var rideStartAt = 0L
+    @Volatile var rideDistM = 0.0
+    @Volatile var rideMovingMs = 0L
+    @Volatile var rideMaxKmh = 0f
+
+    /** إغلاق الرحلة الحالية وإضافتها للسجل (آخر 20 رحلة)، إن تجاوزت نصف كيلومتر */
+    fun closeRide() {
+        if (rideDistM >= 500 && rideStartAt > 0) {
+            val avg = if (rideMovingMs < 5000) 0 else (rideDistM / 1000.0 / (rideMovingMs / 3600000.0)).toInt()
+            val e = "$rideStartAt|${rideDistM.toInt()}|$rideMovingMs|$avg|${rideMaxKmh.toInt()}"
+            val old = Prefs.str("tripLog").split(";").filter { it.isNotEmpty() }
+            Prefs.putStr("tripLog", (listOf(e) + old).take(20).joinToString(";"))
+        }
+        rideStartAt = 0L; rideDistM = 0.0; rideMovingMs = 0L; rideMaxKmh = 0f
+        Prefs.putStr("ride", "")
+    }
+    fun saveRide() { Prefs.putStr("ride", "$rideStartAt|$rideDistM|$rideMovingMs|$rideMaxKmh|$lastMovingAt") }
+    /** عند تشغيل الخدمة: استرجاع رحلة لم تُغلق، وإغلاقها إن مضى عليها أكثر من ساعة */
+    fun restoreRide() {
+        val p = Prefs.str("ride").split("|")
+        if (p.size < 5) return
+        try {
+            rideStartAt = p[0].toLong(); rideDistM = p[1].toDouble(); rideMovingMs = p[2].toLong(); rideMaxKmh = p[3].toFloat()
+            val last = p[4].toLong()
+            if (System.currentTimeMillis() - last > 3600000L) closeRide() else lastMovingAt = last
+        } catch (e: Exception) { Prefs.putStr("ride", "") }
+    }
 
     fun reset() {
         distanceM = 0.0; movingMs = 0L; maxKmh = 0f; startedAt = System.currentTimeMillis(); last = null
@@ -60,6 +88,7 @@ class TripService : Service(), LocationListener {
     override fun onCreate() {
         super.onCreate()
         Prefs.init(this)
+        Trip.restoreRide()
         startForeground(1, notification())
         startGps()
     }
@@ -90,7 +119,10 @@ class TripService : Service(), LocationListener {
         if (prev != null && kmh >= 3f && loc.accuracy < 40f) {
             val d = prev.distanceTo(loc)
             val dt = loc.time - prev.time
-            if (d < 120f && dt in 1..5000) { Trip.distanceM += d; Trip.movingMs += dt }
+            if (d < 120f && dt in 1..5000) {
+                Trip.distanceM += d; Trip.movingMs += dt
+                Trip.rideDistM += d; Trip.rideMovingMs += dt
+            }
         }
         Trip.last = loc
         if (Trip.speedKmh > Trip.maxKmh) Trip.maxKmh = Trip.speedKmh
@@ -98,11 +130,13 @@ class TripService : Service(), LocationListener {
             val idle = now - Trip.lastMovingAt
             // بعد توقف ساعة أو أكثر: ركوب جديد
             if (Trip.lastMovingAt == 0L || idle > 3600000L) {
+                Trip.closeRide(); Trip.rideStartAt = now
                 Trip.rideEvent++; Trip.rideLat = loc.latitude; Trip.rideLon = loc.longitude; Trip.travelShown = false
             }
             // توقف ربع ساعة يبدأ عدّ القيادة المتواصلة من جديد
             if (Trip.lastMovingAt == 0L || idle > 15 * 60000L) Trip.driveStart = now
             Trip.lastMovingAt = now
+            if (Trip.speedKmh > Trip.rideMaxKmh) Trip.rideMaxKmh = Trip.speedKmh
             if (!Trip.travelShown && Cities.km(Trip.rideLat, Trip.rideLon, loc.latitude, loc.longitude) > 50.0) {
                 Trip.travelShown = true; Trip.travelEvent++
             }
@@ -110,6 +144,7 @@ class TripService : Service(), LocationListener {
         // حفظ الموقع لحساب الصلاة والطقس (مرة كل دقيقة تقريباً تكفي)
         if (now / 60000 != Prefs.int("locMin").toLong()) {
             Prefs.lat = loc.latitude; Prefs.lon = loc.longitude; Prefs.putInt("locMin", (now / 60000).toInt())
+            if (Trip.rideStartAt > 0) Trip.saveRide()
         }
         checkAlert()
     }

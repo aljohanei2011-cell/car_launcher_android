@@ -89,9 +89,9 @@ object Prefs {
         set(v) = putInt("preMin", v)
 
     // مفاتيح أنواع التنبيهات
-    val ALERTS = listOf("prayer", "pre", "speed", "rest", "match", "weather", "dust", "heat", "dua", "friday", "sound")
+    val ALERTS = listOf("prayer", "pre", "speed", "rest", "match", "weather", "dust", "heat", "dua", "friday", "fast", "sound")
     val ALERT_NAMES = listOf("الأذان", "قبل الصلاة", "تجاوز السرعة", "الاستراحة", "المباريات (فرقك المفضلة)",
-        "الطقس الشديد", "الغبار الشديد", "الحرارة فوق 45°", "الأدعية (الركوب والسفر)", "تذكير الجمعة", "صوت التنبيهات")
+        "الطقس الشديد", "الغبار الشديد", "الحرارة فوق 45°", "الأدعية (الركوب والسفر)", "تذكير الجمعة", "الصيام والمناسبات", "صوت التنبيهات")
 
     // المباريات
     val LEAGUE_IDS = listOf("ksa.1", "ksa.kings.cup", "afc.champions", "uefa.champions", "eng.1", "esp.1", "ita.1", "ger.1", "fra.1")
@@ -113,6 +113,59 @@ object Prefs {
     var wifiOnly: Boolean
         get() = bool("wifiOnly", false)
         set(v) = putBool("wifiOnly", v)
+    /** خط كبير لقراءة أسهل */
+    var bigFont: Boolean
+        get() = bool("bigFont", false)
+        set(v) = putBool("bigFont", v)
+    /** وضع الانتظار بعد التوقف 10 دقائق */
+    var standby: Boolean
+        get() = bool("standby", true)
+        set(v) = putBool("standby", v)
+    /** تشغيل الموسيقى تلقائياً عند تشغيل الشاشة */
+    var autoPlay: Boolean
+        get() = bool("autoPlay", false)
+        set(v) = putBool("autoPlay", v)
+    /** السطوع اليدوي من اللوحة السريعة (-1 = تلقائي) */
+    var bright: Float
+        get() = p().getFloat("bright", -1f)
+        set(v) { p().edit().putFloat("bright", v).apply() }
+
+    /** النسخ الاحتياطي: كل الإعدادات كنص JSON */
+    fun exportJson(): String {
+        val o = org.json.JSONObject()
+        for ((k, v) in p().all) {
+            val e = org.json.JSONObject()
+            when (v) {
+                is String -> e.put("s", v)
+                is Int -> e.put("i", v)
+                is Boolean -> e.put("b", v)
+                is Float -> e.put("f", v.toDouble())
+                is Long -> e.put("l", v)
+                is Set<*> -> e.put("set", org.json.JSONArray(v.map { it.toString() }))
+                else -> continue
+            }
+            o.put(k, e)
+        }
+        return o.toString()
+    }
+    fun importJson(json: String) {
+        val o = org.json.JSONObject(json)
+        val ed = p().edit()
+        val it = o.keys()
+        while (it.hasNext()) {
+            val k = it.next(); val e = o.getJSONObject(k)
+            when {
+                e.has("s") -> ed.putString(k, e.getString("s"))
+                e.has("i") -> ed.putInt(k, e.getInt("i"))
+                e.has("b") -> ed.putBoolean(k, e.getBoolean("b"))
+                e.has("f") -> ed.putFloat(k, e.getDouble("f").toFloat())
+                e.has("l") -> ed.putLong(k, e.getLong("l"))
+                e.has("set") -> { val a = e.getJSONArray("set"); ed.putStringSet(k, HashSet((0 until a.length()).map { i -> a.getString(i) })) }
+            }
+        }
+        ed.apply()
+    }
+
     fun long(k: String): Long = p().getLong(k, 0L)
     fun putLong(k: String, v: Long) { p().edit().putLong(k, v).apply() }
     fun alertOn(k: String): Boolean = bool("a_$k", true)

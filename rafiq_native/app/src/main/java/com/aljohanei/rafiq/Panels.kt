@@ -27,7 +27,8 @@ object Panels {
     private val hm = SimpleDateFormat("HH:mm", Locale.US)
 
     /** إطار شاشة كاملة بمقاس التصميم: عنوان وزر إغلاق، ومحتوى */
-    private fun frame(a: MainActivity, pal: Palette, title: String, onClose: () -> Unit = {}): Pair<Dialog, FrameLayout> {
+    private fun frame(a: MainActivity, pal: Palette, title: String, extra: Pair<String, () -> Unit>? = null,
+                      onClose: () -> Unit = {}): Pair<Dialog, FrameLayout> {
         val d = Dialog(a, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen)
         val (root, design) = Ui.scaled(a, pal.bg)
         val top = FrameLayout(a)
@@ -38,6 +39,10 @@ object Panels {
             text = "إغلاق"; background = Ui.rounded(pal.card, 12f, 2, pal.accent); setPadding(28, 0, 28, 0)
             setOnClickListener { d.dismiss() }
         }, Ui.at(Ui.WRAP, 52, Gravity.LEFT or Gravity.CENTER_VERTICAL).apply { leftMargin = 24 })
+        if (extra != null) top.addView(Ui.tv(a, 20f, pal.onAccent, true, Gravity.CENTER).apply {
+            text = extra.first; background = Ui.rounded(pal.accent, 12f); setPadding(28, 0, 28, 0)
+            setOnClickListener { d.dismiss(); extra.second() }
+        }, Ui.at(Ui.WRAP, 52, Gravity.LEFT or Gravity.CENTER_VERTICAL).apply { leftMargin = 190 })
         val body = FrameLayout(a)
         design.addView(body, Ui.abs(1280, 648, 0, 72))
         d.setOnDismissListener { onClose() }
@@ -58,7 +63,7 @@ object Panels {
 
     fun weather(a: MainActivity, pal: Palette) {
         val city = Loc.name()
-        val (d, body) = frame(a, pal, "طقس $city")
+        val (d, body) = frame(a, pal, "طقس $city", Pair("تحديث") { weather(a, pal) })
         val wait = t(a, 22f, pal.muted, "جارٍ التحميل…", false, Gravity.CENTER)
         body.addView(wait, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.CENTER))
         d.show()
@@ -79,7 +84,7 @@ object Panels {
     private fun buildWeather(a: MainActivity, pal: Palette, body: FrameLayout, f: Net.Full) {
         // يمين: الآن
         val now = box(a, pal)
-        now.addView(t(a, 18f, pal.muted, "الآن"), Ui.lin(Ui.MATCH, 26))
+        now.addView(t(a, 18f, pal.muted, "الآن · آخر تحديث " + hm.format(Date())), Ui.lin(Ui.MATCH, 26))
         now.addView(t(a, 84f, pal.text, "${f.temp}°", true), Ui.lin(Ui.MATCH, 96))
         now.addView(t(a, 24f, pal.text, f.desc, true), Ui.lin(Ui.MATCH, 34))
         now.addView(t(a, 18f, pal.muted, "الإحساس الفعلي ${f.feels}°"), Ui.lin(Ui.MATCH, 30).apply { topMargin = 10 })
@@ -119,7 +124,7 @@ object Panels {
     fun prayer(a: MainActivity, pal: Palette, openAdjust: () -> Unit) {
         val h = Handler(Looper.getMainLooper())
         var tick: Runnable? = null
-        val (d, body) = frame(a, pal, "الصلاة · ${Loc.name()}") { tick?.let { h.removeCallbacks(it) } }
+        val (d, body) = frame(a, pal, "الصلاة · ${Loc.name()}", null) { tick?.let { h.removeCallbacks(it) } }
         val lat = Loc.lat(); val lon = Loc.lon()
         val nowMs = System.currentTimeMillis()
         val today = Calendar.getInstance()
@@ -147,6 +152,7 @@ object Panels {
         val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 1) }
         list.addView(t(a, 18f, pal.muted, "فجر الغد " + hm.format(Date(Astro.prayerMillis(tomorrow, lat, lon)[0]))), Ui.lin(Ui.MATCH, 30))
         if (ramadan) list.addView(t(a, 18f, pal.amber, "الإمساك " + hm.format(Date(pt[0] - 10 * 60000L))), Ui.lin(Ui.MATCH, 30))
+        for (o in Astro.occasions(nowMs)) list.addView(t(a, 17f, pal.amber, o), Ui.lin(Ui.MATCH, 28))
         body.addView(list, Ui.abs(400, 600, 856, 24))
 
         // وسط: بوصلة القبلة والأزرار
@@ -243,7 +249,7 @@ object Panels {
 
     // ============================ المباريات ============================
     fun matchesDay(a: MainActivity, pal: Palette) {
-        val (d, body) = frame(a, pal, "مباريات اليوم")
+        val (d, body) = frame(a, pal, "مباريات اليوم", Pair("تحديث") { a.forceMatches(); matchesDay(a, pal) })
         val wait = t(a, 22f, pal.muted, "جارٍ التحميل…", false, Gravity.CENTER)
         body.addView(wait, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.CENTER))
         d.show()
@@ -259,6 +265,7 @@ object Panels {
                 val sv = ScrollView(a)
                 val col = Ui.col(a, Gravity.TOP or Gravity.RIGHT).apply { setPadding(24, 16, 24, 24) }
                 sv.addView(col, FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP))
+                col.addView(t(a, 16f, pal.muted, "آخر تحديث " + hm.format(Date())), Ui.lin(Ui.MATCH, 26))
                 for ((code, list) in all.groupBy { it.code }) {
                     val hr = Ui.row(a, Gravity.CENTER_VERTICAL)
                     hr.addView(t(a, 18f, pal.accent, "الترتيب", true, Gravity.CENTER).apply {
@@ -320,5 +327,48 @@ object Panels {
                 body.addView(sv, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.NO_GRAVITY))
             }
         }.start()
+    }
+
+    // ============================ العرض على الزجاج ============================
+    /** سرعة كبيرة معكوسة لتنعكس على الزجاج ليلاً. لمسة تغلقها */
+    fun hud(a: MainActivity, pal: Palette) {
+        val d = Dialog(a, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen)
+        val (root, design) = Ui.scaled(a, 0xFF000000.toInt())
+        val sp = t(a, 340f, pal.accent, "0", true, Gravity.CENTER).apply { scaleX = -1f }
+        design.addView(sp, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.CENTER))
+        val unit = t(a, 40f, pal.muted, "كم/س", false, Gravity.CENTER).apply { scaleX = -1f }
+        design.addView(unit, Ui.at(Ui.MATCH, 60, Gravity.BOTTOM).apply { bottomMargin = 60 })
+        root.setOnClickListener { d.dismiss() }
+        val h = Handler(Looper.getMainLooper())
+        val r = object : Runnable {
+            override fun run() {
+                val v = Math.round(Trip.speedKmh)
+                Ui.setT(sp, v.toString())
+                sp.setTextColor(if (Prefs.alertSpeed in 1 until v) pal.danger else pal.accent)
+                h.postDelayed(this, 1000)
+            }
+        }
+        d.setOnDismissListener { h.removeCallbacks(r) }
+        d.setContentView(root)
+        d.show(); h.post(r)
+    }
+
+    // ============================ سجل الرحلات ============================
+    fun tripLog(a: MainActivity) {
+        val rows = Prefs.str("tripLog").split(";").filter { it.isNotEmpty() }
+        val f = SimpleDateFormat("EEE d/M HH:mm", Locale("ar"))
+        val items = rows.mapNotNull {
+            val p = it.split("|")
+            if (p.size < 5) null else try {
+                val km = String.format(Locale.US, "%.1f", p[1].toDouble() / 1000.0)
+                "${f.format(Date(p[0].toLong()))}\n$km كم · ${p[2].toLong() / 60000} د · متوسط ${p[3]} · أعلى ${p[4]}"
+            } catch (e: Exception) { null }
+        }
+        android.app.AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle("سجل الرحلات (آخر 20)")
+            .setItems(if (items.isEmpty()) arrayOf("لا توجد رحلات بعد") else items.toTypedArray(), null)
+            .setPositiveButton("إغلاق", null)
+            .setNeutralButton("مسح السجل") { _, _ -> Prefs.putStr("tripLog", "") }
+            .show()
     }
 }

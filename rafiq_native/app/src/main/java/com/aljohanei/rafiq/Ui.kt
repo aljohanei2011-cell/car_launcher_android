@@ -18,6 +18,9 @@ import android.widget.TextView
 
 /** أدوات صغيرة لبناء الواجهة بالكود (بدون ملفات تخطيط ولا مكتبات). الأحجام بوحدات التصميم 1280×720 */
 object Ui {
+    /** مضاعف حجم الخط (1 عادي، 1.1 كبير) يُضبط قبل بناء الواجهة */
+    var fontScale = 1f
+
     fun rounded(fill: Int, radius: Float, strokeW: Int = 0, strokeC: Int = 0): GradientDrawable =
         GradientDrawable().apply {
             setColor(fill); cornerRadius = radius
@@ -33,7 +36,7 @@ object Ui {
 
     fun tv(c: Context, size: Float, color: Int, bold: Boolean = false, gravity: Int = Gravity.RIGHT): TextView =
         TextView(c).apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, size * fontScale)
             setTextColor(color)
             if (bold) typeface = Typeface.DEFAULT_BOLD
             this.gravity = gravity or Gravity.CENTER_VERTICAL

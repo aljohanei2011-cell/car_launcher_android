@@ -101,6 +101,10 @@ class MainActivity : Activity() {
     private var restFor = 0L
     private var restCount = 0
     private var tone: ToneGenerator? = null
+    private lateinit var wxHead: TextView
+    private lateinit var headingTv: TextView
+    private var standbyView: View? = null
+    private var lastTouch = System.currentTimeMillis()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,6 +118,18 @@ class MainActivity : Activity() {
             TripService.start(this)
         }
         PrayerAlarm.schedule(this)
+        if (Prefs.autoPlay && !autoPlayed) {
+            autoPlayed = true
+            h.postDelayed({ Media.key(this, KeyEvent.KEYCODE_MEDIA_PLAY) }, 8000)
+        }
+    }
+
+    companion object { private var autoPlayed = false }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
+        lastTouch = System.currentTimeMillis()
+        if (standbyView != null) { hideStandby(); return true }
+        return super.dispatchTouchEvent(ev)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -188,6 +204,8 @@ class MainActivity : Activity() {
 
     private fun build() {
         pal = palNow()
+        Ui.fontScale = if (Prefs.bigFont) 1.1f else 1f
+        standbyView = null
         val (root, d) = Ui.scaled(this, pal.bg)
         design = d
         buildHeader(d)
@@ -221,6 +239,9 @@ class MainActivity : Activity() {
         val mid = Ui.row(this, Gravity.CENTER)
         clockTv = Ui.tv(this, 32f, pal.text, true, Gravity.CENTER)
         dayIcon = Ui.icon(this, R.drawable.g_sun, pal.amber)
+        clockTv.setOnLongClickListener { quickPanel(); true }
+        headingTv = Ui.tv(this, 16f, pal.muted, false, Gravity.CENTER)
+        mid.addView(headingTv, Ui.lin(Ui.WRAP, 72).apply { rightMargin = 12 })
         mid.addView(clockTv, Ui.lin(Ui.WRAP, 72))
         mid.addView(dayIcon, Ui.lin(22, 22).apply { leftMargin = 10 })
         hdr.addView(mid, Ui.at(Ui.WRAP, 72, Gravity.CENTER_HORIZONTAL or Gravity.TOP))
@@ -285,7 +306,7 @@ class MainActivity : Activity() {
                 card = shell(c, R.drawable.ic_clock, false)
             }
             "weather" -> {
-                c.addView(head("حالة الطقس · اضغط للتفاصيل"))
+                wxHead = head("حالة الطقس · اضغط للتفاصيل"); c.addView(wxHead)
                 wxV = Ui.tv(this, 38f, pal.text, true); c.addView(wxV, Ui.lin(Ui.MATCH, 44))
                 wxS = Ui.tv(this, 15f, pal.muted); c.addView(wxS, Ui.lin(Ui.MATCH, 22))
                 card = shell(c, R.drawable.ic_weather, true)
@@ -314,6 +335,7 @@ class MainActivity : Activity() {
                 mS = Ui.tv(this, 15f, pal.muted); c.addView(mS, Ui.lin(Ui.MATCH, 22))
                 card = shell(c, R.drawable.ic_ball, false)
                 card.setOnClickListener { Panels.matchesDay(this, pal) }
+                card.setOnLongClickListener { forceMatches(); toast("جارٍ تحديث المباريات…"); true }
             }
             "music" -> {
                 muHead = head("الموسيقى"); c.addView(muHead)
@@ -533,6 +555,7 @@ class MainActivity : Activity() {
             .setTitle("معلومات السيارة والرحلة").setMessage(msg)
             .setPositiveButton("إغلاق", null)
             .setNeutralButton("تصفير الرحلة") { _, _ -> Trip.reset(); refreshTrip() }
+            .setNegativeButton("سجل الرحلات") { _, _ -> Panels.tripLog(this) }
             .show()
     }
 
@@ -557,7 +580,86 @@ class MainActivity : Activity() {
     }
 
     fun forceWeather() { weatherAt = 0L }
-    fun forceMatches() { matchesAt = 0L; matches = null }
+    fun forceMatches() { matchesAt = 0L }
+    fun matchesUpdatedText(): String = if (matchesAt == 0L) "—" else SimpleDateFormat("HH:mm", Locale.US).format(Date(matchesAt))
+
+    // ============================== اللوحة السريعة ==============================
+    /** ضغطة مطولة على الساعة: السطوع، الصوت، الثيم، العرض على الزجاج */
+    private fun quickPanel() {
+        val box = Ui.col(this, Gravity.TOP or Gravity.RIGHT).apply { setPadding(20, 12, 20, 12) }
+        lateinit var dlg: AlertDialog
+        fun row(label: String, vararg b: Pair<String, () -> Unit>) {
+            val r = Ui.row(this, Gravity.CENTER_VERTICAL or Gravity.RIGHT)
+            for ((txt, fn) in b) r.addView(Ui.tv(this, 18f, pal.text, true, Gravity.CENTER).apply {
+                text = txt; background = Ui.rounded(pal.card, 12f, 2, pal.line); setPadding(18, 0, 18, 0)
+                setOnClickListener { fn() }
+            }, Ui.lin(Ui.WRAP, 52).apply { leftMargin = 8 })
+            r.addView(Ui.tv(this, 18f, pal.text).apply { text = label }, Ui.lin(0, 52, 1f).apply { leftMargin = 16 })
+            box.addView(r, Ui.lin(Ui.MATCH, 60).apply { topMargin = 6 })
+        }
+        fun bright(v: Float) { Prefs.bright = v; lastSlow = 0L; refreshSlow() }
+        row("السطوع", Pair("تلقائي") { bright(-1f) }, Pair("25%") { bright(0.25f) }, Pair("50%") { bright(0.5f) },
+            Pair("75%") { bright(0.75f) }, Pair("100%") { bright(1f) })
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        row("الصوت", Pair("−") { am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI) },
+            Pair("+") { am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI) })
+        val themes = listOf("auto", "dark", "light", "amber")
+        row("الثيم", Pair("تلقائي") { Prefs.theme = themes[0]; dlg.dismiss(); applySettings() },
+            Pair("داكن") { Prefs.theme = themes[1]; dlg.dismiss(); applySettings() },
+            Pair("فاتح") { Prefs.theme = themes[2]; dlg.dismiss(); applySettings() },
+            Pair("كهرماني") { Prefs.theme = themes[3]; dlg.dismiss(); applySettings() })
+        row("شاشات", Pair("على الزجاج") { dlg.dismiss(); Panels.hud(this, pal) }, Pair("الانتظار") { dlg.dismiss(); showStandby() })
+        dlg = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle("لوحة سريعة").setView(box).setPositiveButton("إغلاق", null).create()
+        dlg.show()
+    }
+
+    // ============================== وضع الانتظار ==============================
+    /** شاشة داكنة خفيفة: ساعة كبيرة والصلاة القادمة. تختفي باللمس أو الحركة */
+    private fun showStandby() {
+        if (standbyView != null) return
+        val v = Ui.col(this, Gravity.CENTER).apply { setBackgroundColor(0xFF000000.toInt()) }
+        val now = System.currentTimeMillis()
+        v.addView(Ui.tv(this, 200f, pal.accent, true, Gravity.CENTER).apply { text = SimpleDateFormat("HH:mm", Locale.US).format(Date(now)) }, Ui.lin(Ui.MATCH, 230))
+        v.addView(Ui.tv(this, 28f, 0xFF9AA7B4.toInt(), false, Gravity.CENTER).apply { text = toLatinDigits(SimpleDateFormat("EEEE d MMMM", Locale("ar")).format(Date(now))) + " · " + Astro.hijriText(now) }, Ui.lin(Ui.MATCH, 44))
+        val (idx, at) = Astro.nextPrayer(now, Loc.lat(), Loc.lon())
+        v.addView(Ui.tv(this, 30f, 0xFFF5B841.toInt(), true, Gravity.CENTER).apply { text = "${Astro.PRAYER_NAMES[idx]} " + SimpleDateFormat("HH:mm", Locale.US).format(Date(at)) }, Ui.lin(Ui.MATCH, 50).apply { topMargin = 20 })
+        design.addView(v, Ui.abs(1280, 720, 0, 0))
+        standbyView = v
+        refreshSlow()
+    }
+
+    private fun hideStandby() {
+        standbyView?.let { design.removeView(it) }
+        standbyView = null
+        lastTouch = System.currentTimeMillis()
+        refreshSlow()
+    }
+
+    // ============================== النسخ الاحتياطي ==============================
+    fun backup(save: Boolean) {
+        try {
+            if (save) startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("application/json").putExtra(Intent.EXTRA_TITLE, "rafiq-settings.json"), 41)
+            else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), 42)
+        } catch (e: Exception) { toast("مدير الملفات غير متوفر على هذه الشاشة") }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val uri = data?.data ?: return
+        if (resultCode != RESULT_OK) return
+        try {
+            if (requestCode == 41) {
+                contentResolver.openOutputStream(uri)?.use { it.write(Prefs.exportJson().toByteArray()) }
+                toast("تم حفظ الإعدادات")
+            } else if (requestCode == 42) {
+                val txt = contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() } ?: return
+                Prefs.importJson(txt); applySettings(); toast("تم استرجاع الإعدادات")
+            }
+        } catch (e: Exception) { toast("تعذّر: الملف غير صالح") }
+    }
 
     // ============================== التحديث ==============================
     private var updBusy = false
@@ -690,7 +792,39 @@ class MainActivity : Activity() {
     }
 
     /** فحوص بطيئة: الجمعة، والابتعاد عن المدينة المختارة */
+    private fun dirName(b: Float): String {
+        val n = arrayOf("شمال", "شمال شرق", "شرق", "جنوب شرق", "جنوب", "جنوب غرب", "غرب", "شمال غرب")
+        return n[(((b + 22.5f) % 360f) / 45f).toInt().coerceIn(0, 7)]
+    }
+
     private fun checkSlowAlerts(now: Long) {
+        // الصيام والمناسبات: تذكير بعد المغرب بصيام الغد، وتهنئة العيد صباحاً
+        if (Prefs.alertOn("fast")) {
+            val dayKey = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date(now))
+            val pt = Astro.prayerMillis(Calendar.getInstance(), Loc.lat(), Loc.lon())
+            if (now >= pt[4] && Prefs.str("fastDay") != dayKey) {
+                val tmr = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
+                val hj = Astro.hijri(tmr.timeInMillis)
+                val dow = tmr.get(Calendar.DAY_OF_WEEK)
+                val why = when {
+                    hj[1] == 8 -> ""
+                    hj[1] == 9 && hj[0] == 1 -> ""
+                    hj[1] == 11 && hj[0] == 9 -> "غداً يوم عرفة"
+                    hj[0] in 13..15 && !(hj[1] == 11 && hj[0] == 13) -> "غداً من الأيام البيض"
+                    dow == Calendar.MONDAY -> "غداً الاثنين"
+                    dow == Calendar.THURSDAY -> "غداً الخميس"
+                    else -> ""
+                }
+                Prefs.putStr("fastDay", dayKey)
+                if (why.isNotEmpty()) alert(Alert(pal.amber, R.drawable.ic_prayer, false, why, "تذكير بسنة الصيام لمن أراد", false))
+            }
+            val hj = Astro.hijri(now)
+            val eid = (hj[1] == 9 && hj[0] == 1) || (hj[1] == 11 && hj[0] == 10)
+            if (eid && Prefs.str("eidDay") != dayKey && Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 5..14) {
+                Prefs.putStr("eidDay", dayKey)
+                alert(Alert(pal.amber, R.drawable.ic_prayer, false, "عيدكم مبارك", "تقبّل الله منا ومنكم", false))
+            }
+        }
         val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date(now))
         val cal = Calendar.getInstance()
         if (Prefs.alertOn("friday") && cal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY && cal.get(Calendar.HOUR_OF_DAY) in 6..12
@@ -721,6 +855,11 @@ class MainActivity : Activity() {
             refreshTrip()
             refreshMusic()
             checkAlerts(now)
+            // وضع الانتظار: توقف 10 دقائق بلا لمس، ويخرج عند الحركة
+            if (standbyView != null && Trip.speedKmh > 5f) hideStandby()
+            else if (standbyView == null && Prefs.standby && Trip.speedKmh < 1f &&
+                now - maxOf(Trip.lastMovingAt, lastTouch) > 10 * 60000L) showStandby()
+            Ui.setT(headingTv, if (Trip.bearing >= 0f && Trip.speedKmh > 8f) dirName(Trip.bearing) else "")
             if (now - lastStatus > 5000) { lastStatus = now; refreshStatus() }
             if (now - lastSlow > 30000) {
                 lastSlow = now
@@ -751,7 +890,12 @@ class MainActivity : Activity() {
         Ui.setT(timeS2, Astro.hijriText(now))
         dayIcon.setImageResource(if (night) R.drawable.g_moon else R.drawable.g_sun)
         val lp = window.attributes
-        val want = if (Prefs.nightDim && night) 0.35f else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        val want = when {
+            standbyView != null -> 0.15f
+            Prefs.bright >= 0f -> Prefs.bright
+            Prefs.nightDim && night -> 0.35f
+            else -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        }
         if (lp.screenBrightness != want) { lp.screenBrightness = want; window.attributes = lp }
         refreshPrayer(now)
         refreshAzkar()
@@ -835,6 +979,7 @@ class MainActivity : Activity() {
         val w = weather
         if (w == null) { Ui.setT(wxV, "--°"); Ui.setT(wxS, Loc.name() + " · بانتظار الاتصال"); return }
         Ui.setT(wxV, "${w.temp}°")
+        Ui.setT(wxHead, "حالة الطقس · " + SimpleDateFormat("HH:mm", Locale.US).format(Date(weatherAt)))
         Ui.setT(wxS, if (w.desc.isEmpty()) w.city else "${w.city} · ${w.desc}")
     }
 
@@ -861,6 +1006,7 @@ class MainActivity : Activity() {
         Ui.setT(mV, if (m.state == "pre") "${m.home} × ${m.away}" else "${m.home} ${m.hs} — ${m.aws} ${m.away}")
         val n = matches?.next
         Ui.setT(mS, if (n != null) "قادم: ${n.home} × ${n.away} ${Net.hhmm(n.time)}" else "")
+        if (n == null) Ui.setT(mS, "آخر تحديث " + matchesUpdatedText())
         Prefs.putStr("mcH", mHead.text.toString()); Prefs.putStr("mcV", mV.text.toString()); Prefs.putStr("mcS", mS.text.toString())
     }
 

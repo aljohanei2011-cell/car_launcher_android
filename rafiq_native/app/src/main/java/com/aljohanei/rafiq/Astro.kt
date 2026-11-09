@@ -135,6 +135,28 @@ object Astro {
         } catch (e: Throwable) { intArrayOf(0, -1, 0) }
     }
 
+    private var occKey = ""
+    private var occCache: List<String> = emptyList()
+
+    /** المناسبات القريبة (خلال 120 يوماً): رمضان والعيدان. تُحسب مرة في اليوم */
+    fun occasions(now: Long): List<String> {
+        val key = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date(now))
+        if (key == occKey) return occCache
+        val out = ArrayList<String>()
+        val today = hijri(now)
+        if (today[1] == 8) out.add("رمضان مبارك · اليوم ${today[0]}")
+        val targets = listOf(Triple(8, 1, "رمضان"), Triple(9, 1, "عيد الفطر"), Triple(11, 10, "عيد الأضحى"))
+        for ((m, d, name) in targets) {
+            if (m == 8 && today[1] == 8) continue
+            for (k in 0..120) {
+                val h = hijri(now + k * 86400000L)
+                if (h[1] == m && h[0] == d) { out.add(if (k == 0) "اليوم: $name مبارك" else "$name بعد $k يوماً"); break }
+            }
+        }
+        occKey = key; occCache = out
+        return out
+    }
+
     fun hijriText(millis: Long): String {
         val h = hijri(millis)
         if (h[1] !in 0..11) return ""
