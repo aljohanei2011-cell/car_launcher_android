@@ -292,7 +292,6 @@ class MainActivity : Activity() {
         Ui.icon(this, res, pal.accent).apply { setPadding(11, 10, 11, 10); setOnClickListener { onClick() } }
 
     private fun buildBody(d: FrameLayout) {
-        val hidden = Prefs.hidden()
         val rightStack = Ui.col(this)
         val leftStack = Ui.col(this)
         // المساحة بين الشريط العلوي والقائمة السفلية (تقل قليلاً مع القائمة الكبيرة)
