@@ -58,6 +58,18 @@ object Media {
         read()
     }
 
+    /** [الموضع، المدة] بالمللي ثانية، أو null إن لم يتوفر */
+    fun progress(): LongArray? {
+        val c = ctrl ?: return null
+        val st = c.playbackState ?: return null
+        val dur = c.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+        if (dur <= 0L) return null
+        var pos = st.position
+        if (st.state == PlaybackState.STATE_PLAYING && st.lastPositionUpdateTime > 0)
+            pos += ((android.os.SystemClock.elapsedRealtime() - st.lastPositionUpdateTime) * st.playbackSpeed).toLong()
+        return longArrayOf(pos.coerceIn(0L, dur), dur)
+    }
+
     private fun read() {
         val c = ctrl
         if (c == null) { title = ""; artist = ""; app = ""; playing = false; return }

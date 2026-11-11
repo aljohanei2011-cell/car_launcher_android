@@ -320,6 +320,8 @@ class MainActivity : Activity() {
         Ui.icon(this, res, pal.accent).apply { setPadding(11, 10, 11, 10); setOnClickListener { onClick() } }
 
     private fun buildBody(d: FrameLayout) {
+        big = null
+        if (Prefs.layout == "big") { buildBig(d); return }
         val rightStack = Ui.col(this)
         val leftStack = Ui.col(this)
         // المساحة بين الشريط العلوي والقائمة السفلية (تقل قليلاً مع القائمة الكبيرة)
@@ -536,6 +538,292 @@ class MainActivity : Activity() {
         setOnClickListener { onClick() }
     }
 
+    // ============================== تخطيط البطاقات الكبيرة ==============================
+    /** مراجع عناصر البطاقات الكبيرة (null إن لم تكن ظاهرة) */
+    private class Big {
+        var clock: TextView? = null; var date: TextView? = null; var hijri: TextView? = null
+        var wxIcon: ImageView? = null; var wxTemp: TextView? = null; var wxDesc: TextView? = null
+        var wxCity: TextView? = null; var wxMinMax: TextView? = null; var wxHead: TextView? = null
+        var prName: TextView? = null; var prLeft: TextView? = null; var prAdhan: TextView? = null
+        var qArrow: ImageView? = null; var qDeg: TextView? = null
+        var muSrc: TextView? = null; var muTitle: TextView? = null; var muArtist: TextView? = null
+        var muPos: TextView? = null; var muDur: TextView? = null; var muFill: View? = null; var muBar: View? = null
+        var muPlay: ImageView? = null
+        var mHead: TextView? = null; var mBadge: TextView? = null; var mHome: TextView? = null
+        var mAway: TextView? = null; var mScore: TextView? = null; var mNext: TextView? = null
+        var azHead: TextView? = null; var azCount: TextView? = null; var azText: TextView? = null
+    }
+    private var big: Big? = null
+
+    private fun buildBig(d: FrameLayout) {
+        // البطاقات الكلاسيكية تُنشأ دون عرض حتى تبقى مراجعها صالحة (عناصر صغيرة لا تُرسم)
+        for (id in BASE_CARDS) makeCard(id, emptySet())
+        val b = Big(); big = b
+        val avail = 720 - 72 - barH
+        val ch = (avail - 24 - 12) / 2
+        val pos = listOf(intArrayOf(872, 84), intArrayOf(872, 84 + ch + 12), intArrayOf(16, 84), intArrayOf(16, 84 + ch + 12))
+        for (i in 0..3) {
+            val v = bigCard(Prefs.bigSlot(i), b)
+            d.addView(v, Ui.abs(392, ch, pos[i][0], pos[i][1]))
+        }
+        val gh = avail - 12
+        val g = FrameLayout(this)
+        d.addView(g, Ui.abs(440, gh, 420, 78))
+        gauge = GaugeView(this).apply {
+            pal = this@MainActivity.pal; mode = Prefs.gauge; max = Prefs.maxSpeed; alert = Prefs.alertSpeed; showMax = Prefs.maxMark
+        }
+        g.addView(gauge, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.NO_GRAVITY))
+        if (Prefs.showCar && Prefs.gauge != 6) {
+            val sc = minOf(440 / 528f, gh / 544f)
+            g.addView(ImageView(this).apply { setImageResource(R.drawable.car_rear); scaleType = ImageView.ScaleType.FIT_CENTER },
+                Ui.at((300 * sc).toInt(), (246 * sc).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+        }
+    }
+
+    /** إطار بطاقة كبيرة: عنوان بأيقونة وخط فاصل، ثم المحتوى */
+    private fun bigFrame(icon: Int, title: String, extra: View?): Pair<LinearLayout, LinearLayout> {
+        val card = Ui.col(this, Gravity.TOP).apply { background = Ui.cardBg(pal); setPadding(20, 14, 20, 12) }
+        val hd = Ui.row(this, Gravity.CENTER_VERTICAL)
+        if (extra != null) hd.addView(extra, Ui.lin(Ui.WRAP, 30))
+        hd.addView(View(this), Ui.lin(0, 1, 1f))
+        val tt = Ui.tv(this, 20f, pal.muted).apply { text = title }
+        hd.addView(tt, Ui.lin(Ui.WRAP, 34))
+        hd.addView(Ui.icon(this, icon, pal.accent), Ui.lin(26, 26).apply { leftMargin = 10 })
+        card.addView(hd, Ui.lin(Ui.MATCH, 36))
+        card.addView(View(this).apply { setBackgroundColor(pal.line) }, Ui.lin(Ui.MATCH, 1).apply { topMargin = 6 })
+        val body = Ui.col(this, Gravity.TOP)
+        card.addView(body, Ui.lin(Ui.MATCH, 0, 1f).apply { topMargin = 8 })
+        card.tag = tt
+        return Pair(card, body)
+    }
+
+    private fun vline(): View = View(this).apply { setBackgroundColor(pal.line) }
+
+    private fun bigCard(type: String, b: Big): View {
+        when (type) {
+            "timewx" -> {
+                val (card, body) = bigFrame(R.drawable.g_sun, "الوقت والطقس", null)
+                b.wxHead = card.tag as TextView
+                val row = Ui.row(this, Gravity.CENTER_VERTICAL)
+                val wx = Ui.col(this, Gravity.CENTER)
+                b.wxIcon = Ui.icon(this, R.drawable.g_sun, pal.amber).also { wx.addView(it, Ui.lin(36, 36)) }
+                b.wxTemp = Ui.tv(this, 46f, pal.text, true, Gravity.CENTER).also { wx.addView(it, Ui.lin(Ui.MATCH, 54)) }
+                b.wxDesc = Ui.tv(this, 18f, pal.muted, false, Gravity.CENTER).also { wx.addView(it, Ui.lin(Ui.MATCH, 24)) }
+                row.addView(wx, Ui.lin(118, Ui.MATCH))
+                row.addView(vline(), Ui.lin(1, Ui.MATCH).apply { leftMargin = 8; rightMargin = 14 })
+                val tc = Ui.col(this, Gravity.CENTER_VERTICAL or Gravity.RIGHT)
+                b.clock = Ui.tv(this, 70f, pal.text, true).also { tc.addView(it, Ui.lin(Ui.MATCH, 80)) }
+                b.date = Ui.tv(this, 18f, pal.muted).also { tc.addView(it, Ui.lin(Ui.MATCH, 26)) }
+                b.hijri = Ui.tv(this, 18f, pal.amber).also { tc.addView(it, Ui.lin(Ui.MATCH, 26)) }
+                row.addView(tc, Ui.lin(0, Ui.MATCH, 1f))
+                body.addView(row, Ui.lin(Ui.MATCH, 0, 1f))
+                val bot = Ui.row(this, Gravity.CENTER_VERTICAL)
+                b.wxMinMax = Ui.tv(this, 17f, pal.muted, false, Gravity.LEFT).also { bot.addView(it, Ui.lin(0, 28, 1f)) }
+                b.wxCity = Ui.tv(this, 17f, pal.muted).also { bot.addView(it, Ui.lin(Ui.WRAP, 28)) }
+                body.addView(bot, Ui.lin(Ui.MATCH, 30))
+                card.setOnClickListener { Panels.weather(this, pal) }
+                return card
+            }
+            "prayer" -> {
+                val (card, body) = bigFrame(R.drawable.g_moon, "الصلاة القادمة", null)
+                val row = Ui.row(this, Gravity.CENTER_VERTICAL)
+                val q = Ui.col(this, Gravity.CENTER)
+                b.qArrow = Ui.icon(this, R.drawable.g_arrow, pal.amber).also { q.addView(it, Ui.lin(40, 40)) }
+                b.qDeg = Ui.tv(this, 26f, pal.amber, true, Gravity.CENTER).also { q.addView(it, Ui.lin(Ui.MATCH, 34)) }
+                q.addView(Ui.tv(this, 17f, pal.muted, false, Gravity.CENTER).apply { text = "القبلة" }, Ui.lin(Ui.MATCH, 24))
+                row.addView(q, Ui.lin(108, Ui.MATCH))
+                row.addView(vline(), Ui.lin(1, Ui.MATCH).apply { leftMargin = 8; rightMargin = 14 })
+                val pc = Ui.col(this, Gravity.CENTER_VERTICAL or Gravity.RIGHT)
+                b.prName = Ui.tv(this, 52f, pal.text, true).also { pc.addView(it, Ui.lin(Ui.MATCH, 64)) }
+                b.prLeft = Ui.tv(this, 26f, pal.text).also { pc.addView(it, Ui.lin(Ui.MATCH, 36)) }
+                row.addView(pc, Ui.lin(0, Ui.MATCH, 1f))
+                body.addView(row, Ui.lin(Ui.MATCH, 0, 1f))
+                val ad = Ui.row(this, Gravity.CENTER_VERTICAL).apply { background = Ui.rounded(pal.card, 12f, 2, pal.line); setPadding(14, 0, 14, 0) }
+                b.prAdhan = Ui.tv(this, 20f, pal.amber, true, Gravity.LEFT).also { ad.addView(it, Ui.lin(0, 42, 1f)) }
+                ad.addView(Ui.tv(this, 19f, pal.text).apply { text = "وقت الأذان" }, Ui.lin(Ui.WRAP, 42))
+                ad.addView(Ui.icon(this, R.drawable.g_bell, pal.amber), Ui.lin(22, 22).apply { leftMargin = 8 })
+                body.addView(ad, Ui.lin(Ui.MATCH, 46).apply { topMargin = 4 })
+                card.setOnClickListener { Panels.prayer(this, pal) { openSettingsScreen(3) } }
+                return card
+            }
+            "music" -> {
+                val src = Ui.tv(this, 16f, pal.muted, false, Gravity.LEFT)
+                b.muSrc = src
+                val (card, body) = bigFrame(R.drawable.g_music, "يتم التشغيل الآن", src)
+                val row = Ui.row(this, Gravity.CENTER_VERTICAL)
+                val tc = Ui.col(this, Gravity.CENTER_VERTICAL or Gravity.RIGHT)
+                b.muTitle = Ui.tv(this, 28f, pal.text, true).also { tc.addView(it, Ui.lin(Ui.MATCH, 38)) }
+                b.muArtist = Ui.tv(this, 18f, pal.muted).also { tc.addView(it, Ui.lin(Ui.MATCH, 26)) }
+                row.addView(tc, Ui.lin(0, Ui.MATCH, 1f))
+                row.addView(FrameLayout(this).apply {
+                    background = Ui.rounded(pal.tile, 14f, 1, pal.line)
+                    addView(Ui.icon(context, R.drawable.g_music, pal.accent), Ui.at(36, 36, Gravity.CENTER))
+                }, Ui.lin(66, 66).apply { leftMargin = 14 })
+                body.addView(row, Ui.lin(Ui.MATCH, 70))
+                val pr = Ui.row(this, Gravity.CENTER_VERTICAL)
+                b.muPos = Ui.tv(this, 15f, pal.muted, false, Gravity.CENTER).also { pr.addView(it, Ui.lin(52, 24)) }
+                val bar = FrameLayout(this).apply { background = Ui.rounded(pal.line, 3f) }
+                val fill = View(this).apply { background = Ui.rounded(pal.accent, 3f) }
+                bar.addView(fill, FrameLayout.LayoutParams(0, Ui.MATCH))
+                b.muFill = fill; b.muBar = bar
+                pr.addView(bar, Ui.lin(0, 6, 1f).apply { leftMargin = 6; rightMargin = 6 })
+                b.muDur = Ui.tv(this, 15f, pal.muted, false, Gravity.CENTER).also { pr.addView(it, Ui.lin(52, 24)) }
+                body.addView(pr, Ui.lin(Ui.MATCH, 26).apply { topMargin = 4 })
+                val ctr = Ui.row(this, Gravity.CENTER)
+                fun circle(res: Int, filled: Boolean, onClick: () -> Unit): FrameLayout = FrameLayout(this).apply {
+                    background = Ui.pressable(if (filled) Ui.rounded(pal.accent, 30f) else Ui.rounded(pal.card, 30f, 2, pal.line), Ui.rounded(pal.line, 30f))
+                    setOnClickListener { onClick() }
+                }
+                ctr.addView(circle(R.drawable.g_prev, false) { Media.key(this, KeyEvent.KEYCODE_MEDIA_PREVIOUS) }.apply {
+                    addView(Ui.icon(context, R.drawable.g_prev, pal.text), Ui.at(24, 24, Gravity.CENTER)) }, Ui.lin(60, 60))
+                val play = Ui.icon(this, R.drawable.g_play, pal.onAccent)
+                b.muPlay = play
+                ctr.addView(circle(R.drawable.g_play, true) { Media.key(this, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE); refreshMusic() }.apply {
+                    addView(play, Ui.at(26, 26, Gravity.CENTER)) }, Ui.lin(60, 60).apply { leftMargin = 22; rightMargin = 22 })
+                ctr.addView(circle(R.drawable.g_next, false) { Media.key(this, KeyEvent.KEYCODE_MEDIA_NEXT) }.apply {
+                    addView(Ui.icon(context, R.drawable.g_next, pal.text), Ui.at(24, 24, Gravity.CENTER)) }, Ui.lin(60, 60))
+                body.addView(ctr, Ui.lin(Ui.MATCH, 0, 1f))
+                card.setOnClickListener {
+                    if (!Media.granted(this)) openSettings("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+                    else if (Media.app.isNotEmpty()) launch(Media.app)
+                }
+                return card
+            }
+            "matches" -> {
+                val badge = Ui.tv(this, 16f, 0xFFFFFFFF.toInt(), true, Gravity.CENTER).apply { setPadding(12, 0, 12, 0) }
+                b.mBadge = badge
+                val (card, body) = bigFrame(R.drawable.g_star, "المباريات", badge)
+                b.mHead = card.tag as TextView
+                val row = Ui.row(this, Gravity.CENTER_VERTICAL)
+                b.mAway = Ui.tv(this, 26f, pal.text, true, Gravity.CENTER).apply { maxLines = 2 }.also { row.addView(it, Ui.lin(112, Ui.MATCH)) }
+                b.mScore = Ui.tv(this, 58f, pal.text, true, Gravity.CENTER).also { row.addView(it, Ui.lin(0, Ui.MATCH, 1f)) }
+                b.mHome = Ui.tv(this, 26f, pal.text, true, Gravity.CENTER).apply { maxLines = 2 }.also { row.addView(it, Ui.lin(112, Ui.MATCH)) }
+                body.addView(row, Ui.lin(Ui.MATCH, 0, 1f))
+                body.addView(View(this).apply { setBackgroundColor(pal.line) }, Ui.lin(Ui.MATCH, 1))
+                b.mNext = Ui.tv(this, 17f, pal.muted).also { body.addView(it, Ui.lin(Ui.MATCH, 34)) }
+                card.setOnClickListener { Panels.matchesDay(this, pal) }
+                card.setOnLongClickListener { forceMatches(); toast("جارٍ تحديث المباريات…"); true }
+                return card
+            }
+            "azkar" -> {
+                val (card, body) = bigFrame(R.drawable.g_book, "الأذكار", null)
+                b.azHead = card.tag as TextView
+                b.azCount = Ui.tv(this, 58f, pal.text, true).also { body.addView(it, Ui.lin(Ui.MATCH, 70)) }
+                b.azText = Ui.tv(this, 20f, pal.muted).apply { maxLines = 3; setLineSpacing(4f, 1f) }.also { body.addView(it, Ui.lin(Ui.MATCH, Ui.WRAP)) }
+                body.addView(Ui.tv(this, 15f, pal.muted).apply { text = "اضغط للعدّ · اضغط مطولاً للتالي" }, Ui.lin(Ui.MATCH, 24))
+                card.setOnClickListener { Azkar.tap(System.currentTimeMillis()); it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); refreshAzkar() }
+                card.setOnLongClickListener { Azkar.skip(System.currentTimeMillis()); it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); refreshAzkar(); true }
+                return card
+            }
+            else -> {
+                val (card, body) = bigFrame(R.drawable.ic_pin.let { R.drawable.g_loc }, "وجهاتي · اضغط مطولاً لحفظ موقعك", null)
+                for (k in listOf("home", "work", "mosque")) {
+                    body.addView(Ui.tv(this, 22f, pal.text, true, Gravity.CENTER).apply {
+                        text = destName(k)
+                        background = Ui.pressable(Ui.rounded(pal.card, 12f, 2, if (Prefs.str("dest_$k").isEmpty()) pal.line else pal.accent), Ui.rounded(pal.line, 12f))
+                        setOnClickListener { goDest(k) }
+                        setOnLongClickListener { saveDest(k); true }
+                    }, Ui.lin(Ui.MATCH, 0, 1f).apply { topMargin = 6 })
+                }
+                return card
+            }
+        }
+    }
+
+    /** تحديث البطاقات الكبيرة: السريع كل ثانية (الموسيقى)، والبطيء مع الصلاة والوقت */
+    private fun refreshBigFast() {
+        val b = big ?: return
+        b.clock?.let { Ui.setT(it, Ui.hmBig(System.currentTimeMillis())) }
+        if (b.muTitle != null) {
+            val t = b.muTitle!!
+            if (Media.title.isNotEmpty()) { Ui.setT(t, Media.title); Ui.setT(b.muArtist!!, Media.artist) }
+            else { Ui.setT(t, if (!Media.granted(this)) "اضغط لعرض اسم المقطع" else "لا يوجد تشغيل"); Ui.setT(b.muArtist!!, "") }
+            val src = appLabel(Media.app)
+            b.muSrc?.let { Ui.setT(it, src) }
+            val want = if (Media.playing) R.drawable.g_pause else R.drawable.g_play
+            b.muPlay?.let { if (it.tag != want) { it.tag = want; it.setImageResource(want) } }
+            val p = Media.progress()
+            fun mmss(ms: Long) = String.format(Locale.US, "%d:%02d", ms / 60000, (ms / 1000) % 60)
+            Ui.setT(b.muPos!!, if (p == null) "" else mmss(p[0]))
+            Ui.setT(b.muDur!!, if (p == null) "" else mmss(p[1]))
+            val bar = b.muBar!!; val fill = b.muFill!!
+            val w = if (p == null || bar.width == 0) 0 else (bar.width * p[0] / p[1]).toInt()
+            if (fill.layoutParams.width != w) { fill.layoutParams.width = w; fill.requestLayout() }
+        }
+        if (Trip.gpsLive() && Trip.distanceM > 50) {
+            val dist = String.format(Locale.US, "%.1f", Trip.distanceM / 1000.0)
+            gauge.setTrip("$dist كم · ${Trip.movingMs / 60000} د · متوسط ${Trip.avgKmh().roundToInt()}")
+        } else gauge.setTrip(if (Trip.gpsLive()) "GPS متصل · تنبيه عند ${Prefs.alertSpeed}" else "GPS غير متصل")
+    }
+
+    private fun refreshBigSlow(now: Long) {
+        val b = big ?: return
+        b.date?.let { Ui.setT(it, toLatinDigits(SimpleDateFormat("EEEE d MMMM", Locale("ar")).format(Date(now)))) }
+        b.hijri?.let { Ui.setT(it, Astro.hijriText(now)) }
+        b.wxIcon?.setImageResource(if (night) R.drawable.g_moon else R.drawable.g_sun)
+        if (b.prName != null) {
+            val (idx, at) = Astro.nextPrayer(now, Loc.lat(), Loc.lon())
+            val mins = ((at - now) / 60000L).toInt()
+            Ui.setT(b.prName!!, Astro.PRAYER_NAMES[idx])
+            Ui.setT(b.prLeft!!, if (mins >= 60) "بعد ${mins / 60} س ${mins % 60} د" else "بعد $mins د")
+            Ui.setT(b.prAdhan!!, Ui.hm(at))
+            Ui.setT(b.qDeg!!, "${qiblaDeg.roundToInt()}°")
+        }
+        b.qArrow?.let {
+            val h = Trip.bearing
+            val rot = if (h >= 0f && Trip.gpsLive()) qiblaDeg - h else qiblaDeg
+            if (Math.abs(it.rotation - rot) > 2f) it.rotation = rot
+        }
+        if (b.azCount != null) {
+            val list = Azkar.list(now); val s = Azkar.state(now)
+            if (s[0] >= list.size) {
+                Ui.setT(b.azHead!!, "دعاء اليوم · تمت الأذكار ✓"); Ui.setT(b.azCount!!, "تقبّل الله"); Ui.setT(b.azText!!, Duas.today())
+            } else {
+                Ui.setT(b.azHead!!, if (Azkar.isMorning(now)) "أذكار الصباح" else "أذكار المساء")
+                Ui.setT(b.azCount!!, "${s[1]} / ${list[s[0]].count}"); Ui.setT(b.azText!!, list[s[0]].text)
+            }
+        }
+    }
+
+    private fun refreshBigWeather() {
+        val b = big ?: return
+        val w = weather
+        if (b.wxTemp == null) return
+        if (w == null) {
+            Ui.setT(b.wxTemp!!, "--°"); Ui.setT(b.wxDesc!!, if (!Net.online(this)) "لا إنترنت" else "")
+            Ui.setT(b.wxCity!!, Loc.name()); Ui.setT(b.wxMinMax!!, ""); return
+        }
+        Ui.setT(b.wxTemp!!, "${w.temp}°"); Ui.setT(b.wxDesc!!, w.desc)
+        Ui.setT(b.wxCity!!, w.city + if (weatherFail) " · محفوظ ${Ui.hm(weatherFrom)}" else "")
+        Ui.setT(b.wxMinMax!!, if (w.max > -999) "العظمى ${w.max}° · الصغرى ${w.min}°" else "")
+    }
+
+    private fun refreshBigMatches() {
+        val b = big ?: return
+        if (b.mScore == null) return
+        val m = matches?.main
+        val badge = b.mBadge!!
+        if (m == null) {
+            Ui.setT(b.mHead!!, "المباريات"); badge.visibility = View.GONE
+            Ui.setT(b.mHome!!, ""); Ui.setT(b.mAway!!, "")
+            Ui.setT(b.mScore!!, "—")
+            Ui.setT(b.mNext!!, if (matches == null) (if (matchesFail) (if (!Net.online(this)) "لا يوجد إنترنت" else Net.lastError.ifEmpty { "تعذّر التحميل" }) else "جارٍ التحميل…") else "لا توجد مباريات اليوم أو غداً")
+            return
+        }
+        Ui.setT(b.mHead!!, m.league)
+        badge.visibility = View.VISIBLE
+        when (m.state) {
+            "in" -> { Ui.setT(badge, "● مباشر ${m.clock}"); badge.background = Ui.rounded(0xFF15803D.toInt(), 10f) }
+            "post" -> { Ui.setT(badge, "انتهت"); badge.background = Ui.rounded(pal.muted, 10f) }
+            else -> { Ui.setT(badge, "قادم ${Ui.hm(m.time)}"); badge.background = Ui.rounded(pal.accent, 10f) }
+        }
+        badge.setTextColor(if (m.state == "pre") pal.onAccent else 0xFFFFFFFF.toInt())
+        Ui.setT(b.mHome!!, m.home); Ui.setT(b.mAway!!, m.away)
+        Ui.setT(b.mScore!!, if (m.state == "pre") "×" else "${m.aws} - ${m.hs}")
+        val n = matches?.next
+        Ui.setT(b.mNext!!, if (n != null) "القادمة: ${n.home} × ${n.away} · ${Ui.hm(n.time)}" else "آخر تحديث " + matchesUpdatedText())
+    }
+
     private val BASE_CARDS = setOf("time", "weather", "trip", "matches", "music", "prayer", "azkar", "nav")
 
     /** إطار البطاقة: نص وبلاطة أيقونة في أقصى اليمين (tint للأيقونات البسيطة) */
@@ -592,20 +880,25 @@ class MainActivity : Activity() {
         val v = Ui.col(this, Gravity.CENTER)
         val type = Prefs.slotType(i); val value = Prefs.slotValue(i)
         val active = type == "fn" && value == "home"
-        val color = if (active) pal.accent else pal.text
+        val boxed = Prefs.layout == "big"
+        // في البطاقات الكبيرة: الخانة النشطة مملوءة باللون ونصها بلون معاكس
+        val color = if (active) (if (boxed) pal.onAccent else pal.accent) else pal.text
         val normal = when {
             editMode -> Ui.rounded(pal.card, 14f, 2, pal.accent)
+            boxed && active -> Ui.rounded(pal.accent, 14f)
             active -> Ui.rounded(pal.card, 14f, 2, pal.accent)
+            boxed -> Ui.rounded(pal.card, 14f, 1, pal.line)
             else -> null
         }
         v.background = Ui.pressable(normal, Ui.rounded(pal.line, 14f))
-        val tile = FrameLayout(this).apply { background = Ui.rounded(pal.tile, 14f, 2, if (active) pal.accent else pal.tileLine) }
+        val tile = FrameLayout(this).apply { if (!boxed) background = Ui.rounded(pal.tile, 14f, 2, if (active) pal.accent else pal.tileLine) }
         if (type == "app") {
             tile.addView(ImageView(this).apply { setImageDrawable(appInfo(value)?.second); scaleType = ImageView.ScaleType.FIT_CENTER },
                 Ui.at(iconSz, iconSz, Gravity.CENTER))
         } else {
-            tile.addView(Ui.icon(this, fnIcons[fnIds.indexOf(value).coerceAtLeast(0)], if (active) pal.accent else 0xFFE6EAEE.toInt()),
-                Ui.at(iconSz * 3 / 4, iconSz * 3 / 4, Gravity.CENTER))
+            val tint = if (boxed) color else if (active) pal.accent else 0xFFE6EAEE.toInt()
+            val isz = if (boxed) iconSz * 4 / 5 else iconSz * 3 / 4
+            tile.addView(Ui.icon(this, fnIcons[fnIds.indexOf(value).coerceAtLeast(0)], tint), Ui.at(isz, isz, Gravity.CENTER))
         }
         val icRow = Ui.row(this, Gravity.CENTER)
         icRow.addView(tile, Ui.lin(tileSz, tileSz))
@@ -807,7 +1100,8 @@ class MainActivity : Activity() {
         val at = Prefs.long("wxCacheAt")
         val p = Prefs.str("wxCache").split("|")
         if (p.size >= 4 && System.currentTimeMillis() - at < 12 * 3600000L) try {
-            weather = Net.Weather(p[0].toInt(), p[1], p[2], false, p[3].toInt()); weatherFrom = at
+            weather = Net.Weather(p[0].toInt(), p[1], p[2], false, p[3].toInt(),
+                p.getOrNull(4)?.toIntOrNull() ?: -999, p.getOrNull(5)?.toIntOrNull() ?: -999); weatherFrom = at
         } catch (e: Exception) {}
     }
 
@@ -1112,6 +1406,7 @@ class MainActivity : Activity() {
             gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive(), Trip.bearing, Trip.maxKmh.roundToInt())
             refreshTrip()
             refreshMusic()
+            refreshBigFast()
             checkAlerts(now)
             // وضع الانتظار: توقف 10 دقائق بلا لمس، ويخرج عند الحركة
             // بدون إشارة GPS لا نعرف هل السيارة واقفة، فلا يظهر تلقائياً
@@ -1146,6 +1441,7 @@ class MainActivity : Activity() {
 
     private fun refreshSlow() {
         val now = System.currentTimeMillis()
+        refreshBigSlow(now)
         val df = SimpleDateFormat("EEEE d MMMM yyyy", Locale("ar"))
         Ui.setT(timeV, Ui.hmBig(now))
         Ui.setT(timeS1, toLatinDigits(df.format(Date(now))))
@@ -1207,6 +1503,7 @@ class MainActivity : Activity() {
     }
 
     private fun refreshAzkar() {
+        refreshBigSlow(System.currentTimeMillis())
         val now = System.currentTimeMillis()
         val list = Azkar.list(now)
         val s = Azkar.state(now)
@@ -1266,6 +1563,7 @@ class MainActivity : Activity() {
     }
 
     private fun refreshWeather() {
+        refreshBigWeather()
         val w = weather
         if (w == null) {
             Ui.setT(wxV, "--°"); Ui.setT(wxHead, "حالة الطقس")
@@ -1279,6 +1577,7 @@ class MainActivity : Activity() {
     }
 
     private fun refreshMatches() {
+        refreshBigMatches()
         val m = matches?.main
         if (matches == null && Prefs.str("mcV").isNotEmpty()) {
             // آخر نتيجة محفوظة تظهر فوراً قبل الاتصال، وتبقى إن لم يوجد إنترنت
@@ -1346,7 +1645,7 @@ class MainActivity : Activity() {
                     weatherFail = w == null
                     if (w != null) {
                         weather = w; weatherFrom = weatherAt
-                        Prefs.putStr("wxCache", "${w.temp}|${w.desc}|${w.city}|${w.pm10}"); Prefs.putLong("wxCacheAt", weatherAt)
+                        Prefs.putStr("wxCache", "${w.temp}|${w.desc}|${w.city}|${w.pm10}|${w.max}|${w.min}"); Prefs.putLong("wxCacheAt", weatherAt)
                         val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
                         if (w.severe && Prefs.alertOn("weather") && Prefs.str("wxDay") != today) {
                             Prefs.putStr("wxDay", today)

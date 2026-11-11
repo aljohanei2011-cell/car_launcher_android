@@ -26,7 +26,17 @@ object Prefs {
     // الخلفية: dark / black / light ، لون التمييز: cyan / red / green / amber / blue / silver
     // الافتراضي يطابق الشكل الحالي (داكن سماوي ليلاً، فاتح نهاراً) حتى لا يتغير شيء بعد التحديث
     fun base(slot: String): String = str("base_$slot", when (slot) { "day" -> "light"; else -> "dark" })
-    fun accent(slot: String): String = str("acc_$slot", "cyan")
+    fun accent(slot: String): String = str("acc_$slot", if (slot == "day") "blue" else "cyan")
+
+    /** التخطيط: big = بطاقات كبيرة (4)، classic = الكلاسيكي (حتى 8) */
+    var layout: String
+        get() = str("layout", "big")
+        set(v) = putStr("layout", v)
+    val BIG_TYPES = listOf("timewx", "prayer", "music", "matches", "azkar", "dest")
+    val BIG_NAMES = listOf("الوقت والطقس", "الصلاة", "الموسيقى", "المباريات", "الأذكار", "وجهاتي")
+    val BIG_POS = listOf("اليمين أعلى", "اليمين أسفل", "اليسار أعلى", "اليسار أسفل")
+    fun bigSlot(i: Int): String = str("big$i", listOf("timewx", "prayer", "music", "matches")[i])
+    fun setBigSlot(i: Int, v: String) = putStr("big$i", v)
     fun setBase(slot: String, v: String) = putStr("base_$slot", v)
     fun setAccent(slot: String, v: String) = putStr("acc_$slot", v)
 

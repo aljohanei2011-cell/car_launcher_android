@@ -282,6 +282,20 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
 
     // ---------------- الأقسام ----------------
     private fun looks() {
+        title("ثيمات جاهزة")
+        fun preset(day: Pair<String, String>?, night: Pair<String, String>) {
+            if (day == null) { Prefs.theme = "fixed"; Prefs.setBase("fixed", night.first); Prefs.setAccent("fixed", night.second) }
+            else {
+                Prefs.theme = "auto"
+                Prefs.setBase("day", day.first); Prefs.setAccent("day", day.second)
+                Prefs.setBase("night", night.first); Prefs.setAccent("night", night.second)
+            }
+            changed()
+        }
+        line("نهار فاتح أزرق · ليل داكن سماوي", "الموصى به", btn("اختيار", false) { preset("light" to "blue", "dark" to "cyan") })
+        line("نهار فاتح أزرق · ليل أسود كهرماني", "الأريح للعين ليلاً", btn("اختيار", false) { preset("light" to "blue", "black" to "amber") })
+        line("داكن سماوي دائماً", "إن كان الفاتح يعكس الضوء على الشاشة", btn("اختيار", false) { preset(null, "dark" to "cyan") })
+        title("تخصيص")
         val auto = Prefs.theme != "fixed"
         seg("طريقة الثيم", "التلقائي يبدّل بين ثيم النهار وثيم الليل عند الشروق والغروب",
             listOf("تلقائي", "ثابت"), if (auto) 0 else 1) {
@@ -322,6 +336,21 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
     }
 
     private fun homeScreen() {
+        seg("التخطيط", "البطاقات الكبيرة: 4 بطاقات بخط أكبر وأوضح أثناء القيادة", listOf("بطاقات كبيرة", "الكلاسيكي"),
+            if (Prefs.layout == "big") 0 else 1) { Prefs.layout = if (it == 0) "big" else "classic" }
+        if (Prefs.layout == "big") {
+            title("البطاقات الكبيرة")
+            for (i in 0..3) {
+                val cur = Prefs.bigSlot(i)
+                action(Prefs.BIG_POS[i], Prefs.BIG_NAMES[Prefs.BIG_TYPES.indexOf(cur).coerceAtLeast(0)], "تغيير") {
+                    AlertDialog.Builder(a, T).setTitle(Prefs.BIG_POS[i])
+                        .setSingleChoiceItems(Prefs.BIG_NAMES.toTypedArray(), Prefs.BIG_TYPES.indexOf(cur)) { dlg, w ->
+                            dlg.dismiss(); Prefs.setBigSlot(i, Prefs.BIG_TYPES[w]); changed()
+                        }.setNegativeButton("إلغاء", null).show()
+                }
+            }
+            bottomBar(); return
+        }
         title("البطاقات")
         note("أظهر حتى 4 بطاقات في كل عمود، ورتّبها. «نقل» يبدّلها مع المقابلة في العمود الآخر.")
         val r = Prefs.column(true); val l = Prefs.column(false)
@@ -354,6 +383,10 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
             }
         }
 
+        bottomBar()
+    }
+
+    private fun bottomBar() {
         title("القائمة السفلية")
         seg("الحجم", null, listOf("عادي", "كبير", "أيقونات فقط"), Prefs.barSize) { Prefs.barSize = it }
         if (Prefs.barSize != 2) toggle("أسماء الخانات", null, Prefs.slotLabels) { Prefs.slotLabels = it }

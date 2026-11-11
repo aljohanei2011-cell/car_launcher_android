@@ -59,7 +59,8 @@ object Net {
     }
 
     // ============================ الطقس (Open-Meteo بدون مفتاح) ============================
-    class Weather(val temp: Int, val desc: String, val city: String, val severe: Boolean, val pm10: Int)
+    class Weather(val temp: Int, val desc: String, val city: String, val severe: Boolean, val pm10: Int,
+                  val max: Int = -999, val min: Int = -999, val code: Int = -1)
 
     fun desc(code: Int): String = when (code) {
         0 -> "صافٍ"
@@ -92,11 +93,16 @@ object Net {
     fun weather(lat: Double, lon: Double, city: String): Weather? {
         return try {
             val j = get(String.format(Locale.US,
-                "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f&current=temperature_2m,weather_code", lat, lon))
+                "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f&current=temperature_2m,weather_code" +
+                    "&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto", lat, lon))
             val cur = j.getJSONObject("current")
             val t = Math.round(cur.getDouble("temperature_2m")).toInt()
             val code = cur.optInt("weather_code", -1)
-            Weather(t, desc(code), city, severe(code), pm10(lat, lon))
+            val dl = j.optJSONObject("daily")
+            val mx = dl?.optJSONArray("temperature_2m_max")?.optDouble(0, Double.NaN) ?: Double.NaN
+            val mn = dl?.optJSONArray("temperature_2m_min")?.optDouble(0, Double.NaN) ?: Double.NaN
+            Weather(t, desc(code), city, severe(code), pm10(lat, lon),
+                if (mx.isNaN()) -999 else Math.round(mx).toInt(), if (mn.isNaN()) -999 else Math.round(mn).toInt(), code)
         } catch (e: Exception) { null }
     }
 
