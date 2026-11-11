@@ -73,7 +73,7 @@ object Panels {
             val f = Net.full(lat, lon, coastal)
             h.post {
                 if (!d.isShowing) return@post
-                if (f == null) { wait.text = "تعذّر التحميل. تحقق من الاتصال بالإنترنت"; return@post }
+                if (f == null) { wait.text = "تعذّر التحميل: ${Net.lastError.ifEmpty { "تحقق من الاتصال" }}"; return@post }
                 body.removeAllViews()
                 buildWeather(a, pal, body, f)
             }
@@ -83,7 +83,8 @@ object Panels {
     private fun buildWeather(a: MainActivity, pal: Palette, body: FrameLayout, f: Net.Full) {
         // يمين: الآن
         val now = box(a, pal)
-        now.addView(t(a, 18f, pal.muted, "الآن · آخر تحديث " + Ui.hm(System.currentTimeMillis())), Ui.lin(Ui.MATCH, 26))
+        now.addView(t(a, 18f, if (f.cachedAt > 0) pal.amber else pal.muted,
+            if (f.cachedAt > 0) "بدون اتصال · محفوظ من ${Ui.hm(f.cachedAt)}" else "الآن · آخر تحديث " + Ui.hm(System.currentTimeMillis())), Ui.lin(Ui.MATCH, 26))
         now.addView(t(a, 84f, pal.text, "${f.temp}°", true), Ui.lin(Ui.MATCH, 96))
         now.addView(t(a, 24f, pal.text, f.desc, true), Ui.lin(Ui.MATCH, 34))
         now.addView(t(a, 18f, pal.muted, "الإحساس الفعلي ${f.feels}°"), Ui.lin(Ui.MATCH, 30).apply { topMargin = 10 })
@@ -258,7 +259,7 @@ object Panels {
             val all = Net.fetchAll(leagues)
             h.post {
                 if (!d.isShowing) return@post
-                if (all == null) { wait.text = "لا يوجد اتصال بالإنترنت"; return@post }
+                if (all == null) { wait.text = "تعذّر التحميل: ${Net.lastError.ifEmpty { "تحقق من الاتصال" }}"; return@post }
                 if (all.isEmpty()) { wait.text = "لا توجد مباريات اليوم أو غداً في البطولات المختارة"; return@post }
                 val dayF = SimpleDateFormat("yyyyMMdd", Locale.US)
                 val todayKey = dayF.format(Date())

@@ -532,6 +532,7 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
         toggle("الفحص اليومي عن تحديث", null, Prefs.autoUpdate) { Prefs.autoUpdate = it }
         toggle("التحميل عبر الواي فاي فقط", "لتوفير باقة الجوال", Prefs.wifiOnly) { Prefs.wifiOnly = it }
         action("التحقق من وجود تحديث", null, "تحقق الآن") { a.checkUpdate(true) }
+        action("اختبار الاتصال", "يفحص الشبكة والطقس والمباريات ويوضح سبب أي مشكلة", "اختبار") { a.netTest() }
         title("الشاشة")
         action("اجعله الواجهة الرئيسية للشاشة", null, "فتح") { open(Settings.ACTION_HOME_SETTINGS) }
         action("عرض اسم المقطع في بطاقة الموسيقى", "يحتاج إذن الوصول إلى الإشعارات", "السماح") { open("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS") }

@@ -122,7 +122,8 @@ class TripService : Service(), LocationListener {
             val dtMs = loc.time - prev.time
             if (dtMs in 500..5000) kmh = prev.distanceTo(loc) / (dtMs / 1000f) * 3.6f
         }
-        Trip.speedKmh = if (kmh < 2f) 0f else kmh
+        // ارتجاف GPS عند الوقوف قد يعطي 2–4 كم/س: نعتبره صفراً
+        Trip.speedKmh = if (kmh < 4f || (loc.accuracy > 30f && kmh < 8f)) 0f else kmh
         Trip.hasFix = true
         if (loc.hasAltitude()) Trip.altitude = loc.altitude
         Trip.lastFixAt = now

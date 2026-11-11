@@ -93,6 +93,10 @@ class MainActivity : Activity() {
     // بيانات الشبكة (تبقى عند إعادة بناء الواجهة)
     private var weather: Net.Weather? = null
     private var weatherAt = 0L
+    private var weatherFrom = 0L        // وقت آخر طقس ناجح (للعرض)
+    private var weatherFail = false
+    private var netCb: android.net.ConnectivityManager.NetworkCallback? = null
+    private var lastNetKick = 0L
     private var weatherBusy = false
     private var matches: Net.MatchCard? = null
     private var matchesAt = 0L
@@ -122,6 +126,7 @@ class MainActivity : Activity() {
         Prefs.init(this)
         seenRide = Trip.rideEvent; seenTravel = Trip.travelEvent
         night = Astro.isNight(System.currentTimeMillis(), Loc.lat(), Loc.lon())
+        loadCachedWeather()
         build()
         if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION), 1)
@@ -165,11 +170,34 @@ class MainActivity : Activity() {
         if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) TripService.start(this)
         lastSlow = 0L; lastStatus = 0L
         h.removeCallbacks(tick); h.post(tick)
+        // عند عودة الإنترنت نحدّث الطقس والمباريات فوراً بدل الانتظار
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val cb = object : android.net.ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: android.net.Network) {
+                    h.post {
+                        val t = System.currentTimeMillis()
+                        if (t - lastNetKick > 15000) {
+                            lastNetKick = t
+                            if (weatherFail || weather == null) forceWeather()
+                            if (matchesFail || matches == null) forceMatches()
+                            lastStatus = 0L
+                        }
+                    }
+                }
+                override fun onLost(network: android.net.Network) { h.post { lastStatus = 0L } }
+            }
+            cm.registerDefaultNetworkCallback(cb); netCb = cb
+        } catch (e: Exception) {}
     }
 
     override fun onStop() {
         started = false
         h.removeCallbacks(tick)
+        try {
+            netCb?.let { (getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).unregisterNetworkCallback(it) }
+        } catch (e: Exception) {}
+        netCb = null
         super.onStop()
     }
 
@@ -773,6 +801,27 @@ class MainActivity : Activity() {
     }
 
     fun forceWeather() { weatherAt = 0L }
+
+    /** آخر طقس محفوظ (حتى 12 ساعة) يظهر فوراً عند التشغيل */
+    private fun loadCachedWeather() {
+        val at = Prefs.long("wxCacheAt")
+        val p = Prefs.str("wxCache").split("|")
+        if (p.size >= 4 && System.currentTimeMillis() - at < 12 * 3600000L) try {
+            weather = Net.Weather(p[0].toInt(), p[1], p[2], false, p[3].toInt()); weatherFrom = at
+        } catch (e: Exception) {}
+    }
+
+    /** اختبار الاتصال من الإعدادات */
+    fun netTest() {
+        toast("جارٍ اختبار الاتصال…")
+        Thread {
+            val r = Net.test(applicationContext)
+            h.post {
+                AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle("اختبار الاتصال").setMessage(r).setPositiveButton("إغلاق", null).show()
+            }
+        }.start()
+    }
     fun forceMatches() { matchesAt = 0L; matchesTry = 0L; matchesFullAt = 0L }
     fun matchesUpdatedText(): String = if (matchesAt == 0L) "—" else Ui.hm(matchesAt)
 
@@ -1209,17 +1258,24 @@ class MainActivity : Activity() {
         val bt = try { BluetoothAdapter.getDefaultAdapter()?.isEnabled == true } catch (e: Exception) { false }
         val gps = try { (getSystemService(Context.LOCATION_SERVICE) as LocationManager).isProviderEnabled(LocationManager.GPS_PROVIDER) } catch (e: Exception) { false }
         val wifi = try { (applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).isWifiEnabled } catch (e: Exception) { false }
+        val online = Net.online(this)
         btIv.imageTintList = ColorStateList.valueOf(if (bt) pal.accent else pal.muted)
         gpsIv.imageTintList = ColorStateList.valueOf(if (gps) pal.accent else pal.muted)
-        wifiIv.imageTintList = ColorStateList.valueOf(if (wifi) pal.accent else pal.muted)
+        // الواي فاي: سماوي متصل بالإنترنت، كهرماني مفعّل بلا إنترنت، رمادي متوقف
+        wifiIv.imageTintList = ColorStateList.valueOf(when { wifi && online -> pal.accent; wifi -> pal.amber; else -> pal.muted })
     }
 
     private fun refreshWeather() {
         val w = weather
-        if (w == null) { Ui.setT(wxV, "--°"); Ui.setT(wxS, Loc.name() + " · بانتظار الاتصال"); return }
+        if (w == null) {
+            Ui.setT(wxV, "--°"); Ui.setT(wxHead, "حالة الطقس")
+            Ui.setT(wxS, Loc.name() + " · " + (if (!Net.online(this)) "لا يوجد إنترنت" else if (weatherFail) Net.lastError.ifEmpty { "تعذّر التحميل" } else "جارٍ التحميل…"))
+            return
+        }
         Ui.setT(wxV, "${w.temp}°")
-        Ui.setT(wxHead, "حالة الطقس · " + Ui.hm(weatherAt))
-        Ui.setT(wxS, if (w.desc.isEmpty()) w.city else "${w.city} · ${w.desc}")
+        // آخر قراءة محفوظة تبقى ظاهرة مع وقتها، حتى بدون إنترنت
+        Ui.setT(wxHead, "حالة الطقس · " + (if (weatherFail) "محفوظ " else "") + Ui.hm(weatherFrom))
+        Ui.setT(wxS, (if (w.desc.isEmpty()) w.city else "${w.city} · ${w.desc}") + if (weatherFail) " · بدون اتصال" else "")
     }
 
     private fun refreshMatches() {
@@ -1232,7 +1288,7 @@ class MainActivity : Activity() {
         }
         if (m == null) {
             Ui.setT(mHead, "المباريات"); mBadge.visibility = View.GONE
-            Ui.setT(mV, if (matches == null) (if (matchesFail) "لا يوجد اتصال بالإنترنت" else "جارٍ التحميل…") else "لا توجد مباريات قريبة")
+            Ui.setT(mV, if (matches == null) (if (matchesFail) (if (!Net.online(this)) "لا يوجد إنترنت" else Net.lastError.ifEmpty { "تعذّر التحميل" }) else "جارٍ التحميل…") else "لا توجد مباريات اليوم أو غداً")
             Ui.setT(mS, "اضغط للقائمة · اضغط مطولاً للتحديث"); return
         }
         Ui.setT(mHead, m.league)
@@ -1276,7 +1332,10 @@ class MainActivity : Activity() {
             Prefs.putLong("updTried", now)
             checkUpdate(false)
         }
-        if (!weatherBusy && now - weatherAt > 30 * 60000L) {
+        if (!weatherBusy && now - weatherAt > 30 * 60000L && !Net.online(this)) {
+            // بدون شبكة لا نحاول، وننتظر عودتها (يُحدَّث تلقائياً عند الاتصال)
+            weatherFail = true; weatherAt = now - 25 * 60000L; refreshWeather()
+        } else if (!weatherBusy && now - weatherAt > 30 * 60000L) {
             weatherBusy = true
             val lat = Loc.lat(); val lon = Loc.lon(); val city = Loc.name()
             Thread {
@@ -1284,8 +1343,10 @@ class MainActivity : Activity() {
                 h.post {
                     weatherBusy = false
                     weatherAt = if (w != null) System.currentTimeMillis() else System.currentTimeMillis() - 25 * 60000L
+                    weatherFail = w == null
                     if (w != null) {
-                        weather = w
+                        weather = w; weatherFrom = weatherAt
+                        Prefs.putStr("wxCache", "${w.temp}|${w.desc}|${w.city}|${w.pm10}"); Prefs.putLong("wxCacheAt", weatherAt)
                         val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
                         if (w.severe && Prefs.alertOn("weather") && Prefs.str("wxDay") != today) {
                             Prefs.putStr("wxDay", today)
@@ -1314,7 +1375,10 @@ class MainActivity : Activity() {
         }
         val full = now - matchesFullAt > 20 * 60000L
         val wanted = "matches" !in Prefs.hidden() || (fav.isNotEmpty() && Prefs.alertOn("match"))
-        if (wanted && !matchesBusy && now >= matchesTry && (full || (hot.isNotEmpty() && now - matchesAt > 60000L))) {
+        val due = wanted && !matchesBusy && now >= matchesTry && (full || (hot.isNotEmpty() && now - matchesAt > 60000L))
+        if (due && !Net.online(this)) {
+            matchesFail = true; matchesTry = now + 60000L; refreshMatches()
+        } else if (due) {
             matchesBusy = true
             val prev = if (full) null else matches?.all
             Thread {

@@ -10,14 +10,52 @@ import java.util.TimeZone
 
 /** الطلبات الوحيدة على الإنترنت: الطقس والمباريات والتحديث، وكلها قصيرة وعند الحاجة فقط */
 object Net {
+    /** سبب آخر فشل بلغة مفهومة (يظهر في البطاقات واختبار الاتصال) */
+    @Volatile var lastError = ""
+
+    fun describe(e: Throwable): String = when (e) {
+        is java.net.UnknownHostException -> "لا يوجد اتصال بالإنترنت"
+        is java.net.SocketTimeoutException -> "الاتصال بطيء (انتهت المهلة)"
+        is java.net.ConnectException -> "تعذّر الوصول للخادم"
+        is javax.net.ssl.SSLException, is java.security.cert.CertificateException -> "خطأ في شهادة الأمان (تأكد من تاريخ ووقت الشاشة)"
+        else -> e.message?.takeIf { it.startsWith("HTTP") }?.let { "رد الخادم: $it" } ?: "خطأ في الاتصال"
+    }
+
     fun get(url: String): JSONObject {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        conn.connectTimeout = 10000; conn.readTimeout = 15000
-        conn.setRequestProperty("User-Agent", "RafiqNative/1")
         try {
-            if (conn.responseCode != 200) throw java.io.IOException("HTTP " + conn.responseCode)
-            return JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-        } finally { conn.disconnect() }
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.connectTimeout = 10000; conn.readTimeout = 15000
+            conn.setRequestProperty("User-Agent", "RafiqNative/1")
+            try {
+                if (conn.responseCode != 200) throw java.io.IOException("HTTP " + conn.responseCode)
+                return JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+            } finally { conn.disconnect() }
+        } catch (e: Exception) {
+            lastError = describe(e)
+            throw e
+        }
+    }
+
+    /** هل لدى الشاشة شبكة متصلة بالإنترنت الآن؟ */
+    fun online(c: android.content.Context): Boolean = try {
+        val cm = c.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val n = cm.activeNetwork
+        n != null && cm.getNetworkCapabilities(n)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    } catch (e: Exception) { true }
+
+    /** اختبار الاتصال من الإعدادات: يعيد سطراً لكل خدمة */
+    fun test(c: android.content.Context): String {
+        val sb = StringBuilder()
+        sb.append(if (online(c)) "الشبكة: متصلة\n" else "الشبكة: غير متصلة (فعّل الواي فاي أو نقطة اتصال الجوال)\n")
+        for ((name, url) in listOf(
+            "الطقس" to "https://api.open-meteo.com/v1/forecast?latitude=24.09&longitude=38.06&current=temperature_2m",
+            "المباريات" to "https://site.api.espn.com/apis/site/v2/sports/soccer/ksa.1/scoreboard",
+            "التحديثات" to "https://api.github.com/repos/aljohanei2011-cell/car_launcher_android/releases/tags/rafiq-native")) {
+            val t0 = System.currentTimeMillis()
+            val r = try { get(url); "يعمل (${System.currentTimeMillis() - t0} ملي ثانية)" } catch (e: Exception) { describe(e) }
+            sb.append("$name: $r\n")
+        }
+        return sb.toString().trim()
     }
 
     // ============================ الطقس (Open-Meteo بدون مفتاح) ============================
@@ -65,6 +103,7 @@ object Net {
     class Hour(val time: String, val temp: Int, val rain: Int)
     class Day(val day: String, val max: Int, val min: Int, val desc: String, val rain: Int)
     class Full(
+        val cachedAt: Long,
         val temp: Int, val feels: Int, val humidity: Int, val wind: Int, val windDir: String, val desc: String,
         val hours: List<Hour>, val days: List<Day>, val sunrise: String, val sunset: String, val uv: Int,
         val pm10: Int, val wave: Double
@@ -77,13 +116,37 @@ object Net {
 
     /** شاشة الطقس: طلب واحد يجمع الآن والساعات والأيام، وطلب صغير للغبار، وللبحر في المدن الساحلية فقط */
     fun full(lat: Double, lon: Double, coastal: Boolean): Full? {
+        val key = String.format(Locale.US, "%.2f,%.2f", lat, lon)
+        var cachedAt = 0L
         return try {
-            val j = get(String.format(Locale.US,
+            // بدون اتصال: آخر توقعات محفوظة لنفس المكان (حتى 24 ساعة)
+            val j = try {
+                fetchFull(lat, lon).also {
+                    Prefs.putStr("wxFullJson", it.toString()); Prefs.putStr("wxFullKey", key); Prefs.putLong("wxFullAt", System.currentTimeMillis())
+                }
+            } catch (e: Exception) {
+                val at = Prefs.long("wxFullAt")
+                if (Prefs.str("wxFullKey") != key || System.currentTimeMillis() - at > 24 * 3600000L) return null
+                cachedAt = at
+                JSONObject(Prefs.str("wxFullJson"))
+            }
+            parseFull(j, if (cachedAt == 0L) pm10(lat, lon) else -1, if (cachedAt == 0L && coastal) wave(lat, lon) else -1.0, cachedAt)
+        } catch (e: Exception) { null }
+    }
+
+    private fun wave(lat: Double, lon: Double): Double = try {
+        val m = get(String.format(Locale.US, "https://marine-api.open-meteo.com/v1/marine?latitude=%.3f&longitude=%.3f&current=wave_height", lat, lon))
+        m.getJSONObject("current").optDouble("wave_height", -1.0).let { if (it.isNaN()) -1.0 else it }
+    } catch (e: Exception) { -1.0 }
+
+    private fun fetchFull(lat: Double, lon: Double): JSONObject = get(String.format(Locale.US,
                 "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f" +
                     "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code" +
                     "&hourly=temperature_2m,precipitation_probability&forecast_hours=12" +
                     "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,sunrise,sunset" +
                     "&forecast_days=5&timezone=auto", lat, lon))
+
+    private fun parseFull(j: JSONObject, pm: Int, wv: Double, cachedAt: Long): Full = run {
             val c = j.getJSONObject("current")
             val hr = j.getJSONObject("hourly")
             val ht = hr.getJSONArray("time"); val htemp = hr.getJSONArray("temperature_2m"); val hrain = hr.optJSONArray("precipitation_probability")
@@ -101,21 +164,14 @@ object Net {
                 val name = when (it) { 0 -> "اليوم"; 1 -> "غداً"; else -> dayNames[cal.get(java.util.Calendar.DAY_OF_WEEK) - 1] }
                 Day(name, Math.round(mx.getDouble(it)).toInt(), Math.round(mn.getDouble(it)).toInt(), desc(wc.optInt(it, -1)), pr?.optInt(it, 0) ?: 0)
             }
-            var wave = -1.0
-            if (coastal) {
-                try {
-                    val m = get(String.format(Locale.US, "https://marine-api.open-meteo.com/v1/marine?latitude=%.3f&longitude=%.3f&current=wave_height", lat, lon))
-                    wave = m.getJSONObject("current").optDouble("wave_height", -1.0)
-                } catch (e: Exception) {}
-            }
             Full(
+                cachedAt,
                 Math.round(c.getDouble("temperature_2m")).toInt(), Math.round(c.getDouble("apparent_temperature")).toInt(),
                 c.optInt("relative_humidity_2m"), Math.round(c.optDouble("wind_speed_10m")).toInt(), dir(c.optInt("wind_direction_10m")),
                 desc(c.optInt("weather_code", -1)), hours, days,
                 d.getJSONArray("sunrise").getString(0).takeLast(5), d.getJSONArray("sunset").getString(0).takeLast(5),
-                Math.round(d.getJSONArray("uv_index_max").optDouble(0, 0.0)).toInt(), pm10(lat, lon), if (wave.isNaN()) -1.0 else wave
+                Math.round(d.getJSONArray("uv_index_max").optDouble(0, 0.0)).toInt(), pm, wv
             )
-        } catch (e: Exception) { null }
     }
 
     // ============================ المباريات (بيانات ESPN العامة) ============================
