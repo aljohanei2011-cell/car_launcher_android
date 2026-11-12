@@ -21,6 +21,7 @@ class GaugeView(c: Context) : View(c) {
     var max = 240
     var alert = 120
     var showMax = true
+    var unitLabel = "كم/س"
     /** في تخطيط البطاقات الكبيرة: سطر الرحلة بدل شارتي GPS والتنبيه */
     private var tripText: String? = null
     fun setTrip(t: String?) { if (t != tripText) { tripText = t; invalidate() } }
@@ -193,7 +194,7 @@ class GaugeView(c: Context) : View(c) {
         big.color = pal.text; big.textSize = numSize
         canvas.drawText(speed.toString(), cx, numY, big)
         small.color = pal.muted; small.textSize = 22f
-        canvas.drawText("كم/س", cx, numY + 36f, small)
+        canvas.drawText(unitLabel, cx, numY + 36f, small)
         val tt = tripText
         if (tt != null) {
             small.textSize = 20f

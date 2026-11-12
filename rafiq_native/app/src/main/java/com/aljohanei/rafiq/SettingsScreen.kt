@@ -333,6 +333,17 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
         toggle("صورة السيارة", "تختفي تلقائياً في العداد الرقمي", Prefs.showCar) { Prefs.showCar = it }
         toggle("علامة أعلى سرعة", "خط صغير على العداد عند أعلى سرعة في الرحلة", Prefs.maxMark) { Prefs.maxMark = it }
         action("تجربة صفارة السرعة", null, "تشغيل") { a.testSound(false) }
+        title("معايرة السرعة")
+        note("عدادات السيارات تعرض عادة سرعة أعلى من الحقيقية بـ3–7%. قراءة GPS هي الحقيقية التي تقيسها الكاميرات.")
+        seg("طريقة العرض", "التنبيه وكمبيوتر الرحلة يبقيان على السرعة الحقيقية دائماً",
+            listOf("GPS الحقيقية", "مطابقة عداد السيارة"), if (Prefs.speedMode == "car") 1 else 0) { Prefs.speedMode = if (it == 1) "car" else "gps" }
+        if (Prefs.speedMode == "car") {
+            val pcts = listOf(3, 5, 6, 8)
+            val cur = Math.round((Prefs.speedFactor - 1f) * 100f)
+            seg("الزيادة", "الحالية ${String.format(java.util.Locale.US, "%+.1f", (Prefs.speedFactor - 1f) * 100f)}%",
+                pcts.map { "+$it%" }, pcts.indexOf(cur)) { Prefs.speedFactor = 1f + pcts[it] / 100f }
+            action("معايرة دقيقة", "أثناء القيادة (للراكب) من اللوحة السريعة، أو أدخل الرقمين يدوياً", "معايرة") { d.dismiss(); a.calibrate() }
+        }
     }
 
     private fun homeScreen() {

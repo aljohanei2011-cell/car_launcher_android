@@ -77,6 +77,8 @@ object Trip {
     fun gpsLive(): Boolean = hasFix && System.currentTimeMillis() - lastFixAt < 10000
     /** السرعة الحالية، وصفر إن انقطعت إشارة GPS (حتى لا تبقى آخر سرعة عالقة) */
     fun kmh(): Float = if (gpsLive()) speedKmh else 0f
+    /** السرعة المعروضة: الحقيقية، أو المعايَرة لتطابق عداد السيارة */
+    fun shown(): Float = kmh() * Prefs.shownFactor()
 }
 
 /**

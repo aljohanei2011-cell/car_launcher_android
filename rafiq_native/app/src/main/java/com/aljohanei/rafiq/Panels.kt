@@ -350,7 +350,7 @@ object Panels {
         val h = Handler(Looper.getMainLooper())
         val r = object : Runnable {
             override fun run() {
-                val v = Math.round(Trip.kmh())
+                val v = Math.round(Trip.shown())
                 Ui.setT(sp, v.toString())
                 sp.setTextColor(if (Prefs.alertSpeed in 1 until v) pal.danger else pal.accent)
                 h.postDelayed(this, 1000)

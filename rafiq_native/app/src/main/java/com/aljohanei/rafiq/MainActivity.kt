@@ -353,6 +353,7 @@ class MainActivity : Activity() {
         d.addView(g, Ui.abs(528, gh, 376, 84))
         gauge = GaugeView(this).apply {
             pal = this@MainActivity.pal; mode = Prefs.gauge; max = Prefs.maxSpeed; alert = Prefs.alertSpeed; showMax = Prefs.maxMark
+            unitLabel = if (Prefs.speedMode == "car") "كم/س · معايَر" else "كم/س"
         }
         g.addView(gauge, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.NO_GRAVITY))
         // صورة السيارة (اختيارية، وتختفي في العداد الرقمي لأنه يحتاج المساحة)
@@ -571,6 +572,7 @@ class MainActivity : Activity() {
         d.addView(g, Ui.abs(440, gh, 420, 78))
         gauge = GaugeView(this).apply {
             pal = this@MainActivity.pal; mode = Prefs.gauge; max = Prefs.maxSpeed; alert = Prefs.alertSpeed; showMax = Prefs.maxMark
+            unitLabel = if (Prefs.speedMode == "car") "كم/س · معايَر" else "كم/س"
         }
         g.addView(gauge, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.NO_GRAVITY))
         if (Prefs.showCar && Prefs.gauge != 6) {
@@ -1011,6 +1013,40 @@ class MainActivity : Activity() {
         Drawer.show(this, pal, "اختر تطبيقاً للاختصار") { pkg -> Prefs.putStr("sc$i", pkg); build() }
     }
 
+    /**
+     * معايرة العداد ليطابق عداد السيارة: أثناء القيادة بسرعة ثابتة تُؤخذ قراءة GPS الآن،
+     * وتُدخل ما يعرضه عداد السيارة. ويمكن إدخال الرقمين يدوياً والسيارة واقفة.
+     */
+    fun calibrate() {
+        val now = Trip.kmh()
+        val box = Ui.col(this, Gravity.TOP).apply { setPadding(32, 8, 32, 8) }
+        val hint = android.widget.TextView(this).apply {
+            text = if (now >= 30f) "قراءة GPS الآن مأخوذة تلقائياً. اكتب ما يعرضه عداد السيارة في نفس اللحظة."
+                   else "قُد بسرعة ثابتة فوق 40 كم/س ليأخذ القراءة تلقائياً، أو أدخل الرقمين يدوياً."
+            setPadding(0, 0, 0, 12)
+        }
+        val gps = android.widget.EditText(this).apply {
+            hint = "سرعة GPS"; inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(if (now >= 30f) now.roundToInt().toString() else "100")
+        }
+        val car = android.widget.EditText(this).apply { hint = "ما يعرضه عداد السيارة"; inputType = android.text.InputType.TYPE_CLASS_NUMBER }
+        box.addView(hint)
+        box.addView(android.widget.TextView(this).apply { text = "سرعة GPS (الحقيقية)" }); box.addView(gps)
+        box.addView(android.widget.TextView(this).apply { text = "عداد السيارة يعرض" }); box.addView(car)
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("معايرة العداد").setView(box)
+            .setPositiveButton("حفظ") { _, _ ->
+                val g = gps.text.toString().toFloatOrNull() ?: 0f
+                val c = car.text.toString().toFloatOrNull() ?: 0f
+                if (g < 30f || c < 30f) { toast("أدخل سرعتين فوق 30 كم/س"); return@setPositiveButton }
+                val f = c / g
+                if (f < 0.9f || f > 1.15f) { toast("الفرق كبير جداً، تأكد من الرقمين"); return@setPositiveButton }
+                Prefs.speedFactor = f; Prefs.speedMode = "car"
+                toast(String.format(Locale.US, "تمت المعايرة: عداد السيارة يزيد %+.1f%%", (f - 1f) * 100f)); applySettings()
+            }
+            .setNeutralButton("إلغاء المعايرة") { _, _ -> Prefs.speedMode = "gps"; applySettings() }
+            .setNegativeButton("إغلاق", null).show()
+    }
+
     /** تجربة الأصوات من الإعدادات */
     fun testSound(adhan: Boolean) {
         try {
@@ -1145,6 +1181,11 @@ class MainActivity : Activity() {
         row("الساعة", Pair("12") { Prefs.clock24 = false; dlg.dismiss(); applySettings() },
             Pair("24") { Prefs.clock24 = true; dlg.dismiss(); applySettings() })
         row("شاشات", Pair("سرعة كبيرة") { dlg.dismiss(); Panels.bigSpeed(this) }, Pair("الانتظار") { dlg.dismiss(); showStandby() })
+        // متاحة أثناء القيادة (للراكب): مطابقة عداد السيارة
+        row("السرعة", Pair("معايرة") { dlg.dismiss(); calibrate() },
+            Pair(if (Prefs.speedMode == "car") "GPS الحقيقية" else "مطابقة السيارة") {
+                Prefs.speedMode = if (Prefs.speedMode == "car") "gps" else "car"; dlg.dismiss(); applySettings()
+            })
         dlg = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("لوحة سريعة").setView(box).setPositiveButton("إغلاق", null).create()
         dlg.show()
@@ -1403,7 +1444,7 @@ class MainActivity : Activity() {
             if (!started) return
             val now = System.currentTimeMillis()
             Ui.setT(clockTv, Ui.hmBig(now))
-            gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive(), Trip.bearing, Trip.maxKmh.roundToInt())
+            gauge.set(Trip.shown().roundToInt(), Trip.gpsLive(), Trip.bearing, (Trip.maxKmh * Prefs.shownFactor()).roundToInt())
             refreshTrip()
             refreshMusic()
             refreshBigFast()
@@ -1435,7 +1476,7 @@ class MainActivity : Activity() {
 
     private fun refreshAll() {
         Ui.setT(clockTv, Ui.hmBig(System.currentTimeMillis()))
-        gauge.set(Trip.kmh().roundToInt(), Trip.gpsLive(), Trip.bearing, Trip.maxKmh.roundToInt())
+        gauge.set(Trip.shown().roundToInt(), Trip.gpsLive(), Trip.bearing, (Trip.maxKmh * Prefs.shownFactor()).roundToInt())
         refreshTrip(); refreshMusic(); refreshStatus(); refreshSlow(); refreshWeather(); refreshMatches()
     }
 

@@ -50,6 +50,16 @@ object Prefs {
         get() = int("barSize", 1)
         set(v) = putInt("barSize", v)
 
+    /** عرض السرعة: gps = الحقيقية، car = مطابقة عداد السيارة بمعامل */
+    var speedMode: String
+        get() = str("speedMode", "gps")
+        set(v) = putStr("speedMode", v)
+    var speedFactor: Float
+        get() = p().getFloat("speedFactor", 1.05f)
+        set(v) { p().edit().putFloat("speedFactor", v.coerceIn(0.9f, 1.15f)).apply() }
+    /** المعامل المطبَّق على العرض فقط (التنبيه والرحلة على السرعة الحقيقية) */
+    fun shownFactor(): Float = if (speedMode == "car") speedFactor else 1f
+
     var showCar: Boolean
         get() = bool("showCar", true)
         set(v) = putBool("showCar", v)
