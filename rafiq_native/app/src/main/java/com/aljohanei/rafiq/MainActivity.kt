@@ -1020,7 +1020,7 @@ class MainActivity : Activity() {
     fun calibrate() {
         val now = Trip.kmh()
         val box = Ui.col(this, Gravity.TOP).apply { setPadding(32, 8, 32, 8) }
-        val hint = android.widget.TextView(this).apply {
+        val info = android.widget.TextView(this).apply {
             text = if (now >= 30f) "قراءة GPS الآن مأخوذة تلقائياً. اكتب ما يعرضه عداد السيارة في نفس اللحظة."
                    else "قُد بسرعة ثابتة فوق 40 كم/س ليأخذ القراءة تلقائياً، أو أدخل الرقمين يدوياً."
             setPadding(0, 0, 0, 12)
@@ -1030,7 +1030,7 @@ class MainActivity : Activity() {
             setText(if (now >= 30f) now.roundToInt().toString() else "100")
         }
         val car = android.widget.EditText(this).apply { hint = "ما يعرضه عداد السيارة"; inputType = android.text.InputType.TYPE_CLASS_NUMBER }
-        box.addView(hint)
+        box.addView(info)
         box.addView(android.widget.TextView(this).apply { text = "سرعة GPS (الحقيقية)" }); box.addView(gps)
         box.addView(android.widget.TextView(this).apply { text = "عداد السيارة يعرض" }); box.addView(car)
         AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("معايرة العداد").setView(box)
