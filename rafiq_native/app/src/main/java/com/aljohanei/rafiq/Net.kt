@@ -90,20 +90,56 @@ object Net {
         Math.round(j.getJSONObject("current").getDouble("pm10")).toInt()
     } catch (e: Exception) { -1 }
 
+    /** توفير البيانات: مفعّل يدوياً، أو تلقائياً عند اتصال محدود (نقطة اتصال الجوال) */
+    fun saver(c: android.content.Context): Boolean = when (Prefs.dataSaver) {
+        "on" -> true
+        "off" -> false
+        else -> try { (c.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).isActiveNetworkMetered } catch (e: Exception) { false }
+    }
+
+    /** الغبار يتغير ببطء: نطلبه كل ساعتين فقط */
+    private fun pm10Cached(lat: Double, lon: Double): Int {
+        if (System.currentTimeMillis() - Prefs.long("wxPmAt") < 2 * 3600000L) return Prefs.int("wxPm", -1)
+        val v = pm10(lat, lon)
+        if (v >= 0) { Prefs.putInt("wxPm", v); Prefs.putLong("wxPmAt", System.currentTimeMillis()) }
+        return v
+    }
+
+    /**
+     * طقس البطاقة: طلب واحد كامل يُحفظ، فتفتح شاشة التفاصيل منه بدون طلب ثانٍ.
+     * إن تعطّل المصدر الأول يُجرَّب مصدر احتياطي (met.no) للحرارة والحالة.
+     */
     fun weather(lat: Double, lon: Double, city: String): Weather? {
-        return try {
-            val j = get(String.format(Locale.US,
-                "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f&current=temperature_2m,weather_code" +
-                    "&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto", lat, lon))
+        try {
+            val j = fetchFull(lat, lon)
+            Prefs.putStr("wxFullJson", j.toString()); Prefs.putStr("wxFullKey", String.format(Locale.US, "%.2f,%.2f", lat, lon))
+            Prefs.putLong("wxFullAt", System.currentTimeMillis())
             val cur = j.getJSONObject("current")
-            val t = Math.round(cur.getDouble("temperature_2m")).toInt()
             val code = cur.optInt("weather_code", -1)
             val dl = j.optJSONObject("daily")
             val mx = dl?.optJSONArray("temperature_2m_max")?.optDouble(0, Double.NaN) ?: Double.NaN
             val mn = dl?.optJSONArray("temperature_2m_min")?.optDouble(0, Double.NaN) ?: Double.NaN
-            Weather(t, desc(code), city, severe(code), pm10(lat, lon),
+            return Weather(Math.round(cur.getDouble("temperature_2m")).toInt(), desc(code), city, severe(code), pm10Cached(lat, lon),
                 if (mx.isNaN()) -999 else Math.round(mx).toInt(), if (mn.isNaN()) -999 else Math.round(mn).toInt(), code)
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {}
+        val firstError = lastError
+        return try {
+            val j = get(String.format(Locale.US, "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.3f&lon=%.3f", lat, lon))
+            val d = j.getJSONObject("properties").getJSONArray("timeseries").getJSONObject(0).getJSONObject("data")
+            val t = Math.round(d.getJSONObject("instant").getJSONObject("details").getDouble("air_temperature")).toInt()
+            val sym = d.optJSONObject("next_1_hours")?.optJSONObject("summary")?.optString("symbol_code") ?: ""
+            val ds = when {
+                sym.startsWith("clearsky") || sym.startsWith("fair") -> "صافٍ"
+                sym.startsWith("partlycloudy") -> "غائم جزئياً"
+                sym.startsWith("cloudy") -> "غائم"
+                sym.startsWith("fog") -> "ضباب"
+                sym.contains("thunder") -> "عاصفة رعدية"
+                sym.contains("rain") || sym.contains("sleet") -> "مطر"
+                sym.contains("snow") -> "ثلج"
+                else -> ""
+            }
+            Weather(t, ds, city, sym.contains("thunder") || sym.startsWith("heavyrain"), Prefs.int("wxPm", -1))
+        } catch (e: Exception) { lastError = firstError; null }
     }
 
     class Hour(val time: String, val temp: Int, val rain: Int)
@@ -125,8 +161,10 @@ object Net {
         val key = String.format(Locale.US, "%.2f,%.2f", lat, lon)
         var cachedAt = 0L
         return try {
+            // محفوظ حديثاً من طلب البطاقة (أقل من 30 دقيقة): نعرضه بدون طلب جديد
+            val fresh = Prefs.str("wxFullKey") == key && System.currentTimeMillis() - Prefs.long("wxFullAt") < 30 * 60000L
             // بدون اتصال: آخر توقعات محفوظة لنفس المكان (حتى 24 ساعة)
-            val j = try {
+            val j = if (fresh) JSONObject(Prefs.str("wxFullJson")) else try {
                 fetchFull(lat, lon).also {
                     Prefs.putStr("wxFullJson", it.toString()); Prefs.putStr("wxFullKey", key); Prefs.putLong("wxFullAt", System.currentTimeMillis())
                 }
@@ -136,7 +174,7 @@ object Net {
                 cachedAt = at
                 JSONObject(Prefs.str("wxFullJson"))
             }
-            parseFull(j, if (cachedAt == 0L) pm10(lat, lon) else -1, if (cachedAt == 0L && coastal) wave(lat, lon) else -1.0, cachedAt)
+            parseFull(j, if (cachedAt == 0L) pm10Cached(lat, lon) else Prefs.int("wxPm", -1), if (cachedAt == 0L && coastal) wave(lat, lon) else -1.0, cachedAt)
         } catch (e: Exception) { null }
     }
 
@@ -235,40 +273,48 @@ object Net {
      * تعيد null إن فشلت كل الطلبات (لا يوجد اتصال) حتى لا تُمسح النتائج المعروضة.
      */
     fun fetchAll(leagues: Collection<String>, withTomorrow: Boolean = true): List<Match>? {
-        val all = ArrayList<Match>()
         val f = SimpleDateFormat("yyyyMMdd", Locale.US)
         val t = System.currentTimeMillis()
         // المصدر يرفض نطاق التواريخ، فنطلب كل يوم وحده (اليوم، وغداً إن طُلب)
         val days = if (withTomorrow) listOf(f.format(Date(t)), f.format(Date(t + 86400000L))) else listOf(f.format(Date(t)))
-        var ok = 0; var tried = 0
+        val jobs = ArrayList<Pair<String, String>>()
+        for (code in Prefs.LEAGUE_IDS) if (code in leagues) for (day in days) jobs.add(Pair(code, day))
+        if (jobs.isEmpty()) return emptyList()
+        // 3 طلبات معاً بدل واحد بعد الآخر: أسرع بنحو 3 مرات، وتنتهي الخيوط فور الانتهاء
+        val results = arrayOfNulls<JSONObject>(jobs.size)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(minOf(3, jobs.size))
+        try {
+            val futures = jobs.mapIndexed { idx, (code, day) ->
+                pool.submit(Runnable {
+                    val r = try { get(BASE + code + "/scoreboard?limit=100&dates=" + day) } catch (e: Exception) { null }
+                    results[idx] = r
+                })
+            }
+            for (fu in futures) try { fu.get(40, java.util.concurrent.TimeUnit.SECONDS) } catch (e: Exception) {}
+        } finally { pool.shutdownNow() }
+        if (results.all { it == null }) return null
+        val all = ArrayList<Match>()
         val seen = HashSet<String>()
-        for (code in Prefs.LEAGUE_IDS) {
-            if (code !in leagues) continue
-            for (day in days) {
-            tried++
-            try {
-                val j = get(BASE + code + "/scoreboard?limit=100&dates=" + day)
-                ok++
-                val evs = j.optJSONArray("events") ?: continue
-                for (i in 0 until evs.length()) {
-                    val e = evs.optJSONObject(i) ?: continue
-                    val st = e.optJSONObject("status")
-                    val state = st?.optJSONObject("type")?.optString("state") ?: "pre"
-                    val comp = e.optJSONArray("competitions")?.optJSONObject(0) ?: continue
-                    val cs = comp.optJSONArray("competitors") ?: continue
-                    var h = ""; var a = ""; var hs = ""; var aws = ""
-                    for (k in 0 until cs.length()) {
-                        val t = cs.optJSONObject(k) ?: continue
-                        val n = ar(t.optJSONObject("team")?.optString("displayName") ?: "")
-                        if (t.optString("homeAway") == "home") { h = n; hs = t.optString("score") } else { a = n; aws = t.optString("score") }
-                    }
-                    if (!seen.add(e.optString("id", h + a + e.optString("date")))) continue
-                    all.add(Match(code, leagueName(code), h, a, hs, aws, state, st?.optString("displayClock") ?: "", parseDate(e.optString("date"))))
+        for (idx in jobs.indices) {
+            val code = jobs[idx].first
+            val evs = results[idx]?.optJSONArray("events") ?: continue
+            for (i in 0 until evs.length()) {
+                val e = evs.optJSONObject(i) ?: continue
+                val st = e.optJSONObject("status")
+                val state = st?.optJSONObject("type")?.optString("state") ?: "pre"
+                val comp = e.optJSONArray("competitions")?.optJSONObject(0) ?: continue
+                val cs = comp.optJSONArray("competitors") ?: continue
+                var h = ""; var a = ""; var hs = ""; var aws = ""
+                for (k in 0 until cs.length()) {
+                    val tm = cs.optJSONObject(k) ?: continue
+                    val n = ar(tm.optJSONObject("team")?.optString("displayName") ?: "")
+                    if (tm.optString("homeAway") == "home") { h = n; hs = tm.optString("score") } else { a = n; aws = tm.optString("score") }
                 }
-            } catch (e: Exception) {}
+                if (!seen.add(e.optString("id", h + a + e.optString("date")))) continue
+                all.add(Match(code, leagueName(code), h, a, hs, aws, state, st?.optString("displayClock") ?: "", parseDate(e.optString("date"))))
             }
         }
-        return if (tried > 0 && ok == 0) null else all
+        return all
     }
 
     /** البطاقة: مباراة فريقك المباشرة، ثم أي مباراة مباشرة، ثم مباراة فريقك القادمة */
@@ -276,13 +322,23 @@ object Net {
      * only: أثناء المباريات المباشرة نحدّث بطولاتها فقط (بيانات أقل)، ونُبقي بقية المباريات من prev.
      * تعيد null عند انقطاع الاتصال.
      */
-    fun matches(only: Set<String>? = null, prev: List<Match>? = null): MatchCard? {
+    fun matches(only: Set<String>? = null, prev: List<Match>? = null, withTomorrow: Boolean = true): MatchCard? {
         val fav = Prefs.favTeams()
         val favOnly = Prefs.matchMode == "fav"
         val all: List<Match> = if (only != null && prev != null) {
             val part = fetchAll(only, false) ?: return null
             (prev.filter { it.code !in only } + part).sortedBy { Prefs.LEAGUE_IDS.indexOf(it.code) }
-        } else fetchAll(Prefs.leagues()) ?: return null
+        } else {
+            val got = fetchAll(Prefs.leagues(), withTomorrow) ?: return null
+            if (withTomorrow || prev == null) got else {
+                // مباريات الغد تُطلب كل 3 ساعات فقط: نُبقي المعروف منها
+                val cal = java.util.Calendar.getInstance().apply {
+                    add(java.util.Calendar.DAY_OF_MONTH, 1); set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+                }
+                val keys = got.map { it.home + "|" + it.away + "|" + it.time }.toSet()
+                got + prev.filter { it.time >= cal.timeInMillis && (it.home + "|" + it.away + "|" + it.time) !in keys && it.code in Prefs.leagues() }
+            }
+        }
         fun isFav(m: Match) = m.home in fav || m.away in fav
         val pool = if (favOnly) all.filter { isFav(it) } else all
         val now = System.currentTimeMillis()

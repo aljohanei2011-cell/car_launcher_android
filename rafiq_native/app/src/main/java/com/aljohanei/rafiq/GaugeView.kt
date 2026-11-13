@@ -22,6 +22,8 @@ class GaugeView(c: Context) : View(c) {
     var alert = 120
     var showMax = true
     var unitLabel = "كم/س"
+    /** منصة من حلقتين تحت صورة السيارة */
+    var pedestal = false
     /** في تخطيط البطاقات الكبيرة: سطر الرحلة بدل شارتي GPS والتنبيه */
     private var tripText: String? = null
     fun setTrip(t: String?) { if (t != tripText) { tripText = t; invalidate() } }
@@ -171,6 +173,31 @@ class GaugeView(c: Context) : View(c) {
                 stroke.color = pal.dangerDim; canvas.drawLine(x0 + (x1 - x0) * 0.8f, y, x1, y, stroke)
                 stroke.color = fillColor; if (ratio > 0f) canvas.drawLine(x0, y, x0 + (x1 - x0) * ratio, y, stroke)
             }
+            8 -> {
+                // فاخر: حلقات رفيعة ومؤشر دائري
+                oval.set(cx - rad, cy - rad, cx + rad, cy + rad)
+                r.set(cx - rad - 11f, cy - rad - 11f, cx + rad + 11f, cy + rad + 11f)
+                chip.color = pal.line; canvas.drawArc(r, a0, sweep, false, chip)
+                flat.strokeWidth = 7f
+                flat.color = pal.line; canvas.drawArc(oval, a0, sweep, false, flat)
+                flat.color = pal.danger; canvas.drawArc(oval, ang(danger), sweep * 0.2f, false, flat)
+                flat.color = fillColor; if (ratio > 0f) canvas.drawArc(oval, a0, sweep * ratio, false, flat)
+                var v = 0
+                while (v <= max) {
+                    val d = ang(v.toFloat())
+                    val major = v % 40 == 0
+                    val col = if (v > danger) pal.danger else if (major) pal.text else pal.muted
+                    tick.color = col; tick.strokeWidth = if (major) 2.5f else 1f
+                    canvas.drawLine(px(rad - (if (major) 26f else 17f), d), py(rad - (if (major) 26f else 17f), d), px(rad - 9f, d), py(rad - 9f, d), tick)
+                    if (major) { label.color = col; canvas.drawText(v.toString(), px(rad - 50f, d), py(rad - 50f, d) + 7f, label) }
+                    v += 10
+                }
+                drawAlertDot(canvas); drawMaxMark(canvas)
+                val d = ang(speed.toFloat().coerceIn(0f, max.toFloat()))
+                fill.color = fillColor; canvas.drawCircle(px(rad, d), py(rad, d), 10f, fill)
+                fill.color = pal.bg; canvas.drawCircle(px(rad, d), py(rad, d), 4.5f, fill)
+                numY = 210f; numSize = 120f
+            }
             else -> {
                 oval.set(cx - rad, cy - rad, cx + rad, cy + rad)
                 stroke.strokeWidth = 14f
@@ -205,6 +232,15 @@ class GaugeView(c: Context) : View(c) {
             small.color = pal.text; canvas.drawText(tt, cx, chipTop + 27f, small)
         } else drawChips(canvas, chipTop)
         canvas.restore()
+        if (pedestal) {
+            // المنصة بإحداثيات العرض نفسها، لأن صورة السيارة تُحاذى لأسفل المساحة
+            val mx = width / 2f; val my = height - 20f * s
+            chip.color = pal.line
+            r.set(mx - 172f * s, my - 16f * s, mx + 172f * s, my + 16f * s); canvas.drawOval(r, chip)
+            chip.color = pal.accent; chip.strokeWidth = 2f
+            r.set(mx - 132f * s, my - 10f * s, mx + 132f * s, my + 10f * s); canvas.drawOval(r, chip)
+            chip.strokeWidth = 1.5f
+        }
     }
 
     private fun drawAlertDot(canvas: Canvas) {

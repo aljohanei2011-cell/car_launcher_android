@@ -29,6 +29,8 @@ object Ui {
 
     /** خلفية البطاقة: لون صلب، حدّ رفيع، وخط علوي بلون التمييز */
     fun cardBg(p: Palette): Drawable {
+        val shape = Prefs.cardShape
+        if (shape != "classic") return CardShape(p.card, p.line, p.accent, shape, Prefs.topBar)
         val top = rounded(p.accent, 14f)
         val body = rounded(p.card, 14f, 2, p.line)
         return LayerDrawable(arrayOf<Drawable>(top, body)).apply { setLayerInset(1, 0, 3, 0, 0) }
@@ -87,6 +89,14 @@ object Ui {
         return Pair(root, design)
     }
 
+    /** نص مع نقطة حالة ملوّنة في آخره */
+    fun dot(text: String, color: Int): CharSequence {
+        val sp = android.text.SpannableString("$text  ●")
+        sp.setSpan(android.text.style.ForegroundColorSpan(color), sp.length - 1, sp.length, 0)
+        sp.setSpan(android.text.style.RelativeSizeSpan(0.7f), sp.length - 1, sp.length, 0)
+        return sp
+    }
+
     // ---------------- الوقت بنظام 12 أو 24 ----------------
     /** الوقت نصاً: «11:21 م» أو «23:21» */
     fun hm(ms: Long): String {
@@ -128,4 +138,49 @@ object Ui {
             addState(intArrayOf(android.R.attr.state_pressed), pressed)
             addState(intArrayOf(), normal ?: android.graphics.drawable.ColorDrawable(0))
         }
+}
+
+/**
+ * خلفية بطاقة بأشكال مميزة تُرسم بالكود (بدون صور):
+ * chamfer زاويتان مشطوفتان، leaf زاويتان مستديرتان، round مستديرة. مع خط قصير بلون التمييز في الأعلى.
+ */
+class CardShape(private val fill: Int, private val line: Int, private val accent: Int,
+                private val kind: String, private val bar: Boolean) : Drawable() {
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val path = android.graphics.Path()
+    private val rect = android.graphics.RectF()
+
+    override fun draw(canvas: android.graphics.Canvas) {
+        val b = bounds
+        val w = b.width().toFloat(); val h = b.height().toFloat()
+        if (w <= 0f || h <= 0f) return
+        canvas.save(); canvas.translate(b.left.toFloat(), b.top.toFloat())
+        path.reset()
+        rect.set(1f, 1f, w - 1f, h - 1f)
+        when (kind) {
+            "chamfer" -> {
+                val k = minOf(20f, h / 4f)
+                path.moveTo(k, 1f); path.lineTo(w - 1f, 1f); path.lineTo(w - 1f, h - k)
+                path.lineTo(w - k, h - 1f); path.lineTo(1f, h - 1f); path.lineTo(1f, k); path.close()
+            }
+            "leaf" -> {
+                val a = minOf(34f, h / 3f)
+                path.addRoundRect(rect, floatArrayOf(a, a, 6f, 6f, a, a, 6f, 6f), android.graphics.Path.Direction.CW)
+            }
+            else -> { val a = minOf(24f, h / 3f); path.addRoundRect(rect, a, a, android.graphics.Path.Direction.CW) }
+        }
+        paint.style = android.graphics.Paint.Style.FILL; paint.color = fill
+        canvas.drawPath(path, paint)
+        paint.style = android.graphics.Paint.Style.STROKE; paint.strokeWidth = 1.5f; paint.color = line
+        canvas.drawPath(path, paint)
+        if (bar && w > 160f) {
+            paint.style = android.graphics.Paint.Style.FILL; paint.color = accent
+            canvas.drawRect(w - 108f, 0f, w - 36f, 3f, paint)
+        }
+        canvas.restore()
+    }
+    override fun setAlpha(alpha: Int) {}
+    override fun setColorFilter(cf: android.graphics.ColorFilter?) {}
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
 }

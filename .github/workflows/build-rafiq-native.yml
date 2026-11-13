@@ -64,6 +64,7 @@ jobs:
           curl -s -m 20 "https://api.open-meteo.com/v1/forecast?latitude=24.09&longitude=38.06&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&hourly=temperature_2m,precipitation_probability&forecast_hours=12&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max,sunrise,sunset&forecast_days=5&timezone=auto" | jq -c '{cur:.current, hours:(.hourly.time|length), h0:.hourly.time[0], days:(.daily.time|length), sunrise:.daily.sunrise[0], err:.reason}'
           curl -s -m 20 "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=24.09&longitude=38.06&current=pm10" | jq -c '{pm10:.current.pm10, err:.reason}'
           curl -s -m 20 "https://marine-api.open-meteo.com/v1/marine?latitude=24.09&longitude=38.06&current=wave_height" | jq -c '{wave:.current.wave_height, err:.reason}'
+          curl -s -m 20 -A "RafiqNative/1" "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=24.09&lon=38.06" | jq -c '{metno_temp:.properties.timeseries[0].data.instant.details.air_temperature, sym:.properties.timeseries[0].data.next_1_hours.summary.symbol_code}' || echo "met.no: unexpected"
           exit 0
 
       - name: Build APK

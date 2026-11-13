@@ -48,6 +48,11 @@ class MainActivity : Activity() {
     private var matchesFail = false
     private var matchesTry = 0L
     private var matchesFullAt = 0L
+    private var matchesTomorrowAt = 0L
+    private var matchFails = 0
+    private var wxNext = 0L
+    private var wxFails = 0
+    private val BACKOFF = longArrayOf(15000L, 60000L, 5 * 60000L)
     private lateinit var pal: Palette
     private var night = false
     private var started = false
@@ -127,6 +132,8 @@ class MainActivity : Activity() {
         seenRide = Trip.rideEvent; seenTravel = Trip.travelEvent
         night = Astro.isNight(System.currentTimeMillis(), Loc.lat(), Loc.lon())
         loadCachedWeather()
+        // مرة واحدة: تفعيل التصميم الفاخر (يمكن الرجوع للشكل السابق من الأطقم في الإعدادات)
+        if (!Prefs.bool("lux1", false)) { Prefs.putBool("lux1", true); Prefs.applyKit("royal") }
         build()
         if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION), 1)
@@ -321,6 +328,7 @@ class MainActivity : Activity() {
 
     private fun buildBody(d: FrameLayout) {
         big = null
+        if (Prefs.layout == "lux") { buildLux(d); return }
         if (Prefs.layout == "big") { buildBig(d); return }
         val rightStack = Ui.col(this)
         val leftStack = Ui.col(this)
@@ -582,6 +590,42 @@ class MainActivity : Activity() {
         }
     }
 
+    /** التخطيط الفاخر: العداد جهة السائق مع السيارة على منصة، وعمودان من البطاقات */
+    private fun buildLux(d: FrameLayout) {
+        for (id in BASE_CARDS) makeCard(id, emptySet())
+        val b = Big(); big = b
+        val avail = 720 - 72 - barH
+        val top = 84; val hh = avail - 24
+        // مواضع: العداد (440)، العمود العريض (400)، العمود الجانبي (368)
+        val xs = when (Prefs.gaugeSide) {
+            "center" -> intArrayOf(436, 20, 892)
+            "right" -> intArrayOf(820, 404, 20)
+            else -> intArrayOf(20, 476, 892)
+        }
+        val hA = (hh - 12) * 53 / 100
+        d.addView(bigCard(Prefs.bigSlot(0), b), Ui.abs(400, hA, xs[1], top))
+        d.addView(bigCard(Prefs.bigSlot(3), b), Ui.abs(400, hh - 12 - hA, xs[1], top + hA + 12))
+        val hB = (hh - 12) / 2
+        d.addView(bigCard(Prefs.bigSlot(1), b), Ui.abs(368, hB, xs[2], top))
+        d.addView(bigCard(Prefs.bigSlot(2), b), Ui.abs(368, hh - 12 - hB, xs[2], top + hB + 12))
+        val gh = avail - 12
+        val g = FrameLayout(this)
+        d.addView(g, Ui.abs(440, gh, xs[0], 78))
+        val car = Prefs.showCar && Prefs.gauge != 6
+        gauge = GaugeView(this).apply {
+            pal = this@MainActivity.pal; mode = Prefs.gauge; max = Prefs.maxSpeed; alert = Prefs.alertSpeed; showMax = Prefs.maxMark
+            unitLabel = if (Prefs.speedMode == "car") "كم/س · معايَر" else "كم/س"
+            pedestal = car
+        }
+        g.addView(gauge, Ui.at(Ui.MATCH, Ui.MATCH, Gravity.NO_GRAVITY))
+        if (car) {
+            val sc = minOf(440 / 528f, gh / 544f)
+            val k = when (Prefs.int("carSize", 1)) { 0 -> 0.8f; 2 -> 1.2f; else -> 1f }
+            g.addView(ImageView(this).apply { setImageResource(R.drawable.car_rear); scaleType = ImageView.ScaleType.FIT_CENTER },
+                Ui.at((290 * sc * k).toInt(), (238 * sc * k).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (10 * sc).toInt() })
+        }
+    }
+
     /** إطار بطاقة كبيرة: عنوان بأيقونة وخط فاصل، ثم المحتوى */
     private fun bigFrame(icon: Int, title: String, extra: View?): Pair<LinearLayout, LinearLayout> {
         val card = Ui.col(this, Gravity.TOP).apply { background = Ui.cardBg(pal); setPadding(20, 14, 20, 12) }
@@ -614,7 +658,7 @@ class MainActivity : Activity() {
                 row.addView(wx, Ui.lin(118, Ui.MATCH))
                 row.addView(vline(), Ui.lin(1, Ui.MATCH).apply { leftMargin = 8; rightMargin = 14 })
                 val tc = Ui.col(this, Gravity.CENTER_VERTICAL or Gravity.RIGHT)
-                b.clock = Ui.tv(this, 70f, pal.text, true).also { tc.addView(it, Ui.lin(Ui.MATCH, 80)) }
+                b.clock = Ui.tv(this, 64f, pal.text, true).also { tc.addView(it, Ui.lin(Ui.MATCH, 80)) }
                 b.date = Ui.tv(this, 18f, pal.muted).also { tc.addView(it, Ui.lin(Ui.MATCH, 26)) }
                 b.hijri = Ui.tv(this, 18f, pal.amber).also { tc.addView(it, Ui.lin(Ui.MATCH, 26)) }
                 row.addView(tc, Ui.lin(0, Ui.MATCH, 1f))
@@ -795,6 +839,7 @@ class MainActivity : Activity() {
             Ui.setT(b.wxTemp!!, "--°"); Ui.setT(b.wxDesc!!, if (!Net.online(this)) "لا إنترنت" else "")
             Ui.setT(b.wxCity!!, Loc.name()); Ui.setT(b.wxMinMax!!, ""); return
         }
+        b.wxHead?.text = Ui.dot("الوقت والطقس", if (weatherFail) pal.amber else pal.ok)
         Ui.setT(b.wxTemp!!, "${w.temp}°"); Ui.setT(b.wxDesc!!, w.desc)
         Ui.setT(b.wxCity!!, w.city + if (weatherFail) " · محفوظ ${Ui.hm(weatherFrom)}" else "")
         Ui.setT(b.wxMinMax!!, if (w.max > -999) "العظمى ${w.max}° · الصغرى ${w.min}°" else "")
@@ -806,13 +851,13 @@ class MainActivity : Activity() {
         val m = matches?.main
         val badge = b.mBadge!!
         if (m == null) {
-            Ui.setT(b.mHead!!, "المباريات"); badge.visibility = View.GONE
+            b.mHead!!.text = if (matchesFail) Ui.dot("المباريات", pal.danger) else "المباريات"; badge.visibility = View.GONE
             Ui.setT(b.mHome!!, ""); Ui.setT(b.mAway!!, "")
             Ui.setT(b.mScore!!, "—")
             Ui.setT(b.mNext!!, if (matches == null) (if (matchesFail) (if (!Net.online(this)) "لا يوجد إنترنت" else Net.lastError.ifEmpty { "تعذّر التحميل" }) else "جارٍ التحميل…") else "لا توجد مباريات اليوم أو غداً")
             return
         }
-        Ui.setT(b.mHead!!, m.league)
+        b.mHead!!.text = Ui.dot(m.league, if (matchesFail) pal.amber else pal.ok)
         badge.visibility = View.VISIBLE
         when (m.state) {
             "in" -> { Ui.setT(badge, "● مباشر ${m.clock}"); badge.background = Ui.rounded(0xFF15803D.toInt(), 10f) }
@@ -867,10 +912,47 @@ class MainActivity : Activity() {
         val f = FrameLayout(this)
         design.addView(f, 0, Ui.abs(1280, barH, 0, 720 - barH))
         footer = f
+        if (Prefs.layout == "lux" && Prefs.dock == "pill") {
+            // كبسولة عائمة: أيقونات دائرية، والنشطة مملوءة
+            val ph = barH - 18
+            val pill = Ui.row(this, Gravity.CENTER).apply {
+                background = Ui.rounded(pal.card, ph / 2f, 2, if (editMode) pal.accent else pal.line); setPadding(16, 0, 16, 0)
+            }
+            f.addView(pill, Ui.abs(780, ph, 250, 4))
+            for (i in 5 downTo 0) pill.addView(pillSlot(i, ph - 16), Ui.lin(0, Ui.MATCH, 1f))
+            return
+        }
         f.addView(View(this).apply { setBackgroundColor(if (editMode) pal.accent else pal.line) }, Ui.abs(1280, 2, 0, 0))
         val bar = Ui.row(this, Gravity.CENTER)
         f.addView(bar, Ui.abs(1256, barH - 10, 12, 6))
         for (i in 5 downTo 0) bar.addView(slotView(i), Ui.lin(0, Ui.MATCH, 1f).apply { leftMargin = 5; rightMargin = 5 })
+    }
+
+    private fun pillSlot(i: Int, sz: Int): View {
+        val type = Prefs.slotType(i); val value = Prefs.slotValue(i)
+        val active = type == "fn" && value == "home"
+        val wrap = FrameLayout(this)
+        val circle = FrameLayout(this).apply {
+            background = Ui.pressable(if (active) Ui.rounded(pal.accent, sz / 2f) else if (editMode) Ui.rounded(pal.card, sz / 2f, 2, pal.accent) else null,
+                Ui.rounded(pal.line, sz / 2f))
+        }
+        if (type == "app") circle.addView(ImageView(this).apply { setImageDrawable(appInfo(value)?.second); scaleType = ImageView.ScaleType.FIT_CENTER },
+            Ui.at(sz * 6 / 10, sz * 6 / 10, Gravity.CENTER))
+        else circle.addView(Ui.icon(this, fnIcons[fnIds.indexOf(value).coerceAtLeast(0)], if (active) pal.onAccent else pal.text),
+            Ui.at(sz / 2, sz / 2, Gravity.CENTER))
+        val playing = Media.playing && ((type == "app" && value == Media.app) || (type == "fn" && value == "music"))
+        if (playing) circle.addView(View(this).apply { background = Ui.rounded(pal.ok, 5f) }, Ui.at(10, 10, Gravity.TOP or Gravity.RIGHT))
+        wrap.addView(circle, Ui.at(sz, sz, Gravity.CENTER))
+        wrap.setOnClickListener { if (editMode) editSlot(i) { rebuildFooter() } else openSlot(i) }
+        wrap.setOnLongClickListener {
+            if (!locked()) {
+                editMode = !editMode
+                if (editMode) { toast("وضع التعديل: اضغط أي خانة لتغييرها، واضغط مطولاً للخروج"); h.removeCallbacks(exitEdit); h.postDelayed(exitEdit, 30000) }
+                rebuildFooter()
+            }
+            true
+        }
+        return wrap
     }
 
     /** خانة القائمة: أيقونة داخل بلاطة موحّدة، وإطار للخانة النشطة، وتضيء لحظة الضغط */
@@ -882,7 +964,7 @@ class MainActivity : Activity() {
         val v = Ui.col(this, Gravity.CENTER)
         val type = Prefs.slotType(i); val value = Prefs.slotValue(i)
         val active = type == "fn" && value == "home"
-        val boxed = Prefs.layout == "big"
+        val boxed = Prefs.layout != "classic"
         // في البطاقات الكبيرة: الخانة النشطة مملوءة باللون ونصها بلون معاكس
         val color = if (active) (if (boxed) pal.onAccent else pal.accent) else pal.text
         val normal = when {
@@ -1129,7 +1211,10 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    fun forceWeather() { weatherAt = 0L }
+    fun forceWeather() { weatherAt = 0L; wxNext = 0L; wxFails = 0 }
+    /** تحديث كل البيانات معاً وعرض نتيجة كل مصدر */
+    fun refreshAllData() { forceWeather(); forceMatches(); netTest() }
+    fun weatherUpdatedText(): String = if (weatherFrom == 0L) "—" else Ui.hm(weatherFrom) + if (weatherFail) " (محفوظ)" else ""
 
     /** آخر طقس محفوظ (حتى 12 ساعة) يظهر فوراً عند التشغيل */
     private fun loadCachedWeather() {
@@ -1152,7 +1237,7 @@ class MainActivity : Activity() {
             }
         }.start()
     }
-    fun forceMatches() { matchesAt = 0L; matchesTry = 0L; matchesFullAt = 0L }
+    fun forceMatches() { matchesAt = 0L; matchesTry = 0L; matchesFullAt = 0L; matchesTomorrowAt = 0L; matchFails = 0 }
     fun matchesUpdatedText(): String = if (matchesAt == 0L) "—" else Ui.hm(matchesAt)
 
     // ============================== اللوحة السريعة ==============================
@@ -1672,40 +1757,49 @@ class MainActivity : Activity() {
             Prefs.putLong("updTried", now)
             checkUpdate(false)
         }
-        if (!weatherBusy && now - weatherAt > 30 * 60000L && !Net.online(this)) {
-            // بدون شبكة لا نحاول، وننتظر عودتها (يُحدَّث تلقائياً عند الاتصال)
-            weatherFail = true; weatherAt = now - 25 * 60000L; refreshWeather()
-        } else if (!weatherBusy && now - weatherAt > 30 * 60000L) {
-            weatherBusy = true
-            val lat = Loc.lat(); val lon = Loc.lon(); val city = Loc.name()
-            Thread {
-                val w = Net.weather(lat, lon, city)
-                h.post {
-                    weatherBusy = false
-                    weatherAt = if (w != null) System.currentTimeMillis() else System.currentTimeMillis() - 25 * 60000L
-                    weatherFail = w == null
-                    if (w != null) {
-                        weather = w; weatherFrom = weatherAt
-                        Prefs.putStr("wxCache", "${w.temp}|${w.desc}|${w.city}|${w.pm10}|${w.max}|${w.min}"); Prefs.putLong("wxCacheAt", weatherAt)
-                        val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
-                        if (w.severe && Prefs.alertOn("weather") && Prefs.str("wxDay") != today) {
-                            Prefs.putStr("wxDay", today)
-                            alert(Alert(pal.amber, R.drawable.ic_weather, false, "تنبيه طقس: ${w.desc}", "${w.city} · قُد بحذر", true))
+        val online = Net.online(this)
+        val saver = Net.saver(this)
+        // ---------- الطقس: كل 30 دقيقة (60 مع توفير البيانات)، وعند الفشل إعادة بتدرّج 15ث ثم دقيقة ثم 5 دقائق ----------
+        if (!weatherBusy && now >= wxNext) {
+            if (!online) {
+                // بدون شبكة لا نحاول، ويُحدَّث تلقائياً عند عودة الاتصال
+                weatherFail = true; wxNext = now + 60000L; refreshWeather()
+            } else {
+                weatherBusy = true
+                val lat = Loc.lat(); val lon = Loc.lon(); val city = Loc.name()
+                Thread {
+                    val w = Net.weather(lat, lon, city)
+                    h.post {
+                        weatherBusy = false
+                        val t = System.currentTimeMillis()
+                        weatherFail = w == null
+                        if (w == null) {
+                            wxNext = t + BACKOFF[wxFails.coerceAtMost(2)]; wxFails++
+                        } else {
+                            wxFails = 0; wxNext = t + (if (saver) 60 else 30) * 60000L
+                            weatherAt = t; weather = w; weatherFrom = t
+                            Prefs.putStr("wxCache", "${w.temp}|${w.desc}|${w.city}|${w.pm10}|${w.max}|${w.min}"); Prefs.putLong("wxCacheAt", t)
+                            val today = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+                            if (w.severe && Prefs.alertOn("weather") && Prefs.str("wxDay") != today) {
+                                Prefs.putStr("wxDay", today)
+                                alert(Alert(pal.amber, R.drawable.ic_weather, false, "تنبيه طقس: ${w.desc}", "${w.city} · قُد بحذر", true))
+                            }
+                            if (w.pm10 >= 300 && Prefs.alertOn("dust") && Prefs.str("dustDay") != today) {
+                                Prefs.putStr("dustDay", today)
+                                alert(Alert(pal.amber, R.drawable.ic_weather, false, "غبار شديد", "${w.city} · الرؤية قد تنخفض، قُد بحذر", true))
+                            }
+                            if (w.temp >= 45 && Prefs.alertOn("heat") && Prefs.str("heatDay") != today) {
+                                Prefs.putStr("heatDay", today)
+                                alert(Alert(pal.danger, R.drawable.ic_weather, false, "حرارة عالية ${w.temp}°", "${w.city} · اشرب الماء وتجنّب ترك أحد في السيارة", true))
+                            }
                         }
-                        if (w.pm10 >= 300 && Prefs.alertOn("dust") && Prefs.str("dustDay") != today) {
-                            Prefs.putStr("dustDay", today)
-                            alert(Alert(pal.amber, R.drawable.ic_weather, false, "غبار شديد", "${w.city} · الرؤية قد تنخفض، قُد بحذر", true))
-                        }
-                        if (w.temp >= 45 && Prefs.alertOn("heat") && Prefs.str("heatDay") != today) {
-                            Prefs.putStr("heatDay", today)
-                            alert(Alert(pal.danger, R.drawable.ic_weather, false, "حرارة عالية ${w.temp}°", "${w.city} · اشرب الماء وتجنّب ترك أحد في السيارة", true))
-                        }
+                        refreshWeather()
                     }
-                    refreshWeather()
-                }
-            }.start()
+                }.start()
+            }
         }
-        // أثناء مباراة مباشرة (أو مباراة فريقك التي حان موعدها) نحدّث بطولتها فقط كل دقيقة؛ والتحديث الكامل كل 20 دقيقة
+        // ---------- المباريات ----------
+        // أثناء مباراة مباشرة (أو مباراة فريقك التي حان موعدها) نحدّث بطولتها فقط؛ التحديث الكامل كل 20 دقيقة؛ ومباريات الغد كل 3 ساعات
         val fav = Prefs.favTeams()
         val hot = HashSet<String>()
         matches?.all?.forEach { m ->
@@ -1713,25 +1807,28 @@ class MainActivity : Activity() {
             val due = m.state == "pre" && m.time - now < 2 * 60000L && now - m.time < 3 * 3600000L
             if ((m.state == "in" && (mine || m === matches?.main)) || (due && mine)) hot.add(m.code)
         }
-        val full = now - matchesFullAt > 20 * 60000L
-        val wanted = "matches" !in Prefs.hidden() || (fav.isNotEmpty() && Prefs.alertOn("match"))
-        val due = wanted && !matchesBusy && now >= matchesTry && (full || (hot.isNotEmpty() && now - matchesAt > 60000L))
-        if (due && !Net.online(this)) {
+        val full = now - matchesFullAt > (if (saver) 40 else 20) * 60000L
+        val shown = if (Prefs.layout == "classic") "matches" !in Prefs.hidden() else (0..3).any { Prefs.bigSlot(it) == "matches" }
+        val wanted = shown || (fav.isNotEmpty() && Prefs.alertOn("match"))
+        val due = wanted && !matchesBusy && now >= matchesTry && (full || (hot.isNotEmpty() && now - matchesAt > (if (saver) 120000L else 60000L)))
+        if (due && !online) {
             matchesFail = true; matchesTry = now + 60000L; refreshMatches()
         } else if (due) {
             matchesBusy = true
-            val prev = if (full) null else matches?.all
+            val prevAll = matches?.all
+            val partial = !full && prevAll != null
+            val tomorrow = now - matchesTomorrowAt > (if (saver) 6 else 3) * 3600000L
             Thread {
-                val m = if (prev != null) Net.matches(hot, prev) else Net.matches()
+                val m = if (partial) Net.matches(hot, prevAll) else Net.matches(null, prevAll, tomorrow)
                 h.post {
                     matchesBusy = false
                     val t = System.currentTimeMillis()
                     if (m == null) {
-                        // لا اتصال: نُبقي المعروض ونعيد المحاولة بعد دقيقتين
-                        matchesFail = true; matchesTry = t + 2 * 60000L
+                        // فشل: نُبقي المعروض ونعيد المحاولة بتدرّج
+                        matchesFail = true; matchesTry = t + BACKOFF[matchFails.coerceAtMost(2)]; matchFails++
                     } else {
-                        matchesFail = false; matchesAt = t
-                        if (prev == null) matchesFullAt = t
+                        matchesFail = false; matchFails = 0; matchesAt = t
+                        if (!partial) { matchesFullAt = t; if (tomorrow) matchesTomorrowAt = t }
                         matches = m
                         matchAlerts(m)
                     }

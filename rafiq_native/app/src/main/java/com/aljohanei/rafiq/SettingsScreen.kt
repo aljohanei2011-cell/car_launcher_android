@@ -33,11 +33,11 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
     private var keep = false
     private val T = android.R.style.Theme_DeviceDefault_Dialog_Alert
 
-    private val NAMES = listOf("المظهر", "العداد", "الشاشة الرئيسية", "الصلاة والمدينة", "التنبيهات", "المباريات", "القيادة والأمان", "عام وحول")
+    private val NAMES = listOf("المظهر", "العداد", "الشاشة الرئيسية", "الصلاة والمدينة", "التنبيهات", "المباريات", "القيادة والأمان", "عام وحول", "البيانات والاتصال")
     private val DESC = listOf("الثيم، الألوان، الساعة، الخط", "الشكل، الحد، التنبيه", "البطاقات والقائمة السفلية",
-        "المدينة، الضبط، التنبيه", "الأذان، السرعة، الأدعية", "الفرق والبطولات", "القفل، الانتظار، الاستراحة", "التحديث، النسخ، الذاكرة")
+        "المدينة، الضبط، التنبيه", "الأذان، السرعة، الأدعية", "الفرق والبطولات", "القفل، الانتظار، الاستراحة", "التحديث، النسخ، الذاكرة", "التحديث، التوفير، الاختبار")
     private val ICONS = intArrayOf(R.drawable.g_palette, R.drawable.g_gauge, R.drawable.g_layout, R.drawable.g_moon,
-        R.drawable.g_bell, R.drawable.g_star, R.drawable.g_wheel, R.drawable.g_info)
+        R.drawable.g_bell, R.drawable.g_star, R.drawable.g_wheel, R.drawable.g_info, R.drawable.g_wifi)
 
     /** فهرس البحث: كلمات كل قسم */
     private val INDEX = listOf(
@@ -48,7 +48,10 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
         4 to "التنبيهات الأذان السرعة الاستراحة الأدعية الجمعة الصيام الغبار الحرارة الطقس الصوت",
         5 to "المباريات الفرق المفضلة البطولات الدوري الأهداف تحديث",
         6 to "القيادة القفل وضع الانتظار إبقاء الشاشة الاستراحة السرعة الكبيرة الرقم السري سجل الرحلات تصفير",
-        7 to "التحديث الإصدار النسخ الاحتياطي استرجاع الذاكرة الواجهة الرئيسية الإشعارات التشغيل التلقائي استعادة الافتراضي"
+        7 to "التحديث الإصدار النسخ الاحتياطي استرجاع الذاكرة الواجهة الرئيسية الإشعارات التشغيل التلقائي استعادة الافتراضي",
+        8 to "البيانات الاتصال الإنترنت توفير تحديث الكل اختبار الطقس المباريات المصدر الشبكة",
+        0 to "الأطقم ملكي بحري عنابي ذهبي فضي شكل البطاقات مشطوفة مستديرة ورقة فاخر",
+        2 to "التخطيط فاخر بطاقات كبيرة كلاسيكي جهة العداد كبسولة القائمة"
     )
 
     fun show() { render(); d.show() }
@@ -94,7 +97,25 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
         scroll = sv
         content = Ui.col(a, Gravity.TOP or Gravity.RIGHT).apply { setPadding(24, 12, 24, 30) }
         sv.addView(content, FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP))
-        design.addView(sv, Ui.abs(1280, 648, 0, 72))
+        // داخل القسم: قائمة الأقسام ثابتة على اليمين، ومعاينة مباشرة في قسم المظهر
+        val inSec = section >= 0 && query.isEmpty()
+        val navW = if (inSec) 250 else 0
+        val prevW = if (inSec && section == 0) 300 else 0
+        design.addView(sv, Ui.abs(1280 - navW - prevW, 648, prevW, 72))
+        if (inSec) {
+            val nav = Ui.col(a, Gravity.TOP).apply { setPadding(10, 10, 14, 10) }
+            for (i in listOf(0, 1, 2, 3, 4, 5, 8, 6, 7)) {
+                val on = i == section
+                nav.addView(Ui.tv(a, 19f, if (on) pal.text else pal.muted, on).apply {
+                    text = NAMES[i]; setPadding(14, 0, 14, 0)
+                    background = Ui.pressable(if (on) Ui.rounded(pal.card, 12f, 2, pal.accent) else null, Ui.rounded(pal.line, 12f))
+                    setOnClickListener { section = i; render() }
+                }, Ui.lin(Ui.MATCH, 54).apply { topMargin = 6 })
+            }
+            design.addView(nav, Ui.abs(250, 648, 1030, 72))
+            design.addView(View(a).apply { setBackgroundColor(pal.line) }, Ui.abs(1, 648, 1030, 72))
+        }
+        if (prevW > 0) preview(design)
         if (oldY > 0) sv.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
             override fun onLayoutChange(v: View?, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
                 sv.removeOnLayoutChangeListener(this); sv.scrollTo(0, oldY)
@@ -113,6 +134,7 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
                     4 -> alerts()
                     5 -> matches()
                     6 -> driving()
+                    8 -> data()
                     else -> general()
                 }
                 resetButton()
@@ -158,10 +180,10 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
         content.addView(q, Ui.lin(Ui.MATCH, 100))
 
         // البلاطات 4×2
-        for (rowI in 0..1) {
+        for (rowI in 0..2) {
             val r = Ui.row(a, Gravity.CENTER)
-            for (k in 0..3) {
-                val i = rowI * 4 + k
+            for (k in 0..2) {
+                val i = rowI * 3 + k
                 val t = Ui.row(a, Gravity.CENTER_VERTICAL).apply {
                     background = Ui.pressable(Ui.cardBg(pal), Ui.rounded(pal.line, 14f))
                     setPadding(16, 0, 16, 0); setOnClickListener { section = i; render() }
@@ -174,16 +196,16 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
                     background = Ui.rounded(pal.tile, 16f, 2, pal.tileLine)
                     addView(Ui.icon(a, ICONS[i], pal.accent), Ui.at(40, 40, Gravity.CENTER))
                 }, Ui.lin(68, 68).apply { leftMargin = 12 })
-                r.addView(t, Ui.lin(0, 150, 1f).apply { leftMargin = 6; rightMargin = 6 })
+                r.addView(t, Ui.lin(0, 124, 1f).apply { leftMargin = 6; rightMargin = 6 })
             }
-            content.addView(r, Ui.lin(Ui.MATCH, 162).apply { topMargin = 14 })
+            content.addView(r, Ui.lin(Ui.MATCH, 130).apply { topMargin = 10 })
         }
         note("نصيحة: اضغط مطولاً على الساعة في الشاشة الرئيسية للوحة السريعة، وعلى «رفيق الطريق» لفتح الإعدادات دائماً.")
     }
 
     private fun results() {
         val words = query.split(" ").filter { it.isNotEmpty() }
-        val hits = INDEX.filter { (_, kw) -> words.all { w -> kw.contains(w) || NAMES[INDEX.indexOfFirst { it.second == kw }].contains(w) } }
+        val hits = INDEX.filter { (sec, kw) -> words.all { w -> kw.contains(w) || NAMES[sec].contains(w) } }.distinctBy { it.first }
         if (hits.isEmpty()) { note("لا توجد نتائج لـ«$query»"); return }
         for ((sec, kw) in hits) {
             val matched = kw.split(" ").filter { k -> words.any { k.contains(it) } }.distinct().take(4).joinToString("، ")
@@ -269,9 +291,10 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
 
     private fun resetSection(s: Int) {
         when (s) {
-            0 -> { Prefs.remove(listOf("theme", "clock24", "bigFont", "brand", "brandLeft", "nightDim")); Prefs.removePrefix(listOf("base_", "acc_")) }
-            1 -> Prefs.remove(listOf("gauge", "max", "alert", "showCar", "maxMark"))
-            2 -> { Prefs.remove(listOf("hidden", "colR", "colL", "known", "barSize")); Prefs.removePrefix(listOf("slot", "dest_", "dialN", "dialP", "sc")) }
+            0 -> { Prefs.remove(listOf("theme", "clock24", "bigFont", "brand", "brandLeft", "nightDim", "cardShape", "topBar")); Prefs.removePrefix(listOf("base_", "acc_")) }
+            1 -> Prefs.remove(listOf("gauge", "max", "alert", "showCar", "maxMark", "carSize", "speedMode", "speedFactor"))
+            8 -> Prefs.remove(listOf("dataSaver"))
+            2 -> { Prefs.remove(listOf("hidden", "colR", "colL", "known", "barSize", "layout", "gaugeSide", "dock", "big0", "big1", "big2", "big3")); Prefs.removePrefix(listOf("slot", "dest_", "dialN", "dialP", "sc")) }
             3 -> { Prefs.remove(listOf("cityMode", "city", "preMin")); Prefs.removePrefix(listOf("adj")) }
             4 -> Prefs.remove(Prefs.ALERTS.filter { it != "match" }.map { "a_$it" })
             5 -> Prefs.remove(listOf("leagues", "matchMode", "fav", "a_match") + Prefs.MATCH_ALERTS)
@@ -282,6 +305,16 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
 
     // ---------------- الأقسام ----------------
     private fun looks() {
+        title("أطقم جاهزة")
+        note("الطقم يضبط الثيم وشكل البطاقات والتخطيط والعداد بضغطة واحدة.")
+        for (k in Prefs.KITS.indices) line(Prefs.KIT_NAMES[k], null, btn("تطبيق", false) { Prefs.applyKit(Prefs.KITS[k]); changed() })
+        if (Prefs.hasMyKit()) line("طقمي", "الشكل الذي حفظته", btn("حفظ الحالي", false) { Prefs.saveMyKit(); a.toast("تم حفظ شكلك الحالي") },
+            btn("تطبيق", true) { Prefs.applyKit("mine"); changed() })
+        else action("طقمي", "احفظ شكلك الحالي لتعود إليه بضغطة", "حفظ الحالي") { Prefs.saveMyKit(); changed() }
+        title("شكل البطاقات")
+        val shapes = listOf("classic", "chamfer", "round", "leaf")
+        seg("الشكل", null, listOf("كلاسيكي", "مشطوفة", "مستديرة", "ورقة"), shapes.indexOf(Prefs.cardShape)) { Prefs.cardShape = shapes[it] }
+        if (Prefs.cardShape != "classic") toggle("الخط العلوي بلون التمييز", null, Prefs.topBar) { Prefs.topBar = it }
         title("ثيمات جاهزة")
         fun preset(day: Pair<String, String>?, night: Pair<String, String>) {
             if (day == null) { Prefs.theme = "fixed"; Prefs.setBase("fixed", night.first); Prefs.setAccent("fixed", night.second) }
@@ -317,20 +350,21 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
         toggle("خفض السطوع ليلاً", "يخفّض إضاءة الواجهة بعد الغروب", Prefs.nightDim) { Prefs.nightDim = it }
         title("الشعار")
         val brands = listOf("COROLLA 2015", "TOYOTA", "Corolla", "كورولا 2015", "")
-        seg("النص", null, listOf("COROLLA 2015", "TOYOTA", "Corolla", "كورولا 2015", "بدون"), brands.indexOf(Prefs.brand)) { Prefs.brand = brands[it] }
+        grid(listOf("COROLLA 2015", "TOYOTA", "Corolla", "كورولا 2015", "بدون"), brands.indexOf(Prefs.brand), 3) { Prefs.brand = brands[it] }
         seg("الموضع", null, listOf("يسار", "يمين"), if (Prefs.brandLeft) 0 else 1) { Prefs.brandLeft = it == 0 }
     }
 
     private fun gaugeSec() {
         title("شكل العداد")
-        grid(listOf("قوس", "إبرة كلاسيكية", "قوس مقطّع", "نصف دائرة", "رقمي", "عداد وبوصلة", "حلقة", "شريط"),
-            listOf(0, 3, 4, 5, 6, 7, 1, 2).indexOf(Prefs.gauge), 4) { Prefs.gauge = listOf(0, 3, 4, 5, 6, 7, 1, 2)[it] }
+        grid(listOf("فاخر", "قوس", "إبرة كلاسيكية", "قوس مقطّع", "نصف دائرة", "رقمي", "عداد وبوصلة", "حلقة", "شريط"),
+            listOf(8, 0, 3, 4, 5, 6, 7, 1, 2).indexOf(Prefs.gauge), 4) { Prefs.gauge = listOf(8, 0, 3, 4, 5, 6, 7, 1, 2)[it] }
         note("الرقمي هو الأوضح أثناء القيادة. «عداد وبوصلة» تدور حلقته مع اتجاه السيارة.")
         title("خيارات")
         seg("الحد الأقصى", null, listOf("200", "240"), if (Prefs.maxSpeed == 200) 0 else 1) { Prefs.maxSpeed = if (it == 0) 200 else 240 }
         val alerts = listOf(0, 80, 100, 110, 120, 140)
         seg("تنبيه السرعة", "صفارة وشريط عند التجاوز", alerts.map { if (it == 0) "إيقاف" else "$it" }, alerts.indexOf(Prefs.alertSpeed)) { Prefs.alertSpeed = alerts[it] }
         toggle("صورة السيارة", "تختفي تلقائياً في العداد الرقمي", Prefs.showCar) { Prefs.showCar = it }
+        if (Prefs.showCar && Prefs.layout == "lux") seg("حجم صورة السيارة", "في التخطيط الفاخر", listOf("صغير", "متوسط", "كبير"), Prefs.int("carSize", 1)) { Prefs.putInt("carSize", it) }
         toggle("علامة أعلى سرعة", "خط صغير على العداد عند أعلى سرعة في الرحلة", Prefs.maxMark) { Prefs.maxMark = it }
         action("تجربة صفارة السرعة", null, "تشغيل") { a.testSound(false) }
         title("معايرة السرعة")
@@ -347,14 +381,22 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
     }
 
     private fun homeScreen() {
-        seg("التخطيط", "البطاقات الكبيرة: 4 بطاقات بخط أكبر وأوضح أثناء القيادة", listOf("بطاقات كبيرة", "الكلاسيكي"),
-            if (Prefs.layout == "big") 0 else 1) { Prefs.layout = if (it == 0) "big" else "classic" }
-        if (Prefs.layout == "big") {
-            title("البطاقات الكبيرة")
+        val layouts = listOf("lux", "big", "classic")
+        seg("التخطيط", "الفاخر: العداد جهة السائق والسيارة على منصة", listOf("فاخر", "بطاقات كبيرة", "الكلاسيكي"),
+            layouts.indexOf(Prefs.layout)) { Prefs.layout = layouts[it] }
+        val lux = Prefs.layout == "lux"
+        val posNames = if (lux) listOf("العمود العريض أعلى", "العمود الجانبي أعلى", "العمود الجانبي أسفل", "العمود العريض أسفل") else Prefs.BIG_POS
+        if (lux) {
+            val sides = listOf("left", "center", "right")
+            seg("جهة العداد", null, listOf("يسار", "وسط", "يمين"), sides.indexOf(Prefs.gaugeSide)) { Prefs.gaugeSide = sides[it] }
+            seg("شكل القائمة السفلية", null, listOf("كبسولة عائمة", "شريط كامل"), if (Prefs.dock == "pill") 0 else 1) { Prefs.dock = if (it == 0) "pill" else "bar" }
+        }
+        if (Prefs.layout != "classic") {
+            title("البطاقات")
             for (i in 0..3) {
                 val cur = Prefs.bigSlot(i)
-                action(Prefs.BIG_POS[i], Prefs.BIG_NAMES[Prefs.BIG_TYPES.indexOf(cur).coerceAtLeast(0)], "تغيير") {
-                    AlertDialog.Builder(a, T).setTitle(Prefs.BIG_POS[i])
+                action(posNames[i], Prefs.BIG_NAMES[Prefs.BIG_TYPES.indexOf(cur).coerceAtLeast(0)], "تغيير") {
+                    AlertDialog.Builder(a, T).setTitle(posNames[i])
                         .setSingleChoiceItems(Prefs.BIG_NAMES.toTypedArray(), Prefs.BIG_TYPES.indexOf(cur)) { dlg, w ->
                             dlg.dismiss(); Prefs.setBigSlot(i, Prefs.BIG_TYPES[w]); changed()
                         }.setNegativeButton("إلغاء", null).show()
@@ -590,6 +632,42 @@ class SettingsScreen(private val a: MainActivity, start: Int = -1) {
                 .setPositiveButton("استعادة") { _, _ -> Prefs.resetAll(); changed() }
                 .setNegativeButton("إلغاء", null).show()
         }
+    }
+
+    /** معاينة مباشرة: بطاقة وسيارة بالثيم والشكل الحاليين */
+    private fun preview(design: FrameLayout) {
+        val box = FrameLayout(a)
+        design.addView(box, Ui.abs(300, 648, 0, 72))
+        design.addView(View(a).apply { setBackgroundColor(pal.line) }, Ui.abs(1, 648, 300, 72))
+        box.addView(Ui.tv(a, 16f, pal.muted, false, Gravity.CENTER).apply { text = "معاينة مباشرة" }, Ui.abs(300, 30, 0, 14))
+        val card = Ui.col(a, Gravity.TOP or Gravity.RIGHT).apply { background = Ui.cardBg(pal); setPadding(18, 16, 18, 12) }
+        card.addView(Ui.tv(a, 15f, pal.muted).apply { text = "الصلاة القادمة" }, Ui.lin(Ui.MATCH, 24))
+        card.addView(Ui.tv(a, 40f, pal.text, true).apply { text = "الفجر" }, Ui.lin(Ui.MATCH, 52))
+        card.addView(Ui.tv(a, 18f, pal.text).apply { text = "بعد 7 س 14 د" }, Ui.lin(Ui.MATCH, 28))
+        card.addView(Ui.tv(a, 17f, pal.accent, true).apply { text = "الأذان " + Ui.hm(5, 20) }, Ui.lin(Ui.MATCH, 28))
+        box.addView(card, Ui.abs(264, 176, 18, 52))
+        box.addView(Ui.tv(a, 18f, pal.onAccent, true, Gravity.CENTER).apply { text = "زر"; background = Ui.rounded(pal.accent, 22f) }, Ui.abs(120, 44, 162, 244))
+        box.addView(Ui.tv(a, 18f, pal.text, false, Gravity.CENTER).apply { text = "زر"; background = Ui.rounded(pal.card, 22f, 2, pal.line) }, Ui.abs(120, 44, 18, 244))
+        val g = GaugeView(a).apply { pal = this@SettingsScreen.pal; mode = Prefs.gauge; max = Prefs.maxSpeed; alert = 0; pedestal = Prefs.showCar; set(86, true, -1f, 0) }
+        box.addView(g, Ui.abs(264, 300, 18, 310))
+        if (Prefs.showCar && Prefs.gauge != 6) box.addView(android.widget.ImageView(a).apply { setImageResource(R.drawable.car_rear) }, Ui.abs(140, 115, 80, 490))
+    }
+
+    private fun data() {
+        line("الطقس", "آخر تحديث: " + a.weatherUpdatedText(), btn("تحديث", false) { a.forceWeather(); a.toast("جارٍ تحديث الطقس…") })
+        line("المباريات", "آخر تحديث: " + a.matchesUpdatedText(), btn("تحديث", false) { a.forceMatches(); a.toast("جارٍ تحديث المباريات…") })
+        action("تحديث كل البيانات الآن", "يحدّث الطقس والمباريات ويعرض حالة كل مصدر", "تحديث الكل") { a.refreshAllData() }
+        action("اختبار الاتصال", "يفحص الشبكة والطقس والمباريات ويوضح سبب أي مشكلة", "اختبار") { a.netTest() }
+        title("توفير البيانات")
+        val modes = listOf("auto", "on", "off")
+        seg("الوضع", "التلقائي يعمل عند الاتصال بنقطة اتصال الجوال", listOf("تلقائي", "دائماً", "إيقاف"), modes.indexOf(Prefs.dataSaver)) { Prefs.dataSaver = modes[it] }
+        line("الحالة الآن: " + (if (Net.saver(a)) "التوفير يعمل" else "التوفير لا يعمل"),
+            "مع التوفير: الطقس كل ساعة، والمباريات كل 40 دقيقة، ومباريات الغد كل 6 ساعات")
+        toggle("تحميل التحديثات عبر الواي فاي فقط", null, Prefs.wifiOnly) { Prefs.wifiOnly = it }
+        title("كيف تُجلب البيانات")
+        note("الطقس: طلب واحد كل 30 دقيقة تتشاركه البطاقة وشاشة التفاصيل، ومصدر احتياطي عند تعطل الأول.")
+        note("المباريات: 3 طلبات معاً، وأثناء المباراة المباشرة يُحدَّث دوريها فقط كل دقيقة.")
+        note("عند الفشل: إعادة المحاولة بعد 15 ثانية، ثم دقيقة، ثم 5 دقائق. النقطة بجانب عنوان البطاقة: خضراء محدّث، كهرمانية محفوظ، حمراء فشل.")
     }
 
     private fun open(action: String) {

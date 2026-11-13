@@ -28,7 +28,63 @@ object Prefs {
     fun base(slot: String): String = str("base_$slot", when (slot) { "day" -> "light"; else -> "dark" })
     fun accent(slot: String): String = str("acc_$slot", if (slot == "day") "blue" else "cyan")
 
-    /** التخطيط: big = بطاقات كبيرة (4)، classic = الكلاسيكي (حتى 8) */
+    /** شكل البطاقات: classic / chamfer / round / leaf */
+    var cardShape: String
+        get() = str("cardShape", "classic")
+        set(v) = putStr("cardShape", v)
+    var topBar: Boolean
+        get() = bool("topBar", true)
+        set(v) = putBool("topBar", v)
+    /** جهة العداد في التخطيط الفاخر: left / center / right */
+    var gaugeSide: String
+        get() = str("gaugeSide", "left")
+        set(v) = putStr("gaugeSide", v)
+    /** القائمة السفلية في الفاخر: pill كبسولة عائمة، bar شريط كامل */
+    var dock: String
+        get() = str("dock", "pill")
+        set(v) = putStr("dock", v)
+    /** توفير البيانات: auto (عند اتصال محدود) / on / off */
+    var dataSaver: String
+        get() = str("dataSaver", "auto")
+        set(v) = putStr("dataSaver", v)
+
+    // ---------------- الأطقم: ثيم وشكل وتخطيط بضغطة ----------------
+    val KITS = listOf("royal", "marine", "wine", "cyan")
+    val KIT_NAMES = listOf("ملكي: أسود وذهبي", "بحري: كحلي وفضي", "عنابي: عنابي ووردي ذهبي", "سماوي: الشكل السابق")
+    private val KIT_KEYS = listOf("layout", "cardShape", "gauge", "dock", "theme", "base_day", "acc_day", "base_night", "acc_night",
+        "base_fixed", "acc_fixed", "gaugeSide", "topBar", "barSize")
+
+    fun applyKit(id: String) {
+        fun set(layout: String, shape: String, gauge: Int, dock: String, dayB: String, dayA: String, nightB: String, nightA: String) {
+            this.layout = layout; cardShape = shape; this.gauge = gauge; this.dock = dock; theme = "auto"
+            setBase("day", dayB); setAccent("day", dayA); setBase("night", nightB); setAccent("night", nightA)
+        }
+        when (id) {
+            "royal" -> set("lux", "chamfer", 8, "pill", "pearl", "gold", "black", "gold")
+            "marine" -> set("lux", "round", 8, "pill", "pearl", "silver", "navy", "silver")
+            "wine" -> set("lux", "leaf", 8, "pill", "pearl", "rose", "wine", "rose")
+            "cyan" -> set("big", "classic", 0, "bar", "light", "blue", "dark", "cyan")
+            "mine" -> {
+                val e = p().edit()
+                for (part in str("kitMine").split(";")) {
+                    val kv = part.split("=", limit = 2); if (kv.size < 2 || kv[1].length < 2) continue
+                    val v = kv[1].substring(2)
+                    when (kv[1][0]) { 's' -> e.putString(kv[0], v); 'i' -> e.putInt(kv[0], v.toIntOrNull() ?: 0); 'b' -> e.putBoolean(kv[0], v == "true") }
+                }
+                e.apply()
+            }
+        }
+    }
+    /** حفظ الشكل الحالي كطقم خاص */
+    fun saveMyKit() {
+        val all = p().all
+        putStr("kitMine", KIT_KEYS.mapNotNull { k ->
+            when (val v = all[k]) { is String -> "$k=s:$v"; is Int -> "$k=i:$v"; is Boolean -> "$k=b:$v"; else -> null }
+        }.joinToString(";"))
+    }
+    fun hasMyKit() = str("kitMine").isNotEmpty()
+
+    /** التخطيط: lux = فاخر، big = بطاقات كبيرة (4)، classic = الكلاسيكي (حتى 8) */
     var layout: String
         get() = str("layout", "big")
         set(v) = putStr("layout", v)
