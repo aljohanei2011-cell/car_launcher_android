@@ -63,7 +63,7 @@ object Weather {
         busy = true
         thread {
             try {
-                val u = "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f".format(java.util.Locale.US, lat, lng) +
+                val u = "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f".format(java.util.Locale.US, lat, lng) +
                     "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,visibility&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1"
                 val conn = URL(u).openConnection() as HttpURLConnection
                 conn.connectTimeout = 10_000; conn.readTimeout = 15_000
@@ -79,7 +79,7 @@ object Weather {
                 cur.optDouble("visibility").let { if (!it.isNaN()) o.put("vis", it) }
                 // الغبار من خدمة جودة الهواء (اختياري: لو فشل يكمل بدونه)
                 try {
-                    val aq = URL("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&current=dust,pm10".format(java.util.Locale.US, lat, lng)).openConnection() as HttpURLConnection
+                    val aq = URL("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.2f&longitude=%.2f&current=dust,pm10".format(java.util.Locale.US, lat, lng)).openConnection() as HttpURLConnection
                     aq.connectTimeout = 8_000; aq.readTimeout = 10_000
                     aq.setRequestProperty("User-Agent", "rafiq-car-launcher")
                     if (aq.responseCode == 200) {
