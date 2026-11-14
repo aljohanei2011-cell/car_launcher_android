@@ -132,6 +132,15 @@ html.nogap .galert>*+*{margin-right:14px}
 .dk{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:20px;font-weight:500;border:none;color:#fff;min-width:0;min-height:0;padding:4px}
 .dk svg,.dk img{width:48px;height:48px;border-radius:12px}
 .dk span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* الوضع الخفيف «بطاقات أقصر»: الشريط السفلي أطول وأزراره أكبر (أسهل للمس أثناء القيادة) */
+body.lite-short .L-classic #dock,body.lite-short .L-grid #dock{height:205px;padding-top:calc(var(--dtop,24px) + 6px)}
+body.lite-short .dk{font-size:23px;gap:12px}
+body.lite-short .dk svg,body.lite-short .dk img{width:62px;height:62px}
+body.lite-short #dock.many .dk{font-size:19px}body.lite-short #dock.many .dk svg,body.lite-short #dock.many .dk img{width:52px;height:52px}
+.k-mini{display:flex;flex-direction:column;gap:.15em;margin:.4em 0;min-height:0;overflow:hidden}
+.k-mini div{display:flex;justify-content:space-between;font-size:1.02em;padding:.18em .55em;border-radius:.5em;color:#C3D1E8}
+.k-mini div.on{background:rgba(90,176,255,.18);color:#fff;font-weight:700}
+.k-wx{font-size:1.05em;color:#9FD0FF;margin-top:.25em;white-space:nowrap}
 #dock.many .dk{font-size:17px;gap:8px}
 #dock.many .dk svg,#dock.many .dk img{width:40px;height:40px}
 .L-side .dk{gap:3px;font-size:13px;padding:2px 4px}
@@ -414,11 +423,20 @@ function card(id, label, render){ CARDS[id] = { label: label, render: render }; 
 /* ===== الساعة بأشكالها ===== */
 function clockDates(d, o){
   return { greg: partHidden(o, 'greg') ? '' : '<div class="k-sub">' + fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 'ar-u-nu-latn', d) + '</div>',
-           hijri: partHidden(o, 'hijri') ? '' : '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div>' };
+           hijri: (partHidden(o, 'hijri') ? '' : '<div class="k-sub">' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'ar-SA-u-ca-islamic-umalqura-nu-latn', d) + '</div>') + clockWx(o) };
+}
+/* الوضع الخفيف: سطر الطقس تحت التاريخ (من آخر تحديث محفوظ، بدون اتصال جديد) */
+function clockWx(o){
+  if (!LITE || partHidden(o, 'wx') || !prefs.weatherOn || !cardTall() || (window._liteExtra || []).indexOf('weather') >= 0) return '';
+  var w = weatherData(); if (!w.at || Date.now() - w.at > 3 * 3600000 || w.temp == null) return '';
+  var t = weatherFx(w) === 'dust' ? 'غبار' : (WMO[w.code] || '');
+  return '<div class="k-wx">' + Math.round(w.temp) + '°' + (t ? ' · ' + t : '') + '</div>';
 }
 function ampmHtml(d, o){ var a = partHidden(o, 'ampm') ? '' : ampm(d); return a ? '<span style="font-size:.25em;font-weight:500;margin-left:.2em">' + a + '</span>' : ''; }
 var _rcEl = null;
 /* البطاقة التي تُرسم الآن أعرض من ارتفاعها بوضوح؟ (لترتيب الساعة أفقياً أو عمودياً) */
+/* البطاقة طويلة بما يكفي لإضافة محتوى في الوسط (بدل الفراغ) */
+function cardTall(){ return !!_rcEl && _rcEl.clientHeight >= 300 && _rcEl.clientWidth >= 240; }
 function cardWide(){ return !!_rcEl && _rcEl.clientWidth > _rcEl.clientHeight * 1.45; }
 var CLOCK_RENDER = {
   digital: function (d, o) { var t = clockDates(d, o); return '<div class="k-center" ondblclick="openRest()">' + t.greg + '<div class="k-huge">' + clockStr(d) + ampmHtml(d, o) + '</div>' + t.hijri + '</div>'; },
@@ -504,7 +522,13 @@ card('prayer', 'الصلاة القادمة', function (o) {
       (partHidden(o, 'count') ? '' : '<div class="k-big" style="font-size:2.6em;margin:.15em 0">' + pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60) + '</div>') +
       '<div class="k-sub">' + np.timeFmt + (partHidden(o, 'city') ? '' : ' · ' + esc(cityLabel())) + '</div></div></a>';
   }
-  return '<a href="prayer.html" style="display:contents"><div class="k-row"><span class="k-lbl">الصلاة القادمة</span><span class="k-sub" style="font-size:.95em">' + (partHidden(o, 'city') ? '' : esc(cityLabel())) + '</span></div>' +
+  // بطاقة طويلة: مواقيت اليوم في الوسط بدل الفراغ (القادمة مميّزة)
+  var mini = '';
+  if (cardTall() && !partHidden(o, 'list')) {
+    var nowM = riyadhMinutes(d), pl = prayerMinutes(d), nx = pl.filter(function (p) { return p.min > nowM; })[0];
+    mini = '<div class="k-mini">' + pl.map(function (p) { return '<div class="' + (nx && p.key === nx.key ? 'on' : '') + '"><span>' + p.name + '</span><span>' + fmtMin(p.min) + '</span></div>'; }).join('') + '</div>';
+  }
+  return '<a href="prayer.html" style="display:contents"><div class="k-row"><span class="k-lbl">الصلاة القادمة</span><span class="k-sub" style="font-size:.95em">' + (partHidden(o, 'city') ? '' : esc(cityLabel())) + '</span></div>' + mini +
     '<div><div class="k-mid" style="font-size:2.3em">' + np.name + '</div><div class="k-row" style="align-items:baseline"><span class="k-sub">' + (partHidden(o, 'count') ? '' : fmtDiff(np.diff)) + '</span>' +
     '<span class="k-big">' + np.timeFmt + '</span></div></div></a>';
 });
@@ -535,7 +559,7 @@ card('media', 'الموسيقى', function (o) {
   }
   return '<div class="k-row"><span class="k-lbl">يُشغَّل الآن</span><span class="k-sub" style="font-size:.95em">' + (partHidden(o, 'app') ? '' : esc(m.app)) + '</span></div>' +
     '<div style="display:flex;gap:.9em;align-items:center;min-width:0">' + (art ? '<div class="k-art" style="background-image:url(' + art + ');' + (m.art ? 'display:block' : '') + '"></div>' : '') +
-    '<div style="min-width:0;flex:1"><div class="k-mid" style="white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3">' + esc(m.title) + '</div><div class="k-sub">' + esc(m.artist) + '</div></div></div>' + prog +
+    '<div style="min-width:0;flex:1"><div class="k-mid" style="white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3' + (!art && cardTall() ? ';font-size:2.1em' : '') + '">' + esc(m.title) + '</div><div class="k-sub">' + esc(m.artist) + '</div></div></div>' + prog +
     '<div style="display:flex;justify-content:center;align-items:center;gap:1em;direction:ltr">' +
     '<button class="mbtn" aria-label="السابق" onclick="nat(\'mediaCmd\',\'prev\');later()">' + MI.prev + '</button>' +
     '<button class="mbtn big" aria-label="تشغيل أو إيقاف" onclick="nat(\'mediaCmd\',\'' + (m.playing ? 'pause' : 'play') + '\');later()">' + (m.playing ? MI.pause : MI.play) + '</button>' +
@@ -713,7 +737,7 @@ function buildPages(){
   stage.classList.add('L-' + prefs.layout);
   var G = { s: [16, 12, 14, 18], m: [26, 20, 20, 24], l: [36, 28, 26, 30] }[prefs.cardGap || 'm'] || [26, 20, 20, 24];
   stage.style.setProperty('--cg', G[0] + 'px'); stage.style.setProperty('--cgg', G[1] + 'px'); stage.style.setProperty('--dg', G[2] + 'px'); stage.style.setProperty('--dtop', G[3] + 'px');
-  var pagesEl = document.getElementById('pages'); pagesEl.innerHTML = ''; cardEls = [];
+  var pagesEl = document.getElementById('pages'); pagesEl.innerHTML = ''; cardEls = []; window._liteExtra = [];
   var pages = homePages();
   if (prefs.layout === 'minimal') pages = pages.slice(0, 1);
   pages.forEach(function (cards, pi) {
@@ -723,6 +747,13 @@ function buildPages(){
       cards = cards.slice(0, 3);
     }
     var wrap = document.createElement('div'); wrap.className = 'cards';
+    // الوضع الخفيف «أربع بطاقات»: نضيف بطاقة صغيرة رابعة للصفحة ذات الثلاث (لا تُحفظ في ترتيبك ولا تُحرَّر)
+    if (LITE && prefs.liteCards === 'four' && prefs.layout === 'classic' && cards.length === 3) {
+      // لا نكرر بطاقة موجودة في أي صفحة أو أُضيفت لصفحة سابقة
+      var have = [].concat.apply([], pages.map(function (pp) { return pp.map(function (c) { return c.id; }); })).concat(window._liteExtra || []);
+      var extra = ['weather', 'trip', 'times', 'reminders'].filter(function (id) { return CARDS[id] && have.indexOf(id) < 0 && (id !== 'weather' || prefs.weatherOn); })[0];
+      if (extra) { cards = cards.concat([{ id: extra, size: 's', virt: true }]); (window._liteExtra = window._liteExtra || []).push(extra); }
+    }
     cards.forEach(function (c, ci) {
       if (!CARDS[c.id]) return;
       var el = document.createElement('div');

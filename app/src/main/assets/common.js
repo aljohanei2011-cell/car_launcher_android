@@ -226,7 +226,7 @@ var DEFAULT_PREFS = {
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
   alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true, resumeNav: true,
   /* الشريط العلوي */
-  restEngine: 'native', quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
+  restEngine: 'native', liteCards: 'normal', quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
   topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){
@@ -457,6 +457,9 @@ function applyPrefs(bgKey, p){
   }
   document.body.classList.toggle('solid', !!p.solid);
   document.body.classList.toggle('perf', perfOn(p));
+  // الوضع الخفيف: بطاقات بتدرّج لوني بدل الزجاج، وشكل البطاقات المختار (عادي/أقصر/أربع)
+  document.body.classList.toggle('lite', LITE);
+  document.body.classList.toggle('lite-short', LITE && p.liteCards === 'short');
   var B = document.body;
   SKIN_CLASSES.forEach(function (c) { B.classList.remove(c); });
   var sk = p.skin || 'classic';
@@ -1214,8 +1217,8 @@ function getHomes(p){
    تخصيص البطاقات: أجزاء يمكن إخفاؤها، أشكال الساعة، حجم النص
    ================================================================ */
 var CARD_PARTS = {
-  clock: [['greg', 'التاريخ الميلادي'], ['hijri', 'التاريخ الهجري'], ['ampm', 'ص / م']],
-  prayer: [['city', 'اسم المدينة'], ['img', 'الصورة'], ['count', 'العد التنازلي']],
+  clock: [['greg', 'التاريخ الميلادي'], ['hijri', 'التاريخ الهجري'], ['ampm', 'ص / م']].concat(LITE ? [['wx', 'الطقس']] : []),
+  prayer: [['city', 'اسم المدينة'], ['img', 'الصورة'], ['count', 'العد التنازلي'], ['list', 'مواقيت اليوم']],
   times: [['city', 'اسم المدينة']],
   media: [['art', 'الغلاف'], ['prog', 'شريط التقدم'], ['app', 'اسم التطبيق']],
   weather: [['range', 'العظمى والصغرى'], ['ago', 'وقت التحديث']],

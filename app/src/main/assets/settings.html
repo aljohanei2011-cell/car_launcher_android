@@ -533,7 +533,7 @@ function confirmBox(text, onYes){
   r.appendChild(y); r.appendChild(n); box.appendChild(r); ov.appendChild(box);
   document.getElementById('stage').appendChild(ov);
 }
-var UI_KEYS = ['voiceBtn', 'voiceWait', 'voiceBeep', 'voiceMusic', 'voiceLang', 'voiceRate', 'voicePitch', 'voiceVol', 'cardGap', 'iconMode', 'iconDim', 'iconStyle', 'clockDial', 'clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
+var UI_KEYS = ['liteCards', 'voiceBtn', 'voiceWait', 'voiceBeep', 'voiceMusic', 'voiceLang', 'voiceRate', 'voicePitch', 'voiceVol', 'cardGap', 'iconMode', 'iconDim', 'iconStyle', 'clockDial', 'clockStyle', 'textScale', 'cardsLocked', 'hideEmpty', 'emptyAlt', 'accent', 'weatherFx', 'activeProfile', 'layout', 'homes', 'dock', 'dockLabels', 'statusIcons', 'favApps', 'font', 'clockFont', 'duaFont', 'theme', 'restBg', 'autoNight', 'nightTheme',
   'brand', 'subBrands', 'brandText', 'brandSize', 'solid', 'restStyle', 'restShow', 'duaSec', 'h24', 'digits', 'remPlace'];
 /* ===== نقل الإعدادات بين الشاشات (عن طريق الجوال) ===== */
 function showTransfer(){
@@ -829,6 +829,10 @@ function renderHome(){
   s.appendChild(el('span', 'note', 'كل تصميم يحفظ ترتيب بطاقاته. اسحب الرئيسية يميناً أو يساراً للتنقل بين الصفحات.'));
   s.appendChild(el('span', 'note', 'المسافة بين البطاقات وأزرار الشريط السفلي:'));
   opts(s, [['s', 'ضيقة'], ['m', 'متوسطة'], ['l', 'واسعة']], prefs.cardGap || 'm', function (k) { prefs.cardGap = k; upd(); }, true);
+  if (LITE) {
+    s.appendChild(el('span', 'note', 'شكل البطاقات في الوضع الخفيف:'));
+    opts(s, [['normal', 'عادي'], ['short', 'أقصر وأزرار أكبر'], ['four', 'أربع بطاقات']], prefs.liteCards || 'normal', function (k) { prefs.liteCards = k; upd(); }, true);
+  }
 
   var homes = homesCopy(), pages = homes[prefs.layout];
   if (pageIdx >= pages.length) pageIdx = 0;
