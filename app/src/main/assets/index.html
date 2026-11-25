@@ -149,6 +149,92 @@ body.lite-short #dock.many .dk{font-size:19px}body.lite-short #dock.many .dk svg
 
 .boot{position:absolute;top:0;right:0;bottom:0;left:0;z-index:20;background:rgba(5,10,25,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center}
 .boot .t{font-family:'Alyamama','Thmanyah',serif;font-size:46px;line-height:1.7;max-width:1000px}
+
+/* ===== شكل «أسود OLED» (الوضع الخفيف): خلفية مصمتة، بطاقات مسطحة، أشكال مرسومة فقط ===== */
+body.oled{--obg:#000;--oc:#0d0d0f;--ol:#1c1c22;--och:#1c1c22;--ot:#fff;--om:#8b8b95;--os:#c9c9d2;--otr:#26262e}
+body.oled.ol{--obg:#EEF0F4;--oc:#fff;--ol:#DDE1E8;--och:#EEF0F4;--ot:#14161c;--om:#6b7280;--os:#4a5060;--otr:#E2E5EB}
+body.oled,body.oled #stage{background:var(--obg)!important}
+body.oled #bg,body.oled .shade,body.oled #wx{display:none!important}
+body.oled .card.glass,body.oled .dk,body.oled .act{background:var(--oc)!important;border:1px solid var(--ol)!important;box-shadow:none!important}
+body.oled .card.glass::before{display:none!important}
+body.oled .card{border-radius:calc(var(--fs)*1.9);color:var(--ot)}
+body.oled .dk,body.oled .act,body.oled .top,body.oled .clockTop,body.oled .logo{color:var(--ot)!important}
+body.oled.ol .act svg,body.oled.ol .status svg{stroke:var(--ot)}
+body.oled .dots i,body.oled .dots span{background:var(--om)}
+body.oled.ol .chip{background:#FCE7C8;border-color:#F0B35A;color:#6b4400}body.oled.ol .banner{color:#fff}
+.o{display:flex;flex-direction:column;justify-content:space-between;height:100%;min-height:0;color:var(--ot);text-decoration:none;gap:.5em}
+.o-hd{display:flex;justify-content:space-between;align-items:center;gap:.5em;font-size:1.05em;min-width:0}
+.o-tag{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o-r{color:var(--om);white-space:nowrap;display:flex;align-items:center}
+.o-sub{font-size:1.05em;color:var(--om);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o-mid{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.o-row{display:flex;gap:.8em;min-width:0}
+.o-col{min-width:0}
+.o-chip{display:inline-block;background:var(--och);color:var(--os);border-radius:1em;padding:.3em .8em;font-size:.95em;white-space:nowrap}
+.o-chips{display:flex;gap:.45em;flex-wrap:wrap;overflow:hidden;max-height:2.2em}
+.o-btn{align-self:flex-start;background:var(--och);color:var(--ot);border:none;border-radius:1.2em;padding:.5em 1.2em;font:inherit;font-size:1em;text-decoration:none}
+.o-ring{position:relative;flex:none;width:7.6em;height:7.6em}
+.o-ring svg{width:100%;height:100%}
+.o-rin{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.o-rin b{font-size:1.9em;direction:ltr}.o-rin small{font-size:.85em;color:var(--om)}
+.o-name{font-size:2.5em;font-weight:800;line-height:1.15}
+.o-t2{font-size:1.5em;color:var(--os)}
+.o-tl{position:relative;padding-top:.35em}
+.o-tlt{position:absolute;top:.75em;right:.5em;left:.5em;height:.25em;background:var(--otr);border-radius:.2em}
+.o-tlt i{position:absolute;top:0;right:0;height:100%;border-radius:.2em}
+.o-tlr{position:relative;display:flex;justify-content:space-between}
+.o-tlr div{display:flex;flex-direction:column;align-items:center;font-size:.9em;color:var(--om);min-width:0}
+.o-tlr b{width:.95em;height:.95em;border-radius:50%;background:var(--otr);margin-bottom:.35em}
+.o-tlr div.done b{background:#FFA21F}
+.o-tlr div.on b{width:1.3em;height:1.3em;margin:-.17em 0 .2em;background:var(--oc);border:.3em solid #FFA21F;box-sizing:border-box}
+.o-tlr div.on{color:#FFA21F;font-weight:800}
+.o-tlr em{font-style:normal;font-weight:700;color:var(--os)}.o-tlr div.on em{color:#FFA21F}
+.o-list{display:flex;flex-direction:column;gap:.35em;flex:1;min-height:0;overflow:hidden}
+.o-li{display:flex;justify-content:space-between;padding:.35em .7em;border-radius:.7em;font-size:1.1em;color:var(--os)}
+.o-li.past{opacity:.55}.o-li.on{background:#FFA21F;color:#111;font-weight:800;opacity:1}
+.o-clock{font-size:5.4em;font-weight:300;line-height:1;direction:ltr;white-space:nowrap;font-variant-numeric:tabular-nums}
+.o-moon{width:1.8em;height:1.8em}
+.o-temp{font-size:4.4em;font-weight:300;line-height:1;direction:ltr;text-align:right;white-space:nowrap}
+.o-temp small{font-size:.32em;color:var(--om)}
+.o-wi{width:5em;height:5em;flex:none}.o-wi svg{width:100%;height:100%}
+.o-chart{width:100%;height:auto;max-height:6.2em;direction:ltr}
+.o-gauge{flex:1;min-height:0;display:flex;justify-content:center}
+.o-gauge svg{height:100%;max-width:100%}
+.o-lim{display:inline-flex;align-items:center;justify-content:center;width:2.3em;height:2.3em;font-size:.95em;border-radius:50%;background:#fff;border:.3em solid #E0323E;color:#111;font-weight:800;box-sizing:border-box;flex:none}
+.o-disc{width:5.6em;height:5.6em;border-radius:50%;flex:none;background:radial-gradient(circle,var(--oc) 0 14%,#8C6BFF 15% 26%,var(--och) 27% 100%);box-shadow:0 0 0 2px var(--ol)}
+.o-disc-wrap{align-items:center;gap:.6em}
+.o-art{width:5.6em;height:5.6em;border-radius:1em;flex:none;background-size:cover;background-position:center}
+.o-eq{display:flex;gap:.4em;align-items:flex-end;height:4em}
+.o-eq i{width:.7em;border-radius:.35em;display:block}
+.o-eq.sm{height:2.4em;margin-top:.6em}
+.o-title{font-size:1.75em;font-weight:700;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.3}
+.o-bar{height:.35em;background:var(--otr);border-radius:.2em;overflow:hidden;direction:ltr}
+.o-bar i{display:block;height:100%;border-radius:.2em}
+.o-pt{display:flex;justify-content:space-between;font-size:.85em;color:var(--om);margin-top:.3em;direction:ltr}
+.o-ctl{display:flex;justify-content:center;align-items:center;gap:1.4em;direction:ltr}
+.o-ctl button{width:3.2em;height:3.2em;border-radius:50%;border:none;background:var(--och);display:flex;align-items:center;justify-content:center;padding:0}
+.o-ctl button svg{width:1.4em;height:1.4em;fill:var(--ot)}
+.o-ctl button.big{width:4em;height:4em;background:var(--ot)}.o-ctl button.big svg{fill:var(--obg)}
+.o-vs{flex-direction:row!important;align-items:center;justify-content:space-between;gap:.4em}
+.o-team{display:flex;flex-direction:column;align-items:center;gap:.35em;min-width:0;flex:1}
+.o-team span{width:2.9em;height:2.9em;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.05em;box-shadow:0 0 0 .18em rgba(127,127,127,.35)}
+.o-team b{font-size:1.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.o-score{display:flex;gap:.3em;align-items:center;font-size:3.2em;font-weight:800;white-space:nowrap;line-height:1}
+.o-score i{font-style:normal;font-weight:300;color:var(--om)}
+.o-score.sm{font-size:1.9em}
+.o-mlist{display:flex;flex-direction:column;gap:.8em;flex:1;justify-content:center;min-height:0}
+.o-mi b{font-size:1.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.o-mi span{font-size:.95em;white-space:nowrap}
+.o-mi .o-bar{margin-top:.4em;height:.45em}
+.o-rem{display:flex;justify-content:space-between;align-items:center;gap:.5em;border-right:.3em solid;padding:.35em .7em;border-radius:.4em;background:var(--och);font-size:1.05em}
+.o-rem span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.o-rem button{flex:none;border:none;border-radius:1em;padding:.3em .9em;background:var(--ot);color:var(--obg);font:inherit;font-size:.9em}
+.o-note{flex:1;min-height:0;overflow:hidden;border-right:.3em solid;padding-right:.7em;font-size:1.2em;line-height:1.55;white-space:pre-line}
+.o-compass{height:100%;max-height:8em;flex:none}
+.o-pk{width:2.6em;height:2.6em;border-radius:.7em;color:#fff;font-weight:800;font-size:1.3em;display:flex;align-items:center;justify-content:center;flex:none}
+.o-apps{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em;flex:1;min-height:0;align-content:center}
+.o-apps button{display:flex;flex-direction:column;align-items:center;gap:.3em;background:none;border:none;color:var(--ot);font:inherit;font-size:.9em;min-width:0}
+.o-apps img,.o-apps svg{width:2.8em;height:2.8em;border-radius:.8em}
+.o-apps span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 </style>
 </head>
 <body>
@@ -187,6 +273,7 @@ body.lite-short #dock.many .dk{font-size:19px}body.lite-short #dock.many .dk svg
 (function () { try { var n = +(localStorage.getItem('carlauncher.bootTry') || 0); if (n >= 3) { localStorage.setItem('carlauncher.bootTry', '0'); location.replace('safe.html'); return; } localStorage.setItem('carlauncher.bootTry', String(n + 1)); } catch (e) {} })();
 </script>
 <script src="common.js"></script>
+<script src="oled.js"></script>
 <script>
 /* أول تشغيل على هذه الشاشة: معالج الإعداد */
 var FIRST_RUN = (function () { try { return !localStorage.getItem(PREFS_KEY) && !lsGet('carlauncher.wizardDone', 0); } catch (e) { return false; } })();
@@ -845,7 +932,7 @@ function renderCards(){
     if (c.rid !== rid) { c.rid = rid; c.baseFs = 0; }
     _rcEl = c.el;
     if (prefs.guest && GUEST_CARDS[rid]) h = '<span class="k-lbl">' + CARDS[rid].label + '</span><div class="k-center" style="height:auto"><div class="k-sub">مخفية في وضع الضيف</div></div><div></div>';
-    else try { h = CARDS[rid].render(c.opt || {}); } catch (e) { h = '<span class="k-lbl">' + CARDS[rid].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
+    else try { h = (oledOn() && OLED[rid] ? OLED[rid] : CARDS[rid].render)(c.opt || {}); } catch (e) { h = '<span class="k-lbl">' + CARDS[rid].label + '</span><div class="k-sub">تعذّر العرض</div>'; }
     if (h !== c.html) { c.el.innerHTML = h; c.html = h; fitCard(c); }
   });
 }
@@ -1030,6 +1117,8 @@ nat('setOverlay', false); nat('setRestOpen', false);
 safe('tick', tick); safe('glass', buildGlass); setTimeout(function () { nat('ready'); }, 250); safe('weak', autoWeak); safe('banner', renderBanner); safe('boot', bootAction); safe('bright', applyBrightness); safe('weather', weatherRefreshIfStale); safe('wx', renderWeatherFx);
 every(function () { if (!document.hidden && !restOpen()) tick(); }, 1000);
 every(function () { if (!document.hidden) renderStatus(); }, 5000);
+// «أسود OLED» التلقائي: فاتح من الشروق حتى المغرب
+every(function () { var was = document.body.classList.contains('ol'); oledApply(); if (was !== document.body.classList.contains('ol')) { forceCards = true; tick(); forceCards = false; } }, 60000);
 autoDetectPerf();
 /* البحث عن تحديث بهدوء: عند تشغيل الشاشة ثم كل ساعة عند توفر الإنترنت، وتنبيه مرة لكل إصدار جديد */
 function autoUpdateCheck(boot){

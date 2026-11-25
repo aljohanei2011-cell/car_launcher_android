@@ -226,7 +226,7 @@ var DEFAULT_PREFS = {
   /* التنبيهات الزجاجية: المكان العام ولكل نوع، والمدة، والظهور فوق الخرائط */
   alertPos: 'tc', alertPosT: {}, alertSec: 6, glassOverlay: true, alertSpeak: false, stayRest: true, resumeNav: true,
   /* الشريط العلوي */
-  restEngine: 'native', liteCards: 'normal', quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
+  restEngine: 'native', liteCards: 'normal', liteLook: 'oled', oledMode: 'auto', quranReciter: 'ar.alafasy', clockDial: 'gold', restDim: 'night', restVideo: false, restVideoNight: false, restVideoRotate: false, restClockPos: 'c', restClockLook: 'thin', restShadeV: 20, restPauseMove: true, restNightVideo: 'dim',
   topBar: { size: 'm', order: ['gps', 'wifi', 'bt'], place: 'clock' }
 };
 function loadPrefs(){
@@ -460,6 +460,7 @@ function applyPrefs(bgKey, p){
   // الوضع الخفيف: بطاقات بتدرّج لوني بدل الزجاج، وشكل البطاقات المختار (عادي/أقصر/أربع)
   document.body.classList.toggle('lite', LITE);
   document.body.classList.toggle('lite-short', LITE && p.liteCards === 'short');
+  if (typeof oledApply === 'function') oledApply(p);
   var B = document.body;
   SKIN_CLASSES.forEach(function (c) { B.classList.remove(c); });
   var sk = p.skin || 'classic';
@@ -473,7 +474,7 @@ function applyPrefs(bgKey, p){
   renderBrand(p);
   /* حفظ الخلفية والأصناف لتُطبَّق فوراً عند فتح الصفحة التالية (بدون وميض الخلفية الافتراضية) */
   try { if (img) localStorage.setItem('carlauncher.bg.' + (bgKey === 'rest' ? 'rest' : 'home'), img.getAttribute('src') || '');
-        localStorage.setItem('carlauncher.bodycls', ['solid','perf'].concat(SKIN_CLASSES).filter(function(c){ return document.body.classList.contains(c); }).join(' ')); } catch (e) {}
+        localStorage.setItem('carlauncher.bodycls', ['solid','perf','lite','oled','ol'].concat(SKIN_CLASSES).filter(function(c){ return document.body.classList.contains(c); }).join(' ')); } catch (e) {}
 }
 
 /* ===== مواقيت الصلاة على الجهاز (بدون إنترنت) — طريقة أم القرى =====

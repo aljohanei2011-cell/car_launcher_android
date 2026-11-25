@@ -64,7 +64,7 @@ object Weather {
         thread {
             try {
                 val u = "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f".format(java.util.Locale.US, lat, lng) +
-                    "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,visibility&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1"
+                    "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,visibility&daily=temperature_2m_max,temperature_2m_min&hourly=temperature_2m&forecast_hours=8&timezone=auto&forecast_days=1"
                 val conn = URL(u).openConnection() as HttpURLConnection
                 conn.connectTimeout = 10_000; conn.readTimeout = 15_000
                 conn.setRequestProperty("User-Agent", "rafiq-car-launcher")
@@ -87,6 +87,19 @@ object Weather {
                         if (ac != null) { ac.optDouble("dust").let { if (!it.isNaN()) o.put("dust", it) }; ac.optDouble("pm10").let { if (!it.isNaN()) o.put("pm10", it) } }
                     }
                 } catch (e: Exception) {}
+                // حرارة الساعات القادمة لمنحنى بطاقة الطقس: [[الساعة، الحرارة], ...]
+                j.optJSONObject("hourly")?.let { h ->
+                    val tm = h.optJSONArray("time"); val tp = h.optJSONArray("temperature_2m")
+                    if (tm != null && tp != null) {
+                        val arr = org.json.JSONArray()
+                        for (i in 0 until minOf(tm.length(), tp.length(), 8)) {
+                            val hh = tm.optString(i).substringAfter('T').substringBefore(':').toIntOrNull() ?: continue
+                            val v = tp.optDouble(i); if (v.isNaN()) continue
+                            arr.put(org.json.JSONArray().put(hh).put(v))
+                        }
+                        if (arr.length() > 0) o.put("hours", arr)
+                    }
+                }
                 if (d != null) {
                     o.put("max", d.optJSONArray("temperature_2m_max")?.optDouble(0))
                     o.put("min", d.optJSONArray("temperature_2m_min")?.optDouble(0))
